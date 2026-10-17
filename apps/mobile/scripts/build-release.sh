@@ -4,8 +4,9 @@
 #
 #   scripts/build-release.sh [--version-code N] [--out <dir>] [--clean] [--abi-suffix]
 #
-# Reads the signing material from RB_SIGNING_ENV (required), a file only
-# the builder can read, with:
+# Reads the signing material from the file named by RB_SIGNING_ENV (required;
+# there is no default path), a file only the builder can
+# read, with:
 #
 #   RB_RELEASE_STORE_FILE=/path/to/release.jks
 #   RB_RELEASE_STORE_PASSWORD=...
@@ -14,8 +15,9 @@
 #
 # The values are passed to Gradle through a temporary gradle.properties in a
 # private GRADLE_USER_HOME overlay (not on the command line, so they do not
-# show up in `ps` or shell history). The APK is verified with apksigner and
-# copied to <out>/multica-unofficial-<versionName>.apk next to a .sha256.
+# show up in `ps` or shell history). The APK is verified with apksigner, its
+# signer certificate must match release-signer.sha256 (SHA-256 of the
+# certificate; skipped when the file is absent), and it is copied to <out>/multica-unofficial-<versionName>.apk next to a .sha256.
 #
 # Environment: ANDROID_VERSION_NAME / ANDROID_VERSION_CODE (see app.config.ts),
 # RB_ARCHS (ABIs, default arm64-v8a,armeabi-v7a), RB_OUT_DIR (default
@@ -42,8 +44,8 @@ while [ $# -gt 0 ]; do
   shift
 done
 
-SIGNING_ENV="${RB_SIGNING_ENV:-}"
-if [ -z "$SIGNING_ENV" ] || [ ! -r "$SIGNING_ENV" ]; then
+SIGNING_ENV="${RB_SIGNING_ENV:?set RB_SIGNING_ENV to the signing env file}"
+if [ ! -r "$SIGNING_ENV" ]; then
   echo "signing env not readable: $SIGNING_ENV" >&2
   exit 1
 fi
@@ -99,7 +101,17 @@ echo "==> release guard (no debug token login in the bundle)"
 scripts/check-release-bundle.sh "$APK"
 
 echo "==> apksigner verify"
-"$BUILD_TOOLS/apksigner" verify --print-certs "$APK" | sed -n '1,6p'
+CERTS="$("$BUILD_TOOLS/apksigner" verify --print-certs "$APK")"
+sed -n '1,6p' <<<"$CERTS"
+SIGNER="$(sed -n 's/^Signer #1 certificate SHA-256 digest: //p' <<<"$CERTS" | head -1)"
+if [ -r release-signer.sha256 ]; then
+  EXPECTED_SIGNER="$(tr -d '[:space:]' < release-signer.sha256)"
+  if [ "$SIGNER" != "$EXPECTED_SIGNER" ]; then
+    echo "signer certificate $SIGNER does not match release-signer.sha256 ($EXPECTED_SIGNER)" >&2
+    exit 1
+  fi
+  echo "==> signer matches release-signer.sha256"
+fi
 
 BADGING="$("$BUILD_TOOLS/aapt2" dump badging "$APK")"
 VERSION_NAME="$(sed -n "s/.*versionName='\([^']*\)'.*/\1/p" <<<"$BADGING" | head -1)"
