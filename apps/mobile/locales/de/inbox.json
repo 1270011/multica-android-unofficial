@@ -1,0 +1,109 @@
+{
+  "title": "Inbox",
+  "empty": {
+    "title": "Alles erledigt",
+    "body": "Benachrichtigungen und Agenten-Updates erscheinen hier.",
+    "unread_title": "Keine ungelesenen Benachrichtigungen",
+    "unread_body": "Alles in deiner Inbox ist gelesen.",
+    "archived_title": "Nichts archiviert",
+    "archived_body": "Archivierte Benachrichtigungen erscheinen hier und lassen sich wiederherstellen."
+  },
+  "actions": {
+    "mark_read": "Als gelesen markieren",
+    "mark_unread": "Als ungelesen markieren",
+    "mark_all_read": "Alle als gelesen markieren",
+    "archive": "Archivieren",
+    "archive_all": "Alle archivieren",
+    "archive_all_read": "Alle gelesenen archivieren",
+    "archive_completed": "Erledigte archivieren",
+    "inbox_actions": "Inbox-Aktionen",
+    "unarchive": "Wiederherstellen",
+    "open_issue": "Issue öffnen",
+    "row_actions": "Aktionen zur Benachrichtigung",
+    "open_chat": "Im Chat öffnen",
+    "open_details": "Details öffnen",
+    "done": "Erledigt"
+  },
+  "filters": {
+    "all": "Alle",
+    "unread": "Ungelesen",
+    "archived": "Archiviert"
+  },
+  "archive": {
+    "confirm_title": "Alle archivieren?",
+    "confirm_body": "Das archiviert jeden Inbox-Eintrag, gelesen oder ungelesen. Über die Issue-Seiten findest du sie weiterhin."
+  },
+  "errors": {
+    "load_failed": "Inbox konnte nicht geladen werden: {{message}}"
+  },
+  "detail": {
+    "priority_none": "Keine Priorität",
+    "priority_low": "Niedrig",
+    "priority_medium": "Mittel",
+    "priority_high": "Hoch",
+    "priority_urgent": "Dringend",
+    "status_todo": "Todo",
+    "status_in_progress": "In Arbeit",
+    "status_done": "Erledigt",
+    "status_blocked": "Blockiert",
+    "notification": "Benachrichtigung",
+    "close": "Benachrichtigung schließen",
+    "unavailable": "Diese Benachrichtigung ist nicht mehr verfügbar.",
+    "billing_disabled": "Abrechnungsänderungen sind für diesen Workspace nicht verfügbar. Wende dich an deinen Workspace-Administrator.",
+    "contact_admin": "Bitte einen Workspace-Inhaber oder -Admin, die Abrechnungsoptionen zu prüfen.",
+    "review_billing": "Abrechnungsoptionen prüfen",
+    "review_billing_web": "Öffne Multica im Web, um die Abrechnungsoptionen zu prüfen."
+  },
+  "type": {
+    "assigned": "Zugewiesen",
+    "subscribed": "Abonniert",
+    "unassigned": "Zuweisung entfernt",
+    "reassigned": "Neu zugewiesen",
+    "status_changed": "Status geändert",
+    "priority_changed": "Priorität geändert",
+    "start_date_changed": "Startdatum geändert",
+    "due_date_changed": "Fälligkeit geändert",
+    "new_comment": "Neuer Kommentar",
+    "mentioned": "Erwähnt",
+    "review_requested": "Review angefragt",
+    "task_completed": "Lauf abgeschlossen",
+    "task_failed": "Lauf fehlgeschlagen",
+    "agent_blocked": "Agent blockiert",
+    "agent_completed": "Agent fertig",
+    "reaction_added": "Reaktion hinzugefügt",
+    "quick_create_done": "Schnellerstellung fertig",
+    "quick_create_failed": "Schnellerstellung fehlgeschlagen",
+    "quick_create_unconfirmed": "Schnellerstellung bitte prüfen",
+    "autopilot_paused": "Autopilot pausiert",
+    "children_done": "Unteraufgaben abgeschlossen",
+    "autopilot_quota_exceeded": "Autopilot-Lauflimit erreicht",
+    "set_status": "Status gesetzt auf",
+    "set_priority": "Priorität gesetzt auf",
+    "assigned_to": "Zugewiesen an {{name}}",
+    "removed_assignee": "Zuweisung entfernt",
+    "set_due_date": "Fällig am {{date}}",
+    "removed_due_date": "Fälligkeit entfernt",
+    "reacted_with": "Reagiert mit {{emoji}}",
+    "created_with_agent": "Mit Agent erstellt: {{identifier}}",
+    "failed_with_detail": "Fehlgeschlagen: {{detail}}",
+    "run_limit_blocked": "Lauf blockiert, weil das Limit erreicht ist",
+    "children_done_stage": "Unteraufgaben von Stufe {{stage}} abgeschlossen"
+  },
+  "body": {
+    "autopilot_title_limit": "Autopilot „{{title}}“ wurde nicht gestartet, weil dieser Workspace sein Limit von {{limit}} Läufen für den aktuellen Zeitraum erreicht hat. Das Kontingent wird am {{resetAt}} zurückgesetzt.",
+    "autopilot_limit": "Dieser Workspace hat sein Limit von {{limit}} Autopilot-Läufen für den aktuellen Zeitraum erreicht. Dieser Lauf wurde nicht gestartet. Das Kontingent wird am {{resetAt}} zurückgesetzt."
+  },
+  "filter_sheet": {
+    "button": "Filter",
+    "button_active": "Filter, {{count}} aktiv",
+    "title": "Inbox filtern",
+    "status": "Status",
+    "priority": "Priorität",
+    "from": "Von",
+    "clear": "Filter zurücksetzen",
+    "count_one": "{{count}} Benachrichtigung",
+    "count_other": "{{count}} Benachrichtigungen",
+    "empty_title": "Keine Benachrichtigungen für diese Filter",
+    "nothing_to_filter": "Noch nichts zum Filtern."
+  }
+}

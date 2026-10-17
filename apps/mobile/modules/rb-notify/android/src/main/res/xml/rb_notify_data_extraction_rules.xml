@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Auto Backup and device transfer, Android 12+. Replaces
+     the expo-secure-store rules and keeps their exclusion. -->
+<data-extraction-rules>
+  <cloud-backup>
+    <include domain="sharedpref" path="."/>
+    <exclude domain="sharedpref" path="SecureStore"/>
+    <exclude domain="sharedpref" path="rb_notify.xml"/>
+  </cloud-backup>
+  <device-transfer>
+    <include domain="sharedpref" path="."/>
+    <exclude domain="sharedpref" path="SecureStore"/>
+    <exclude domain="sharedpref" path="rb_notify.xml"/>
+  </device-transfer>
+</data-extraction-rules>

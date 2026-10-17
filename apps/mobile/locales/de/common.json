@@ -1,0 +1,59 @@
+{
+  "actions": {
+    "add": "Hinzufügen",
+    "back": "Zurück",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "confirm": "Bestätigen",
+    "continue": "Weiter",
+    "copy": "Kopieren",
+    "create": "Erstellen",
+    "delete": "Löschen",
+    "discard": "Verwerfen",
+    "done": "Fertig",
+    "download": "Herunterladen",
+    "edit": "Bearbeiten",
+    "more": "Mehr",
+    "open": "Öffnen",
+    "remove": "Entfernen",
+    "retry": "Erneut versuchen",
+    "save": "Speichern",
+    "search": "Suchen",
+    "send": "Senden",
+    "share": "Teilen",
+    "upload": "Hochladen"
+  },
+  "fields": {
+    "assignee": "Zuständig",
+    "description": "Beschreibung",
+    "due_date": "Fällig am",
+    "email": "E-Mail",
+    "label": "Label",
+    "name": "Name",
+    "priority": "Priorität",
+    "project": "Projekt",
+    "status": "Status",
+    "title": "Titel"
+  },
+  "states": {
+    "loading": "Wird geladen …",
+    "saving": "Wird gespeichert …",
+    "sending": "Wird gesendet …",
+    "offline": "Offline",
+    "empty": "Noch nichts hier",
+    "error": "Etwas ist schiefgelaufen",
+    "offline_banner": "Offline – Änderungen werden gesendet, sobald wieder Verbindung besteht",
+    "offline_refresh": "Du bist offline. Aktualisieren nicht möglich."
+  },
+  "time": {
+    "just_now": "Gerade eben",
+    "minutes_ago_one": "vor {{count}} Min.",
+    "minutes_ago_other": "vor {{count}} Min.",
+    "hours_ago_one": "vor {{count}} Std.",
+    "hours_ago_other": "vor {{count}} Std.",
+    "days_ago_one": "vor {{count}} Tag",
+    "days_ago_other": "vor {{count}} Tagen",
+    "weeks_ago_one": "vor {{count}} Woche",
+    "weeks_ago_other": "vor {{count}} Wochen"
+  }
+}

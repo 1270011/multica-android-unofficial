@@ -1,0 +1,278 @@
+// @vitest-environment node
+import { describe, expect, it } from "vitest";
+import type { Agent, AgentActivityBucket } from "../types";
+import {
+  buildActivityMap,
+  deriveAgentActivity,
+  summarizeActivityWindow,
+} from "./use-agent-activity";
+
+const DAY = 24 * 60 * 60 * 1000;
+
+// Fixed anchor — derivation uses local-time start of "today", a real
+// clock would drift. 12:00 also keeps "today" stable across odd timezones.
+const NOW = new Date("2026-04-28T12:00:00").getTime();
+
+function bucket(
+  agentId: string,
+  daysAgo: number,
+  taskCount: number,
+  failedCount = 0,
+  cancelledCount = 0,
+): AgentActivityBucket {
+  const t = new Date(NOW);
+  t.setHours(0, 0, 0, 0);
+  return {
+    agent_id: agentId,
+    bucket_at: new Date(t.getTime() - daysAgo * DAY).toISOString(),
+    task_count: taskCount,
+    failed_count: failedCount,
+    completed_count: taskCount - failedCount - cancelledCount,
+    cancelled_count: cancelledCount,
+  };
+}
+
+const fullHistoryAgent: Agent = {
+  id: "a1",
+  workspace_id: "w",
+  runtime_id: "r1",
+  name: "Old Agent",
+  description: "",
+  instructions: "",
+  avatar_url: null,
+  runtime_mode: "cloud",
+  runtime_config: {},
+  custom_args: [],
+  visibility: "workspace",
+  permission_mode: "public_to",
+  invocation_targets: [{ target_type: "workspace", target_id: null }],
+  status: "idle",
+  max_concurrent_tasks: 1,
+  model: "",
+  owner_id: null,
+  skills: [],
+  // Older than the window so daysSinceCreated saturates at DAYS.
+  created_at: new Date(NOW - 100 * DAY).toISOString(),
+  updated_at: new Date(NOW).toISOString(),
+  archived_at: null,
+  archived_by: null,
+};
+
+describe("deriveAgentActivity", () => {
+  it("places buckets in oldest→newest slots across 30 days", () => {
+    const buckets = [
+      bucket("a1", 29, 1), // slot 0
+      bucket("a1", 0, 5), // slot 29
+    ];
+    const result = deriveAgentActivity(
+      buckets,
+      fullHistoryAgent.created_at,
+      NOW,
+    );
+    expect(result.buckets).toHaveLength(30);
+    expect(result.buckets[0]).toMatchObject({ total: 1, failed: 0 });
+    expect(result.buckets[29]).toMatchObject({ total: 5, failed: 0 });
+    expect(result.daysSinceCreated).toBe(30);
+  });
+
+  it("clamps daysSinceCreated for young agents", () => {
+    const created = new Date(NOW - 3 * DAY - 60 * 1000).toISOString();
+    const result = deriveAgentActivity([bucket("fresh", 1, 4)], created, NOW);
+    expect(result.daysSinceCreated).toBe(3);
+  });
+
+  it("treats sub-day-old agents as daysSinceCreated = 0", () => {
+    const created = new Date(NOW - 2 * 60 * 60 * 1000).toISOString();
+    const result = deriveAgentActivity([bucket("fresh", 0, 1)], created, NOW);
+    expect(result.daysSinceCreated).toBe(0);
+    // Today's bucket still records — pre-life days simply look like zero
+    // days, which is on purpose.
+    expect(result.buckets[29]).toMatchObject({ total: 1, failed: 0 });
+  });
+
+  it("ignores buckets older than the 30-day window", () => {
+    const result = deriveAgentActivity(
+      [bucket("a1", 60, 99)],
+      fullHistoryAgent.created_at,
+      NOW,
+    );
+    expect(
+      result.buckets.reduce((s, b) => s + b.total, 0),
+    ).toBe(0);
+  });
+
+  it("zero-fills when the agent has no buckets", () => {
+    const result = deriveAgentActivity(
+      [],
+      fullHistoryAgent.created_at,
+      NOW,
+    );
+    expect(result.buckets).toHaveLength(30);
+    expect(result.buckets.every((b) => b.total === 0 && b.failed === 0)).toBe(
+      true,
+    );
+  });
+});
+
+describe("summarizeActivityWindow", () => {
+  it.each<[number, number, number, number | null]>([
+    [1, 1, 8, 50],
+    [0, 0, 8, null],
+    [0, 2, 1, 0],
+    [2, 0, 1, 100],
+    [0, 0, 0, null],
+  ])("counts completed=%s, failed=%s, cancelled=%s independently", (completed, failed, cancelled, rate) => {
+    const total = completed + failed + cancelled;
+    const result = deriveAgentActivity([
+      {
+        ...bucket("a1", 0, total, failed),
+        completed_count: completed,
+        cancelled_count: cancelled,
+      },
+    ], fullHistoryAgent.created_at, NOW);
+    expect(summarizeActivityWindow(result, 30)).toMatchObject({
+      totalRuns: total,
+      totalCompleted: completed,
+      totalFailed: failed,
+      totalCancelled: cancelled,
+      successRate: rate,
+    });
+  });
+
+  it("rolls outcome counts up over the requested window only", () => {
+    // 5 clean runs 20 days back, then 1/1/8 today. The 7-day window sees
+    // only the recent day, so the older successes must not lift its rate.
+    const result = deriveAgentActivity(
+      [bucket("a1", 20, 5), bucket("a1", 0, 10, 1, 8)],
+      fullHistoryAgent.created_at,
+      NOW,
+    );
+    expect(summarizeActivityWindow(result, 30)).toMatchObject({
+      totalRuns: 15, totalCompleted: 6, totalCancelled: 8, successRate: 86,
+    });
+    expect(summarizeActivityWindow(result, 7)).toMatchObject({
+      totalRuns: 10, totalCompleted: 1, totalCancelled: 8, successRate: 50,
+    });
+  });
+
+  it("sums outcomes from several buckets landing on the same day", () => {
+    const result = deriveAgentActivity(
+      [bucket("a1", 0, 5), bucket("a1", 0, 2, 1)],
+      fullHistoryAgent.created_at,
+      NOW,
+    );
+    expect(summarizeActivityWindow(result, 30)).toMatchObject({
+      totalRuns: 7, totalCompleted: 6, totalFailed: 1, successRate: 86,
+    });
+  });
+
+  it("rolls up totals across the trailing N buckets", () => {
+    // 5 runs total over the 30-day series.
+    const result = deriveAgentActivity(
+      [
+        bucket("a1", 25, 1), // outside 7d, inside 30d
+        bucket("a1", 6, 1), // inside 7d
+        bucket("a1", 0, 3, 1), // inside 7d
+      ],
+      fullHistoryAgent.created_at,
+      NOW,
+    );
+    const last7 = summarizeActivityWindow(result, 7);
+    expect(last7.totalRuns).toBe(4);
+    expect(last7.totalFailed).toBe(1);
+    expect(last7.buckets).toHaveLength(7);
+
+    const last30 = summarizeActivityWindow(result, 30);
+    expect(last30.totalRuns).toBe(5);
+    expect(last30.totalFailed).toBe(1);
+    expect(last30.buckets).toHaveLength(30);
+  });
+
+  it("returns an empty summary for missing activity", () => {
+    const summary = summarizeActivityWindow(undefined, 7);
+    expect(summary.buckets).toEqual([]);
+    expect(summary.totalRuns).toBe(0);
+    expect(summary.totalFailed).toBe(0);
+    expect(summary.windowDays).toBe(7);
+  });
+
+  it("clamps an oversized window to the available bucket count", () => {
+    const result = deriveAgentActivity(
+      [bucket("a1", 0, 2)],
+      fullHistoryAgent.created_at,
+      NOW,
+    );
+    const summary = summarizeActivityWindow(result, 1000);
+    expect(summary.buckets).toHaveLength(30);
+    expect(summary.totalRuns).toBe(2);
+  });
+
+  it("returns no buckets when window is 0", () => {
+    const result = deriveAgentActivity(
+      [bucket("a1", 0, 5)],
+      fullHistoryAgent.created_at,
+      NOW,
+    );
+    const summary = summarizeActivityWindow(result, 0);
+    expect(summary.buckets).toEqual([]);
+    expect(summary.totalRuns).toBe(0);
+  });
+});
+
+describe("buildActivityMap", () => {
+  it("groups buckets by agent and yields a derivation per agent", () => {
+    const agents: Agent[] = [
+      fullHistoryAgent,
+      { ...fullHistoryAgent, id: "a2" },
+    ];
+    const buckets: AgentActivityBucket[] = [
+      bucket("a1", 0, 3),
+      bucket("a2", 1, 2, 1),
+      bucket("a1", 2, 4),
+    ];
+    const map = buildActivityMap(agents, buckets, NOW);
+    expect(map.size).toBe(2);
+    expect(summarizeActivityWindow(map.get("a1"), 30).totalRuns).toBe(7);
+    expect(summarizeActivityWindow(map.get("a2"), 30).totalRuns).toBe(2);
+    expect(summarizeActivityWindow(map.get("a2"), 30).totalFailed).toBe(1);
+  });
+
+  it("emits a zero-filled entry for an agent with no buckets", () => {
+    const agents: Agent[] = [fullHistoryAgent];
+    const map = buildActivityMap(agents, [], NOW);
+    const a = map.get("a1");
+    expect(a?.buckets).toHaveLength(30);
+    expect(summarizeActivityWindow(a, 30).totalRuns).toBe(0);
+  });
+});
+
+
+describe("aggregate duration", () => {
+  it("weights daily duration totals by measured runs, independent of task pages", () => {
+    const result = deriveAgentActivity([
+      { ...bucket("a", 0, 200), duration_ms: 12000000, duration_count: 200 },
+      { ...bucket("a", 1, 1), duration_ms: 600000, duration_count: 1 },
+    ], "2026-01-01", NOW);
+    expect(result.avgDurationMs).toBe(Math.round(12600000 / 201));
+  });
+
+  // completed_at > now() - 30 days can span 31 calendar days. The chart keeps
+  // 30 local-day slots, but the average must cover the whole server window.
+  it("averages the full rolling window, including the oldest day the chart drops", () => {
+    const now = Date.parse("2026-09-27T12:00:00Z");
+    const run = (bucketAt: string, durationMs: number): AgentActivityBucket => ({
+      agent_id: "a", bucket_at: bucketAt, task_count: 1, completed_count: 1,
+      failed_count: 0, cancelled_count: 0, duration_ms: durationMs, duration_count: 1,
+    });
+    const result = deriveAgentActivity([
+      run("2026-08-28T00:00:00Z", 61 * 60_000),
+      run("2026-09-27T00:00:00Z", 60_000),
+    ], "2026-01-01T00:00:00Z", now);
+    expect(result.buckets.reduce((sum, b) => sum + b.total, 0)).toBe(1);
+    expect(result.avgDurationMs).toBe(31 * 60_000);
+  });
+
+  it("does not estimate duration when the server omits aggregates", () => {
+    expect(deriveAgentActivity([bucket("a", 0, 5)], "2026-01-01", NOW).avgDurationMs).toBe(0);
+  });
+});

@@ -1,0 +1,111 @@
+{
+  "title": "Select a workspace",
+  "members": "Members",
+  "agents": "Agents",
+  "select": "Select workspace",
+  "switch": {
+    "title": "Switch workspace",
+    "message": "Switch to {{name}}?",
+    "confirm": "Switch",
+    "current_a11y": "{{name}} is the current workspace",
+    "switch_a11y": "Switch to {{name}}"
+  },
+  "empty": "You don't belong to any workspaces yet. Contact your workspace admin to be invited.",
+  "agent": {
+    "title": "Agents",
+    "empty": "No agents yet",
+    "search_placeholder": "Search agents...",
+    "tab_agents": "Agents",
+    "tab_squads": "Squads",
+    "load_failed": "Could not load the list.",
+    "squads_empty": "No squads yet",
+    "squad": "Squad",
+    "not_found": "Not found or no access.",
+    "overview": "Overview",
+    "recent_runs": "Recent runs",
+    "no_runs": "No runs yet.",
+    "runs_error": "Could not load the runs.",
+    "runs_forbidden": "You are not allowed to see this agent's runs.",
+    "field_runtime": "Runtime",
+    "field_capacity": "Capacity",
+    "capacity_value_one": "{{count}} run at a time",
+    "capacity_value_other": "{{count}} runs at a time",
+    "field_archived": "Archived",
+    "runtime_hidden": "Runtime not visible to you",
+    "runtime_none": "No runtime",
+    "last_run": "Last run: {{status}} {{when}}",
+    "last_run_none": "No finished run yet",
+    "member_count_one": "{{count}} member",
+    "member_count_other": "{{count}} members",
+    "members": "Members",
+    "no_members": "No members.",
+    "leader": "Leader",
+    "status": {
+      "archived": "Archived",
+      "no_runtime": "No runtime",
+      "working_one": "Working on {{count}} run",
+      "working_other": "Working on {{count}} runs",
+      "queued_one": "{{count}} run queued",
+      "queued_other": "{{count}} runs queued",
+      "online": "Ready",
+      "unstable": "Connection unstable",
+      "offline": "Offline"
+    },
+    "member_status": {
+      "working": "Working",
+      "idle": "Ready",
+      "unstable": "Connection unstable",
+      "offline": "Offline",
+      "archived": "Archived"
+    }
+  },
+  "actions": {
+    "retry": "Retry",
+    "sign_out": "Sign out"
+  },
+  "auth": {
+    "signed_in_as": "Signed in as"
+  },
+  "errors": {
+    "load_failed": "Failed to load workspaces: {{message}}"
+  },
+  "pins": {
+    "errors": {
+      "load_failed": "Failed to load pins: {{message}}"
+    },
+    "empty": "No pinned items yet.",
+    "unavailable_issue": "This pinned issue is unavailable.",
+    "unavailable_project": "This pinned project is unavailable."
+  },
+  "invitations": {
+    "title": "Pending invitations",
+    "workspace_fallback": "Workspace",
+    "detail": "Invited by {{inviter}} · {{role}}",
+    "detail_no_inviter": "Invitation · {{role}}",
+    "role": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "member": "Member"
+    },
+    "a11y": "Invitation to {{name}}",
+    "accept": "Accept",
+    "decline": "Decline",
+    "accept_a11y": "Accept invitation to {{name}}",
+    "decline_a11y": "Decline invitation to {{name}}",
+    "joined_title": "You joined {{name}}",
+    "joined_message": "Switch to this workspace now?",
+    "joined_pending": "The workspace will appear in the list shortly.",
+    "switch_now": "Switch now",
+    "later": "Later",
+    "decline_title": "Decline invitation to {{name}}?",
+    "decline_message": "You can only join later with a new invitation.",
+    "pending_count_one": "{{count}} pending invitation",
+    "pending_count_other": "{{count}} pending invitations",
+    "failed_gone_title": "Invitation no longer available",
+    "failed_gone_message": "It was answered on another device, withdrawn or has expired.",
+    "failed_invalid_title": "Invitation could not be processed",
+    "failed_invalid_message": "The server refused the request. Try again later or ask for a new invitation.",
+    "failed_network_title": "No connection",
+    "failed_network_message": "Check your connection and try again."
+  }
+}

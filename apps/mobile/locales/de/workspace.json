@@ -1,0 +1,111 @@
+{
+  "title": "Workspace auswählen",
+  "members": "Mitglieder",
+  "agents": "Agenten",
+  "select": "Workspace auswählen",
+  "switch": {
+    "title": "Workspace wechseln",
+    "message": "Zu {{name}} wechseln?",
+    "confirm": "Wechseln",
+    "current_a11y": "{{name}} ist der aktuelle Workspace",
+    "switch_a11y": "Zu {{name}} wechseln"
+  },
+  "empty": "Du gehörst noch keinem Workspace an. Bitte deinen Workspace-Admin um eine Einladung.",
+  "agent": {
+    "title": "Agenten",
+    "empty": "Noch keine Agenten",
+    "search_placeholder": "Agenten suchen …",
+    "tab_agents": "Agents",
+    "tab_squads": "Squads",
+    "load_failed": "Liste konnte nicht geladen werden.",
+    "squads_empty": "Noch keine Squads",
+    "squad": "Squad",
+    "not_found": "Nicht gefunden oder kein Zugriff.",
+    "overview": "Übersicht",
+    "recent_runs": "Letzte Läufe",
+    "no_runs": "Noch keine Läufe.",
+    "runs_error": "Die Läufe konnten nicht geladen werden.",
+    "runs_forbidden": "Du darfst die Läufe dieses Agents nicht sehen.",
+    "field_runtime": "Runtime",
+    "field_capacity": "Kapazität",
+    "capacity_value_one": "{{count}} Lauf gleichzeitig",
+    "capacity_value_other": "{{count}} Läufe gleichzeitig",
+    "field_archived": "Archiviert",
+    "runtime_hidden": "Runtime für dich nicht sichtbar",
+    "runtime_none": "Keine Runtime",
+    "last_run": "Letzter Lauf: {{status}} {{when}}",
+    "last_run_none": "Noch kein abgeschlossener Lauf",
+    "member_count_one": "{{count}} Mitglied",
+    "member_count_other": "{{count}} Mitglieder",
+    "members": "Mitglieder",
+    "no_members": "Keine Mitglieder.",
+    "leader": "Leitung",
+    "status": {
+      "archived": "Archiviert",
+      "no_runtime": "Keine Runtime",
+      "working_one": "Arbeitet an {{count}} Lauf",
+      "working_other": "Arbeitet an {{count}} Läufen",
+      "queued_one": "{{count}} Lauf wartet",
+      "queued_other": "{{count}} Läufe warten",
+      "online": "Bereit",
+      "unstable": "Verbindung instabil",
+      "offline": "Offline"
+    },
+    "member_status": {
+      "working": "Arbeitet",
+      "idle": "Bereit",
+      "unstable": "Verbindung instabil",
+      "offline": "Offline",
+      "archived": "Archiviert"
+    }
+  },
+  "actions": {
+    "retry": "Erneut versuchen",
+    "sign_out": "Abmelden"
+  },
+  "auth": {
+    "signed_in_as": "Angemeldet als"
+  },
+  "errors": {
+    "load_failed": "Workspaces konnten nicht geladen werden: {{message}}"
+  },
+  "pins": {
+    "errors": {
+      "load_failed": "Angepinnte Elemente konnten nicht geladen werden: {{message}}"
+    },
+    "empty": "Noch nichts angepinnt.",
+    "unavailable_issue": "Dieses angepinnte Issue ist nicht verfügbar.",
+    "unavailable_project": "Dieses angepinnte Projekt ist nicht verfügbar."
+  },
+  "invitations": {
+    "title": "Offene Einladungen",
+    "workspace_fallback": "Workspace",
+    "detail": "Eingeladen von {{inviter}} · {{role}}",
+    "detail_no_inviter": "Einladung · {{role}}",
+    "role": {
+      "owner": "Inhaber",
+      "admin": "Admin",
+      "member": "Mitglied"
+    },
+    "a11y": "Einladung zu {{name}}",
+    "accept": "Annehmen",
+    "decline": "Ablehnen",
+    "accept_a11y": "Einladung zu {{name}} annehmen",
+    "decline_a11y": "Einladung zu {{name}} ablehnen",
+    "joined_title": "Du bist {{name}} beigetreten",
+    "joined_message": "Jetzt zu diesem Workspace wechseln?",
+    "joined_pending": "Der Workspace erscheint gleich in der Liste.",
+    "switch_now": "Jetzt wechseln",
+    "later": "Später",
+    "decline_title": "Einladung zu {{name}} ablehnen?",
+    "decline_message": "Beitreten kannst du danach nur mit einer neuen Einladung.",
+    "pending_count_one": "{{count}} offene Einladung",
+    "pending_count_other": "{{count}} offene Einladungen",
+    "failed_gone_title": "Einladung nicht mehr verfügbar",
+    "failed_gone_message": "Sie wurde auf einem anderen Gerät beantwortet, zurückgezogen oder ist abgelaufen.",
+    "failed_invalid_title": "Einladung konnte nicht verarbeitet werden",
+    "failed_invalid_message": "Der Server hat die Anfrage abgelehnt. Versuche es später erneut oder bitte um eine neue Einladung.",
+    "failed_network_title": "Keine Verbindung",
+    "failed_network_message": "Prüfe die Verbindung und versuche es erneut."
+  }
+}

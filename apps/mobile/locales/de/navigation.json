@@ -1,0 +1,39 @@
+{
+  "back": "Zurück",
+  "tabs": {
+    "inbox": "Inbox",
+    "my_issues": "Meine Issues",
+    "chat": "Chat",
+    "more": "Mehr"
+  },
+  "more_menu": {
+    "pinned": "Angepinnt",
+    "issues": "Issues",
+    "projects": "Projekte",
+    "account_settings": "Kontoeinstellungen",
+    "agents": "Agents"
+  },
+  "routes": {
+    "issues": "Issues",
+    "projects": "Projekte",
+    "settings": "Einstellungen",
+    "profile": "Profil",
+    "notifications": "Benachrichtigungen",
+    "search": "Suche",
+    "issue": "Issue",
+    "project": "Projekt",
+    "assignee": "Zuständig",
+    "mention": "Erwähnen",
+    "agents": "Agenten",
+    "pinned": "Angepinnt",
+    "switch_workspace": "Workspace wechseln",
+    "new_issue": "Neues Issue",
+    "new_project": "Neues Projekt",
+    "edit_issue": "Issue bearbeiten",
+    "edit_project": "Projekt bearbeiten",
+    "runs": "Läufe",
+    "add_resource": "Ressource hinzufügen",
+    "recent": "Zuletzt",
+    "issue_chat": "Chat"
+  }
+}

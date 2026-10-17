@@ -1,0 +1,37 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'com.recordingbeats'
+version = '0.1.0'
+
+android {
+  namespace "com.recordingbeats.rbnotify"
+  defaultConfig {
+    versionCode 1
+    versionName '0.1.0'
+  }
+  buildFeatures {
+    buildConfig true
+  }
+  testOptions {
+    unitTests.returnDefaultValues = true
+    unitTests.all {
+      // Binding ping-rule vectors (docs/TECHNIK.md §1.4), shared with the
+      // JS file check in lib/ping-rule-vectors.test.ts.
+      systemProperty "rb.pingVectors", file("../../../../../docs/technik/ping-rule-vectors.json").absolutePath
+    }
+  }
+}
+
+dependencies {
+  implementation "androidx.core:core-ktx:1.17.0"
+  // Same OkHttp as React Native (react-native/gradle/libs.versions.toml);
+  // no logging interceptor anywhere (security T6).
+  implementation "com.squareup.okhttp3:okhttp:4.9.2"
+
+  testImplementation "junit:junit:4.13.2"
+  // Real org.json for JVM unit tests (the android.jar stub throws).
+  testImplementation "org.json:json:20240303"
+}

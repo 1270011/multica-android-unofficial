@@ -1,0 +1,76 @@
+{
+  "list": {
+    "title": "Projekte",
+    "empty": "Noch keine Projekte",
+    "search_placeholder": "Projekte suchen …"
+  },
+  "status": {
+    "planned": "Geplant",
+    "in_progress": "In Arbeit",
+    "paused": "Pausiert",
+    "completed": "Abgeschlossen",
+    "cancelled": "Abgebrochen"
+  },
+  "priority": {
+    "urgent": "Dringend",
+    "high": "Hoch",
+    "medium": "Mittel",
+    "low": "Niedrig",
+    "none": "Keine Priorität"
+  },
+  "detail": {
+    "properties": "Eigenschaften",
+    "related_issues": "Zugehörige Issues",
+    "resources": "Ressourcen",
+    "lead": "Leitung",
+    "no_resources": "Keine Ressourcen verknüpft.",
+    "add_resource": "Ressource hinzufügen"
+  },
+  "form": {
+    "icon_emoji": "Symbol (Emoji)",
+    "title": "Titel",
+    "title_placeholder": "Projekttitel",
+    "description": "Beschreibung",
+    "description_placeholder": "Worum geht es in diesem Projekt?",
+    "discard_title": "Projekt verwerfen?",
+    "discard_message": "Dein Entwurf geht verloren.",
+    "keep_editing": "Weiter bearbeiten",
+    "save_failed": "Projekt konnte nicht erstellt werden",
+    "save_failed_edit": "Speichern fehlgeschlagen"
+  },
+  "errors": {
+    "load_failed": "Projekt konnte nicht geladen werden: {{message}}"
+  },
+  "actions": {
+    "creating": "Wird erstellt …",
+    "saving": "Wird gespeichert …"
+  },
+  "menu": {
+    "pin": "Anpinnen",
+    "unpin": "Lospinnen",
+    "edit_details": "Details bearbeiten",
+    "open_web": "Im Web öffnen",
+    "project_actions": "Projektaktionen"
+  },
+  "delete": {
+    "title": "Projekt löschen?",
+    "message": "Das lässt sich nicht rückgängig machen. Issues dieses Projekts gehören danach zu keinem Projekt mehr."
+  },
+  "properties": {
+    "status": "Status",
+    "priority": "Priorität",
+    "lead": "Leitung",
+    "unassigned": "Nicht zugewiesen"
+  },
+  "resources": {
+    "title": "Ressourcen",
+    "add": "Hinzufügen",
+    "detach_title": "Ressource entfernen?",
+    "detach": "Entfernen",
+    "empty": "Keine Ressourcen verknüpft."
+  },
+  "runs": {
+    "working": "In Arbeit",
+    "count": "Läufe · {{count}}"
+  }
+}

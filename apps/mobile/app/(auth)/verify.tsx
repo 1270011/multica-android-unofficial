@@ -1,0 +1,200 @@
+import { useEffect, useRef, useState } from "react";
+import { KeyboardAvoidingView, Platform, Pressable, View } from "react-native";
+import { SafeAreaView } from "react-native-safe-area-context";
+import { router, useLocalSearchParams } from "expo-router";
+import * as Haptics from "expo-haptics";
+import * as Clipboard from "expo-clipboard";
+import { Text } from "@/components/ui/text";
+import { OtpInput, type OtpInputRef } from "@/components/ui/otp-input";
+import { Button } from "@/components/ui/button";
+import { MulticaLogo } from "@/components/brand/multica-logo";
+import { useAuthStore } from "@/data/auth-store";
+import { i18n, useT } from "@/lib/i18n";
+import { mapAuthError } from "@/lib/auth-error";
+import { extractOtpCode } from "@/lib/otp-paste";
+import { clearClipboard, useClearClipboardPref } from "@/lib/clipboard-clear-pref";
+
+const CODE_LENGTH = 6;
+const RESEND_COOLDOWN_SECONDS = 60;
+
+export default function Verify() {
+  const sendCode = useAuthStore((s) => s.sendCode);
+  const verifyCode = useAuthStore((s) => s.verifyCode);
+  const { email = "" } = useLocalSearchParams<{ email?: string }>();
+  const [code, setCode] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [cooldown, setCooldown] = useState(RESEND_COOLDOWN_SECONDS);
+  const [resending, setResending] = useState(false);
+  const otpRef = useRef<OtpInputRef>(null);
+  // Guards a double submit: paste fills the field (which may fire
+  // onComplete) and submits itself.
+  const submittingRef = useRef(false);
+  const [pasteHint, setPasteHint] = useState<string | null>(null);
+  const [clearAfterPaste] = useClearClipboardPref();
+  const { t } = useT("auth");
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const t = setInterval(() => {
+      setCooldown((c) => (c <= 1 ? 0 : c - 1));
+    }, 1000);
+    return () => clearInterval(t);
+  }, [cooldown]);
+
+  const submit = async (value: string) => {
+    if (!value || !email || submitting || submittingRef.current) return;
+    submittingRef.current = true;
+    void Haptics.selectionAsync();
+    setSubmitting(true);
+    setError(null);
+    try {
+      await verifyCode(email, value);
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace("/");
+    } catch (err) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setError(mapAuthError(err, t("verify.verify_failed"), (key) => i18n.t(`auth:${key}`)));
+      setSubmitting(false);
+      submittingRef.current = false;
+      otpRef.current?.clear();
+      setCode("");
+    }
+  };
+
+  // paste the code without focusing the field, like the
+  // server-setup paste buttons. Only a clear six-digit code is taken over.
+  const onPaste = async () => {
+    if (submitting) return;
+    let raw = "";
+    try {
+      raw = await Clipboard.getStringAsync();
+    } catch {
+      raw = "";
+    }
+    const pasted = extractOtpCode(raw, CODE_LENGTH);
+    if (!pasted) {
+      setPasteHint(t("verify.paste_none"));
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+      return;
+    }
+    setPasteHint(null);
+    setError(null);
+    // Like the other paste buttons (security H5): the code leaves the
+    // clipboard unless the user switched that off.
+    if (clearAfterPaste) void clearClipboard();
+    otpRef.current?.setValue(pasted);
+    setCode(pasted);
+    void submit(pasted);
+  };
+
+  const onResend = async () => {
+    if (cooldown > 0 || resending || !email) return;
+    void Haptics.selectionAsync();
+    setResending(true);
+    setError(null);
+    try {
+      await sendCode(email);
+      setCooldown(RESEND_COOLDOWN_SECONDS);
+      otpRef.current?.clear();
+      setCode("");
+    } catch (err) {
+      void Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+      setError(mapAuthError(err, t("verify.resend_failed"), (key) => i18n.t(`auth:${key}`)));
+    } finally {
+      setResending(false);
+    }
+  };
+
+  return (
+    <SafeAreaView className="flex-1 bg-background">
+      <KeyboardAvoidingView
+        className="flex-1"
+        behavior={Platform.OS === "ios" ? "padding" : undefined}
+      >
+        <View className="flex-1 justify-center px-6 gap-6">
+          <View className="items-center gap-3">
+            <MulticaLogo size={32} />
+            <View className="gap-1 items-center">
+              <Text className="text-2xl font-semibold text-foreground">
+                {t("verify.enter_title")}
+              </Text>
+              <Text className="text-sm text-muted-foreground text-center">
+                {t("verify.sent_to", { email })}
+              </Text>
+            </View>
+          </View>
+
+          <View className="gap-3 items-center">
+            <OtpInput
+              ref={otpRef}
+              numberOfDigits={CODE_LENGTH}
+              value={code}
+              onChange={setCode}
+              onComplete={submit}
+              autoFocus
+              editable={!submitting}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={submitting}
+              onPress={onPaste}
+              accessibilityLabel={t("verify.paste_a11y")}
+              className="min-h-11"
+              testID="verify-paste"
+            >
+              <Text>{t("verify.paste")}</Text>
+            </Button>
+            {pasteHint ? (
+              <Text className="text-sm text-muted-foreground text-center" accessibilityLiveRegion="polite">
+                {pasteHint}
+              </Text>
+            ) : null}
+            {error ? (
+              <Text className="text-sm text-destructive">{error}</Text>
+            ) : null}
+          </View>
+
+          <View className="gap-3">
+            <Button
+              size="lg"
+              disabled={submitting || code.length < CODE_LENGTH}
+              onPress={() => submit(code)}
+            >
+              <Text>{submitting ? t("verify.verifying") : t("verify.verify")}</Text>
+            </Button>
+
+            <Pressable
+              onPress={onResend}
+              disabled={cooldown > 0 || resending}
+              className="py-2 items-center"
+            >
+              <Text
+                className={
+                  cooldown > 0 || resending
+                    ? "text-sm text-muted-foreground"
+                    : "text-sm text-primary"
+                }
+              >
+                {resending
+                  ? t("login.sending")
+                  : cooldown > 0
+                    ? t("verify.resend_in", { count: cooldown })
+                    : t("verify.resend")}
+              </Text>
+            </Pressable>
+
+            <Button
+              variant="ghost"
+              disabled={submitting}
+              onPress={() => router.back()}
+            >
+              <Text>{t("verify.change_email")}</Text>
+            </Button>
+          </View>
+        </View>
+      </KeyboardAvoidingView>
+    </SafeAreaView>
+  );
+}

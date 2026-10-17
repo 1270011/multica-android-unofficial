@@ -1,0 +1,21 @@
+{
+  "a11y": {
+    "mention_someone": "Jemanden erwähnen",
+    "bullet_list": "Aufzählung",
+    "checklist": "Checkliste",
+    "code_block": "Codeblock",
+    "quote": "Zitat",
+    "attach_image": "Bild anhängen",
+    "attach_file": "Datei anhängen"
+  },
+  "code": {
+    "copied": "Code kopiert",
+    "copy": "Code kopieren"
+  },
+  "upload": {
+    "file_too_large_title": "Datei zu groß",
+    "file_too_large_message": "Dateien müssen kleiner als 100 MB sein.",
+    "failed": "Upload fehlgeschlagen",
+    "error": "Unbekannter Fehler"
+  }
+}

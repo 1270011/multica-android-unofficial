@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Auto Backup, Android 11 and lower. Replaces the
+     expo-secure-store rules and keeps their exclusion. Only shared prefs are
+     included; the session copy, seen ids and nonces live in noBackupFilesDir
+     and are excluded by the platform; the notification prefs are excluded
+     explicitly. -->
+<full-backup-content>
+  <include domain="sharedpref" path="."/>
+  <exclude domain="sharedpref" path="SecureStore"/>
+  <exclude domain="sharedpref" path="rb_notify.xml"/>
+</full-backup-content>

@@ -1,0 +1,199 @@
+{
+  "tabs": {
+    "title": "Chat"
+  },
+  "composer": {
+    "no_agent": "Kein Agent ausgewählt",
+    "revoked": "Du kannst diesen Agenten nicht mehr ausführen",
+    "no_agents": "Keine Agenten in diesem Workspace",
+    "archived": "Dieser Chat ist archiviert",
+    "runtime_required": "Agent braucht eine Runtime",
+    "replying_to": "Antwort an {{name}}",
+    "cancel_reply": "Antwort abbrechen",
+    "mention": "Jemanden oder ein Issue erwähnen",
+    "upload_image": "Bild hochladen",
+    "upload_file": "Datei hochladen",
+    "send": "Senden",
+    "default_placeholder": "Nachricht eingeben …",
+    "unavailable": "Chat nicht verfügbar",
+    "stop_agent": "Agent stoppen",
+    "file_too_large_title": "Datei zu groß",
+    "file_too_large_message": "Dateien müssen kleiner als 100 MB sein.",
+    "working": "Agent arbeitet …",
+    "message": "Nachricht …",
+    "send_queued": "Senden, kommt in die Warteschlange",
+    "working_queue": "Nächste Nachricht schreiben …"
+  },
+  "empty": {
+    "greeting": "Hallo, ich bin {{name}}",
+    "no_agent_title": "Chatte mit deinen Agenten",
+    "examples": "Beispiele füllen das Eingabefeld, ohne zu senden.",
+    "starter_help_label": "Wobei kannst du helfen?",
+    "starter_help_prompt": "Wobei kannst du am besten helfen? Gib mir einen knappen Überblick.",
+    "starter_task_label": "Erste Aufgabe vorschlagen",
+    "starter_task_prompt": "Schlage drei sinnvolle Aufgaben vor, die ich dir übergeben könnte.",
+    "starter_action_label": "Eine Aktion empfehlen",
+    "starter_action_prompt": "Sieh dir an, was du über meinen Workspace weißt, und empfiehl eine sinnvolle erste Aktion."
+  },
+  "picker": {
+    "title": "Agent auswählen",
+    "placeholder": "Agenten suchen …",
+    "empty": "Keine Agenten verfügbar.",
+    "needs_runtime": "Braucht Runtime"
+  },
+  "banners": {
+    "no_agent": "Keine Agenten verfügbar",
+    "runtime_required": "Dieser Agent braucht eine Runtime, bevor er laufen kann.",
+    "offline": "{{name}} ist offline. Nachrichten warten, bis die Runtime zurück ist.",
+    "no_agent_action": "Füge unter Mehr → Agenten einen Agenten hinzu oder aktiviere einen, um zu chatten.",
+    "offline_unstable": "{{name}} hat sich möglicherweise gerade getrennt – deine Nachricht wird eingereiht.",
+    "runtime_required_name": "{{name}} braucht eine Runtime, bevor er laufen kann. Verknüpfe eine im Web oder am Desktop."
+  },
+  "status": {
+    "offline": "Offline",
+    "reconnecting": "Verbindet neu",
+    "queued": "In Warteschlange",
+    "starting": "Startet",
+    "thinking": "Denkt nach",
+    "typing": "Schreibt",
+    "working": "Arbeitet",
+    "running_command": "Führt Befehl aus",
+    "reading_files": "Liest Dateien",
+    "searching_code": "Durchsucht Code",
+    "making_edits": "Nimmt Änderungen vor",
+    "searching_web": "Durchsucht das Web",
+    "retrying": "Versucht erneut"
+  },
+  "alerts": {
+    "no_permission_title": "Keine Berechtigung für diesen Agenten",
+    "no_permission_message": "Du darfst diesen Agenten nicht mehr ausführen, daher wurde die Nachricht nicht gesendet. Bitte den Besitzer um Zugriff.",
+    "runtime_title": "Runtime erforderlich",
+    "runtime_message": "Verknüpfe im Web oder am Desktop eine Runtime mit diesem Agenten, bevor du eine Nachricht sendest.",
+    "not_sent": "Nachricht nicht gesendet",
+    "delete_title": "Diesen Chat löschen?",
+    "delete_confirm": "Löschen",
+    "delete_failed_title": "Chat nicht gelöscht",
+    "delete_failed_message": "Der Server hat den Chat nicht gelöscht. Verbindung prüfen und erneut versuchen."
+  },
+  "failure": {
+    "invocation_not_allowed": "Du darfst diesen Agenten nicht mehr ausführen, daher wurde die Nachricht nicht gesendet.",
+    "agent_runtime_required": "Verknüpfe eine Runtime mit diesem Agenten, bevor du eine Nachricht sendest.",
+    "runtime_access_denied": "Nachricht nicht gesendet – {{detail}}",
+    "default": "Deine Nachricht konnte nicht gesendet werden. Bitte erneut versuchen.",
+    "runtime_access_recovery": "Dieser Agent kann nicht auf seiner privaten Runtime laufen. Mache die Runtime öffentlich oder verknüpfe/kopiere den Agenten auf eine Runtime, die sein Besitzer nutzen darf."
+  },
+  "a11y": {
+    "suggested_followups": "Vorgeschlagene Anschlussfragen",
+    "show_error_details": "Fehlerdetails anzeigen",
+    "no_agents": "Keine Agenten verfügbar",
+    "session_actions": "Aktionen zur Chat-Sitzung",
+    "new_chat": "Neuer Chat",
+    "sessions_agent_picker": "Chat-Sitzungen und Agentenauswahl"
+  },
+  "title": {
+    "fallback": "Chat",
+    "this_agent": "Dieser Agent"
+  },
+  "elapsed": {
+    "replied": "Geantwortet in {{time}}",
+    "finished": "Fertig in {{time}}",
+    "failed": "Fehlgeschlagen nach {{time}}"
+  },
+  "details": {
+    "show": "Details anzeigen"
+  },
+  "sessions": {
+    "title": "Chats",
+    "empty": "Noch keine Chats.",
+    "archived": "archiviert",
+    "new_chat": "Neuer Chat",
+    "tab_active": "Chats",
+    "tab_archived": "Archiv",
+    "archived_empty": "Keine archivierten Chats.",
+    "loading": "Wird geladen …",
+    "pinned": "angeheftet",
+    "unread": "ungelesen",
+    "long_press_hint": "Lange drücken zum Umbenennen, Anheften, Archivieren oder Löschen.",
+    "actions": {
+      "rename": "Umbenennen",
+      "pin": "Anheften",
+      "unpin": "Lösen",
+      "archive": "Archivieren",
+      "restore": "Wiederherstellen",
+      "delete": "Löschen"
+    },
+    "long_press_hint_archived": "Lange drücken zum Wiederherstellen, Umbenennen oder Löschen."
+  },
+  "picker.title": "Agent auswählen",
+  "no_response": "Der Agent hat diesen Durchlauf ohne Textantwort beendet.",
+  "failure_reason": {
+    "default": "Lauf fehlgeschlagen",
+    "queued_expired": "In der Warteschlange abgelaufen",
+    "runtime_offline": "Daemon offline",
+    "runtime_reconnect_timeout": "Daemon hat sich nicht rechtzeitig neu verbunden",
+    "runtime_recovery": "Daemon neu gestartet",
+    "timeout": "Zeitüberschreitung des Laufs",
+    "iteration_limit": "Iterationslimit erreicht",
+    "agent_blocked": "Wartet auf menschliche Eingabe",
+    "api_invalid_request": "Von der Modell-API abgelehnt",
+    "skill_bundle_unavailable": "Die Skills des Agenten konnten nicht geladen werden",
+    "runtime_cli_timeout": "Zeitüberschreitung der lokalen Runtime-CLI",
+    "environment_prepare_failed": "Die Ausführungsumgebung konnte nicht vorbereitet werden",
+    "runtime_access_denied": "Dieser Agent kann nicht auf seiner privaten Runtime laufen und konnte daher nicht antworten. Mache die Runtime öffentlich oder verknüpfe/kopiere den Agenten auf eine Runtime, die sein Besitzer nutzen darf.",
+    "invalid_task_identity": "Identität des Laufs stimmt nicht überein",
+    "agent_error_provider_auth_or_access": "Anmeldung beim Anbieter fehlgeschlagen",
+    "agent_error_provider_quota_limit": "Kontingent des Anbieters erschöpft",
+    "agent_error_provider_capacity_or_rate_limit": "Vom Anbieter gedrosselt",
+    "agent_error_provider_server_error": "Serverfehler beim Anbieter",
+    "agent_error_provider_network": "Netzwerkfehler beim Anbieter",
+    "agent_error_process_failure": "Agentenprozess abgestürzt",
+    "agent_error_empty_or_unparseable_output": "Agent lieferte keine verwertbare Ausgabe",
+    "agent_error_agent_timeout": "Zeitüberschreitung des Agenten",
+    "agent_error_context_overflow": "Kontextfenster überschritten",
+    "agent_error_missing_config": "API-Schlüssel oder Konfiguration fehlt",
+    "agent_error_model_not_found_or_unavailable": "Modell nicht verfügbar",
+    "agent_error_runtime_version_unsupported": "Version der Runner-CLI nicht unterstützt",
+    "agent_error_runtime_missing_executable": "Runner-CLI nicht installiert",
+    "agent_error_unknown": "Fehler bei der Agentenausführung",
+    "agent_fallback_message": "Agent lieferte eine Ersatzantwort",
+    "codex_resume_oversized": "Sitzung zu groß zum Fortsetzen",
+    "idle_watchdog": "Agent nach Inaktivität gestoppt",
+    "local_directory_error": "Fehler im lokalen Verzeichnis",
+    "cancelled": "Vom System abgebrochen",
+    "agent_error": "Fehler bei der Agentenausführung",
+    "codex_semantic_inactivity": "Codex: semantische Inaktivität, Zeitüberschreitung",
+    "manual": "Vom Benutzer abgebrochen",
+    "user_cancelled": "Vom Benutzer abgebrochen"
+  },
+  "timeline": {
+    "steps_count_one": "{{count}} Schritt",
+    "steps_count_other": "{{count}} Schritte",
+    "tool": "Werkzeug",
+    "tool_result_named": "Ergebnis von {{tool}}: ",
+    "tool_result_unnamed": "Ergebnis: ",
+    "truncated": "… (gekürzt)",
+    "error": "Fehler"
+  },
+  "rename": {
+    "title": "Chat umbenennen",
+    "label": "Chat-Titel",
+    "save": "Speichern",
+    "too_long": "Höchstens {{max}} Zeichen."
+  },
+  "queue": {
+    "title_one": "{{count}} Nachricht wartet",
+    "title_other": "{{count}} Nachrichten warten",
+    "send_now": "Jetzt senden",
+    "send_now_wait": "„Jetzt senden“ geht, sobald die aktuelle Antwort begonnen hat.",
+    "send_now_no_permission": "Du darfst diesen Agent nicht mehr ausführen.",
+    "send_now_confirm_title": "Diese Nachricht jetzt senden?",
+    "send_now_confirm_message": "Die aktuelle Antwort wird abgebrochen, diese Nachricht kommt als Nächstes dran.",
+    "send_now_unavailable": "„Jetzt senden“ geht gerade nicht. Die Warteschlange wird aktualisiert.",
+    "clear": "Alle entfernen",
+    "clear_confirm_title": "Warteschlange leeren?",
+    "clear_confirm_message_one": "{{count}} wartende Nachricht wird nicht gesendet.",
+    "clear_confirm_message_other": "{{count}} wartende Nachrichten werden nicht gesendet.",
+    "fallback": "Wartende Nachricht",
+    "failed": "Die Warteschlange konnte nicht geändert werden."
+  }
+}

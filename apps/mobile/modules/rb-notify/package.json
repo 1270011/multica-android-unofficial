@@ -1,0 +1,7 @@
+{
+  "name": "rb-notify",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Operator notifications without a push provider",
+  "main": "index.ts"
+}

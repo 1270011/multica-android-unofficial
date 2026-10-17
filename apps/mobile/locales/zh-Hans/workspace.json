@@ -1,0 +1,106 @@
+{
+  "title": "选择工作区",
+  "members": "成员",
+  "agents": "智能体",
+  "select": "选择工作区",
+  "switch": {
+    "title": "切换工作区",
+    "message": "切换到 {{name}}？",
+    "confirm": "切换",
+    "current_a11y": "{{name}} 是当前工作区",
+    "switch_a11y": "切换到 {{name}}"
+  },
+  "empty": "你还没有加入任何工作区。请联系工作区管理员以获取邀请。",
+  "agent": {
+    "title": "智能体",
+    "empty": "还没有智能体",
+    "search_placeholder": "搜索智能体...",
+    "tab_agents": "智能体",
+    "tab_squads": "小组",
+    "load_failed": "无法加载列表。",
+    "squads_empty": "暂无小组",
+    "squad": "小组",
+    "not_found": "未找到或无访问权限。",
+    "overview": "概览",
+    "recent_runs": "最近运行",
+    "no_runs": "暂无运行。",
+    "runs_error": "无法加载运行记录。",
+    "runs_forbidden": "你无权查看此智能体的运行记录。",
+    "field_runtime": "运行时",
+    "field_capacity": "并发",
+    "capacity_value_other": "同时 {{count}} 个运行",
+    "field_archived": "已归档",
+    "runtime_hidden": "你无法查看该运行时",
+    "runtime_none": "无运行时",
+    "last_run": "上次运行：{{status}} {{when}}",
+    "last_run_none": "暂无已完成的运行",
+    "member_count_other": "{{count}} 名成员",
+    "members": "成员",
+    "no_members": "暂无成员。",
+    "leader": "负责人",
+    "status": {
+      "archived": "已归档",
+      "no_runtime": "无运行时",
+      "working_other": "正在进行 {{count}} 个运行",
+      "queued_other": "{{count}} 个运行排队中",
+      "online": "就绪",
+      "unstable": "连接不稳定",
+      "offline": "离线"
+    },
+    "member_status": {
+      "working": "工作中",
+      "idle": "就绪",
+      "unstable": "连接不稳定",
+      "offline": "离线",
+      "archived": "已归档"
+    }
+  },
+  "actions": {
+    "retry": "重试",
+    "sign_out": "退出登录"
+  },
+  "auth": {
+    "signed_in_as": "当前登录账号"
+  },
+  "errors": {
+    "load_failed": "工作区加载失败：{{message}}"
+  },
+  "pins": {
+    "errors": {
+      "load_failed": "固定项加载失败：{{message}}"
+    },
+    "empty": "还没有固定项。",
+    "unavailable_issue": "该固定任务不可用。",
+    "unavailable_project": "该固定项目不可用。"
+  },
+  "invitations": {
+    "title": "待处理的邀请",
+    "workspace_fallback": "工作区",
+    "detail": "{{inviter}} 邀请 · {{role}}",
+    "detail_no_inviter": "邀请 · {{role}}",
+    "role": {
+      "owner": "所有者",
+      "admin": "管理员",
+      "member": "成员"
+    },
+    "a11y": "加入 {{name}} 的邀请",
+    "accept": "接受",
+    "decline": "拒绝",
+    "accept_a11y": "接受加入 {{name}} 的邀请",
+    "decline_a11y": "拒绝加入 {{name}} 的邀请",
+    "joined_title": "你已加入 {{name}}",
+    "joined_message": "现在切换到该工作区吗？",
+    "joined_pending": "该工作区稍后会出现在列表中。",
+    "switch_now": "立即切换",
+    "later": "稍后",
+    "decline_title": "拒绝加入 {{name}} 的邀请？",
+    "decline_message": "之后只能通过新的邀请加入。",
+    "pending_count_other": "{{count}} 个待处理的邀请",
+    "failed_gone_title": "邀请已不可用",
+    "failed_gone_message": "该邀请已在其他设备上处理、被撤回或已过期。",
+    "failed_invalid_title": "无法处理邀请",
+    "failed_invalid_message": "服务器拒绝了请求。请稍后重试或请求新的邀请。",
+    "failed_network_title": "无网络连接",
+    "failed_network_message": "请检查网络连接后重试。"
+  }
+}
