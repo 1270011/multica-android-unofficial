@@ -16,12 +16,16 @@ export default ({ config }: ConfigContext): ExpoConfig => {
 
   return {
     ...config,
+    // Unofficial community build: own display name and package ids so it
+    // can never be mistaken for, or installed over, the official Multica
+    // app. Logo, the name "Multica" and the attribution notices in the UI
+    // stay unchanged (Multica License, see LICENSE and NOTICE).
     name: isProd
-      ? "Multica"
+      ? "Multica (Unofficial)"
       : isStaging
-        ? "Multica (Staging)"
-        : "Multica (Dev)",
-    slug: "multica-mobile",
+        ? "Multica (Unofficial Staging)"
+        : "Multica (Unofficial Dev)",
+    slug: "multica-android-unofficial",
     // Android build: versionName tracks the upstream Multica version the
     // app is built against plus a release suffix. Release builds set
     // ANDROID_VERSION_NAME (e.g. "0.6.1-rb3") and ANDROID_VERSION_CODE;
@@ -65,16 +69,16 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // auto-loads `.env.<mode>.local` regardless of APP_ENV) and collapse
       // dev / staging / prod onto a single id.
       bundleIdentifier: isProd
-        ? (process.env.EXPO_BUNDLE_IDENTIFIER_PROD ?? "ai.multica.mobile")
+        ? (process.env.EXPO_BUNDLE_IDENTIFIER_PROD ?? "net.recordingbeats.multica.unofficial")
         : isStaging
-          ? "ai.multica.mobile.staging"
-          : (process.env.EXPO_BUNDLE_IDENTIFIER_DEV ?? "ai.multica.mobile.dev"),
+          ? "net.recordingbeats.multica.unofficial.staging"
+          : (process.env.EXPO_BUNDLE_IDENTIFIER_DEV ?? "net.recordingbeats.multica.unofficial.dev"),
     },
     android: {
       // One package id for every variant: the Android build ships a
       // single sideloaded APK, so there is no dev/staging/prod side-by-side
       // install to keep apart (that is what the iOS suffixes above do).
-      package: "com.recordingbeats.multica",
+      package: "net.recordingbeats.multica.unofficial",
       versionCode: Number.parseInt(process.env.ANDROID_VERSION_CODE ?? "1", 10),
       adaptiveIcon: {
         foregroundImage: "./assets/icon.png",

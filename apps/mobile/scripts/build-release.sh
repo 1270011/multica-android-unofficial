@@ -15,7 +15,7 @@
 # The values are passed to Gradle through a temporary gradle.properties in a
 # private GRADLE_USER_HOME overlay (not on the command line, so they do not
 # show up in `ps` or shell history). The APK is verified with apksigner and
-# copied to <out>/multica-recordingbeats-<versionName>.apk next to a .sha256.
+# copied to <out>/multica-unofficial-<versionName>.apk next to a .sha256.
 #
 # Environment: ANDROID_VERSION_NAME / ANDROID_VERSION_CODE (see app.config.ts),
 # RB_ARCHS (ABIs, default arm64-v8a,armeabi-v7a), RB_OUT_DIR (default
@@ -104,7 +104,7 @@ echo "==> apksigner verify"
 BADGING="$("$BUILD_TOOLS/aapt2" dump badging "$APK")"
 VERSION_NAME="$(sed -n "s/.*versionName='\([^']*\)'.*/\1/p" <<<"$BADGING" | head -1)"
 ARCHS_ACTUAL="$(sed -n "s/^native-code: //p" <<<"$BADGING" | tr -d "'" | tr ' ' ',')"
-NAME="multica-recordingbeats-${VERSION_NAME}"
+NAME="multica-unofficial-${VERSION_NAME}"
 [ "$ABI_SUFFIX" = 1 ] && NAME="${NAME}-${ARCHS_ACTUAL}"
 NAME="${NAME}.apk"
 mkdir -p "$OUT_DIR"
