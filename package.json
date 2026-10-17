@@ -1,0 +1,40 @@
+{
+  "name": "multica-android-unofficial",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "pnpm -C apps/mobile dev",
+    "android:prebuild": "pnpm -C apps/mobile android:prebuild",
+    "android:debug": "pnpm -C apps/mobile android:debug",
+    "android:release": "pnpm -C apps/mobile android:release",
+    "check:native-patches": "apps/mobile/scripts/check-native-patches.sh",
+    "lint": "pnpm -C apps/mobile lint",
+    "typecheck": "pnpm -C apps/mobile typecheck",
+    "test": "pnpm -C apps/mobile test && pnpm -C packages/core test"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.28.2",
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "esbuild"
+    ],
+    "overrides": {
+      "@types/react": "catalog:",
+      "@types/react-dom": "catalog:",
+      "@xmldom/xmldom": "^0.8.13",
+      "postcss": "8.5.26",
+      "uuid": "11.1.1",
+      "shell-quote": "1.9.0",
+      "minimatch@3>brace-expansion": "1.1.18",
+      "minimatch@5>brace-expansion": "2.1.4",
+      "minimatch@9>brace-expansion": "2.1.4",
+      "minimatch@10>brace-expansion": "5.0.9"
+    },
+    "patchedDependencies": {
+      "react-native-screens@4.23.0": "patches/react-native-screens@4.23.0.patch"
+    }
+  }
+}

@@ -1,0 +1,21 @@
+packages:
+  - apps/*
+  - packages/*
+
+catalog:
+  '@formatjs/intl-localematcher': ^0.8.4
+  '@tanstack/react-query': ^5.96.2
+  '@testing-library/react': ^16.3.2
+  '@types/react': ^19.2.0
+  '@types/react-dom': ^19.2.0
+  i18next: ^26.0.8
+  jsdom: ^29.0.1
+  posthog-js: ^1.176.1
+  react: 19.2.3
+  react-dom: 19.2.3
+  react-i18next: ^17.0.6
+  typescript: ^5.9.3
+  vitest: ^4.1.0
+  yaml: ^2.6.0
+  zod: ^4.1.5
+  zustand: ^5.0.0

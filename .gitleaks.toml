@@ -1,0 +1,9 @@
+# gitleaks configuration: the default rules, plus an allowlist for the unit
+# tests, which contain fake tokens and keys on purpose (they check that the
+# logger and the redaction never leak them).
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "Fake secrets in unit tests"
+paths = ['''^apps/mobile/.*\.test\.ts$''']

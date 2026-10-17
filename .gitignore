@@ -1,0 +1,33 @@
+node_modules
+dist
+*.log
+.DS_Store
+.envrc
+
+# build outputs
+build
+out
+*.tsbuildinfo
+
+# env: only the committed public templates/configs are tracked
+.env*
+!.env.example
+!apps/mobile/.env.example
+!apps/mobile/.env.staging
+!apps/mobile/.env.production
+!apps/mobile/.env.production.example
+
+# test coverage
+coverage
+test-results/
+
+# runtime
+*.pid
+
+# local tool settings
+.claude/
+.idea
+.tool-versions
+
+# Emulator smoke reports
+/apps/mobile/smoke-out/
