@@ -160,7 +160,7 @@ export default function NewProject() {
       <Pressable
         onPress={onCancel}
         accessibilityRole="button"
-        // Gap to the Android title, like the modal ✕ (J3b).
+        // Gap to the Android title, like the modal ✕.
         style={{ marginRight: MODAL_CLOSE_TITLE_GAP_DP }}
         className="px-1 py-1"
       >

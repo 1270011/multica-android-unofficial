@@ -241,7 +241,7 @@ export function PushSettingsSection({
           label={t("push.sound_vibration")}
           onPress={() => rbNotify.openNotificationSettings(null)}
         />
-        {/* Debug builds only (docs/UX.md §8.9 test trigger): posts a sample
+        {/* Debug builds only (test trigger): posts a sample
             notification for the newest inbox issue through the real native
             path, tap included. Gate spelled out so Metro folds it away. */}
         {process.env.EXPO_PUBLIC_DEBUG_TOKEN_LOGIN === "1" && enabled ? (

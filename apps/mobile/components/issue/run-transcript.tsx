@@ -34,7 +34,7 @@ export function RunTranscript({ task, issueId, onBack }: { task: AgentTask; issu
   });
   const blocks = useMemo(() => buildTranscript(data ?? []), [data]);
   // When the run finishes, polling stops; fetch once more so the last
-  // seconds of the transcript are not missing (review #26).
+  // seconds of the transcript are not missing.
   const live = isRunLive(task);
   const wasLive = useRef(live);
   useEffect(() => {

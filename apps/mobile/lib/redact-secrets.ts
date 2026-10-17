@@ -9,7 +9,7 @@
  * still lack: Multica tokens (`mul_…` PAT, `mat_…` task token), JSON
  * `"token": "…"`, `Authorization: token|Basic …`, `user:pw@` in http(s)
  * URLs and a PEM block without END line. Quantifiers are bounded and the
- * input is cut to MAX_REDACT_INPUT first (M3: the JWT pattern backtracked
+ * input is cut to MAX_REDACT_INPUT first (the JWT pattern backtracked
  * quadratically, 80 KB froze the JS thread for 1.5 s in Node).
  */
 
@@ -37,7 +37,7 @@ const patterns: { re: RegExp; replacement: string }[] = [
   { re: /\bsk-[A-Za-z0-9_-]{20,}\b/g, replacement: "[REDACTED API KEY]" },
   // Slack tokens
   { re: /\bxox[bporas]-[A-Za-z0-9-]{10,}\b/g, replacement: "[REDACTED SLACK TOKEN]" },
-  // JWT tokens (bounded segments, M3)
+  // JWT tokens (bounded segments)
   { re: /\bey[A-Za-z0-9_-]{10,2048}\.[A-Za-z0-9_-]{10,4096}\.[A-Za-z0-9_-]{10,2048}\b/g, replacement: "[REDACTED JWT]" },
   // Multica personal access tokens (mul_) and agent task tokens (mat_)
   { re: /\b(?:mul|mat)_[A-Za-z0-9_-]{8,256}/g, replacement: "[REDACTED MULTICA TOKEN]" },

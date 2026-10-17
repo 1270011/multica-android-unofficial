@@ -2,7 +2,7 @@
  * Agent detail, read-only: overview (status, runtime,
  * capacity, description) and the latest runs. Runs that belong to an issue
  * open that issue. Editing the agent (instructions, skills, runtime, access)
- * stays on the web (docs/UX.md §3).
+ * stays on the web.
  */
 import { Pressable, ScrollView, View } from "react-native";
 import { Stack, router, useLocalSearchParams } from "expo-router";

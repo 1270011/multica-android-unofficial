@@ -1,6 +1,5 @@
 /**
- * Read-only Agents/Squads overview (docs/UX.md §3 Navigation,
- * §6 Paket H): status line, runtime label, last run and squad member rows.
+ * Read-only Agents/Squads overview: status line, runtime label, last run and squad member rows.
  *
  * The three-state presence itself comes from `@multica/core/agents`
  * (`buildPresenceMap`, via lib/use-agent-presence.ts) so web and mobile
@@ -139,11 +138,11 @@ export function squadMemberRows(
 }
 
 /**
- * What the "Recent runs" section of the agent detail shows (J3a). A failed
+ * What the "Recent runs" section of the agent detail shows. A failed
  * load — 403 included — is an error state with "Try again", never "No runs
  * yet", which would claim something the app does not know. Runs already on
  * screen stay when a refetch fails (every `task:*` event refetches; a short
- * network blip must not replace the list, J3b).
+ * network blip must not replace the list).
  */
 export type RunsSectionState = "loading" | "forbidden" | "error" | "empty" | "list";
 
@@ -168,5 +167,5 @@ export function runsSectionState({
   return "empty";
 }
 
-/** Squad rows (active issues too) are at least this tall (J3a, UX §4). */
+/** Squad rows (active issues too) are at least this tall. */
 export const SQUAD_ROW_MIN_DP = 44;

@@ -47,7 +47,7 @@ export function usePresenceRealtime() {
         queryClient.invalidateQueries({ queryKey: snapshotKey });
       // Every run lifecycle step also changes the "latest runs" of the
       // agent detail: a new run shows up when it is queued,
-      // not only once it ended (J3a). Only a mounted detail refetches.
+      // not only once it ended. Only a mounted detail refetches.
       const invalidateRuns = () => {
         invalidateSnapshot();
         queryClient.invalidateQueries({ queryKey: [...agentsKey, "tasks"] });

@@ -15,7 +15,7 @@ import { patchIssueProperties } from "./issue-ws-updaters";
 const wsId = "ws-1";
 const issue = (revision: number) => ({ id: "i-1", revision, properties: { a: 1 } }) as unknown as Issue;
 
-describe("patchIssueProperties (issue_properties:changed, review #24)", () => {
+describe("patchIssueProperties (issue_properties:changed)", () => {
   it("takes the bag from a newer or equal revision", () => {
     const qc = new QueryClient();
     qc.setQueryData(issueKeys.detail(wsId, "i-1"), issue(5));
@@ -39,7 +39,7 @@ describe("patchIssueProperties (issue_properties:changed, review #24)", () => {
   });
 });
 
-describe("propertyListOptions includeArchived (review #24)", () => {
+describe("propertyListOptions includeArchived", () => {
   it("keys and requests archived definitions separately", async () => {
     const qc = new QueryClient();
     const withArchived = propertyListOptions(wsId, true);

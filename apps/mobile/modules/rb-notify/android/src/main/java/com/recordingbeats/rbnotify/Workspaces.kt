@@ -4,7 +4,7 @@ package com.recordingbeats.rbnotify
 data class Workspace(val id: String, val slug: String, val name: String, val enabled: Boolean)
 
 /**
- * One WebSocket for all workspaces (docs/TECHNIK.md §1.3, review #14 B2):
+ * One WebSocket for all workspaces:
  * the server sends `inbox:*` to every connection of the user, whatever
  * workspace it was opened with. Entries are therefore matched to their
  * workspace by `item.workspace_id`, never by the connection.
@@ -26,9 +26,9 @@ object WorkspaceRouting {
       ?: workspaces.firstOrNull { it.slug !in lost }
 }
 
-/** How a failed WebSocket auth is handled (docs/TECHNIK.md §1.5). */
+/** How a failed WebSocket auth is handled. */
 enum class AuthFailure {
-  /** The server rejected the token: delete the session copy (T2). */
+  /** The server rejected the token: delete the session copy. */
   Rejected,
   /** Not a member of the workspace the socket was opened with. */
   WorkspaceLost,
@@ -36,7 +36,7 @@ enum class AuthFailure {
    * HTTP 403 on the upgrade. The server only answers 403 for cookie auth,
    * which the service does not use, so it comes from Cloudflare Access
    * (e.g. an expired service token): reconnect with backoff and tell the
-   * user, never drop workspaces or the session (review #14 Fix 2).
+   * user, never drop workspaces or the session.
    */
   Refused,
   /** Network, timeout, protocol: reconnect with backoff, keep the session. */

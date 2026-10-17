@@ -466,7 +466,7 @@ export default function SearchModal() {
             returnKeyType="search"
             clearButtonMode="while-editing"
             // Inline fontSize, no Tailwind text-* (its lineHeight clips the
-            // placeholder at 200 % font, N5; see components/ui/text-field).
+            // placeholder at 200 % font; see components/ui/text-field).
             style={{ fontSize: 16, includeFontPadding: false, textAlignVertical: "center" }}
             className="flex-1 min-h-10 text-foreground"
           />

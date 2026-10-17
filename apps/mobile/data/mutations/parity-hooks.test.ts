@@ -192,7 +192,7 @@ describe("chat sessions", () => {
     expect(sorted.map((s) => s.id)).toEqual(["pin", "new", "old"]);
   });
 
-  it("ranks by last message time, falling back to updated_at, like web (J3b)", () => {
+  it("ranks by last message time, falling back to updated_at, like web", () => {
     const sorted = sortChatSessions([
       session({ id: "edited", updated_at: "2026-10-10T00:00:00Z" }),
       session({

@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({
   resolveMe: (_: unknown) => {},
   resolveToken: null as null | ((t: string) => void),
-  /** Set → setToken() waits until it is called (verifyCode test, H1). */
+  /** Set → setToken() waits until it is called (verifyCode test). */
   releaseSetToken: null as null | (() => void),
   holdSetToken: false,
 }));
@@ -30,10 +30,10 @@ vi.mock("./workspace-store", () => ({
   useWorkspaceStore: { getState: () => ({ restoreSlug: async () => {} }) },
 }));
 vi.mock("@/lib/notify/session", () => ({ handOverSession: vi.fn() }));
-// Session data (S-1) has its own test (session-end.test.ts); its real
+// Session data has its own test (session-end.test.ts); its real
 // module loads the React Native query client.
 vi.mock("./session-end", () => ({ clearSessionData: vi.fn() }));
-// Filter stores (F1/F2) are reset on logout; they are not under test here.
+// Filter stores are reset on logout; they are not under test here.
 vi.mock("./stores/inbox-filter-store", () => ({
   useInboxFilterStore: { getState: () => ({ reset: vi.fn() }) },
 }));
@@ -46,7 +46,7 @@ import { handOverSession } from "@/lib/notify/session";
 import { api } from "./api";
 import { useAuthStore } from "./auth-store";
 
-describe("auth-store initialize vs logout (T2, review #14)", () => {
+describe("auth-store initialize vs logout", () => {
   it("a logout during getMe() wins: no user, no session handover, not stuck loading", async () => {
     const init = useAuthStore.getState().initialize();
     await vi.waitFor(() => expect(state.resolveMe).not.toBe(undefined));
@@ -60,7 +60,7 @@ describe("auth-store initialize vs logout (T2, review #14)", () => {
     expect(handOverSession).not.toHaveBeenCalled();
   });
 
-  it("a logout while the token is still being read wins too (N2)", async () => {
+  it("a logout while the token is still being read wins too", async () => {
     vi.mocked(handOverSession).mockClear();
     vi.mocked(api.getMe).mockClear();
     state.resolveToken = () => {}; // getToken() now waits
@@ -78,7 +78,7 @@ describe("auth-store initialize vs logout (T2, review #14)", () => {
   });
 });
 
-describe("verifyCode vs logout (security H1)", () => {
+describe("verifyCode vs logout", () => {
   it("a logout while the new token is written wins: no user, no session handover", async () => {
     vi.mocked(handOverSession).mockClear();
     vi.mocked(api.setToken).mockClear();

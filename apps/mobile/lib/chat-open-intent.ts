@@ -1,6 +1,6 @@
 /**
- * Marks an issue-chat open as coming from inside the app (T5 narrow
- * variant, docs/UX.md §8.5). Only such opens — and, from P4b on, taps on the
+ * Marks an issue-chat open as coming from inside the app (narrow
+ * read rule "T5"). Only such opens — and taps on the
  * app's own notification — mark the issue's inbox entries read. A deep link
  * from another app or a web page goes through the same route but never
  * passes here, so it only displays the chat and cannot clear the operator's

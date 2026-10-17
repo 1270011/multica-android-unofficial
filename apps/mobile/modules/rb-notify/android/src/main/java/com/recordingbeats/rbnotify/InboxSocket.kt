@@ -3,8 +3,8 @@ package com.recordingbeats.rbnotify
 import kotlin.random.Random
 
 /**
- * The one Multica WebSocket of the service (docs/TECHNIK.md §1.3, review
- * #14): token only in the first frame (T6), `auth_ack` within 10 s, backoff
+ * The one Multica WebSocket of the service:
+ * token only in the first frame, `auth_ack` within 10 s, backoff
  * with jitter, immediate retry when the network returns.
  *
  * Pure Kotlin: OkHttp and the Android handler sit behind [Transport] and
@@ -113,7 +113,7 @@ class InboxSocket(
       listener.onUnauthorized()
       return
     }
-    // One connection only (review #14 B1).
+    // One connection only.
     conn?.cancel()
     scheduler.remove(authTimeout)
     connected = false

@@ -1,7 +1,7 @@
 package com.recordingbeats.rbnotify
 
 /**
- * Reconnect delay (docs/TECHNIK.md §1.3): exponential from 1 s, capped at
+ * Reconnect delay: exponential from 1 s, capped at
  * 5 min, "equal jitter" so a fleet of clients does not reconnect in step.
  */
 object Backoff {

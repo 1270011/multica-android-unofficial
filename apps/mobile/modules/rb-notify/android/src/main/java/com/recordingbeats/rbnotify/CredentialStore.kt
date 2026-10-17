@@ -12,7 +12,7 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /**
- * The service's copy of the session (security T1/T2/T3, docs/TECHNIK.md §1.5).
+ * The service's copy of the session.
  *
  * AES-256-GCM with a key in the Android Keystore, created WITHOUT user
  * authentication so the service can read it while the device is locked. The
@@ -39,7 +39,7 @@ data class Credentials(
     .put("cfClientSecret", cfClientSecret)
     .toString()
 
-  /** Host the CF headers may be sent to (T6: only the configured host). */
+  /** Host the CF headers may be sent to (only the configured host). */
   fun host(): String? = try {
     java.net.URI(baseUrl).host
   } catch (_: Exception) {

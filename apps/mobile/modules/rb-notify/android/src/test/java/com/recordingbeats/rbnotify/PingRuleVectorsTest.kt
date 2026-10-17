@@ -8,7 +8,7 @@ import java.io.File
 
 /**
  * Runs every vector of docs/technik/ping-rule-vectors.json against the
- * production rule (binding per docs/TECHNIK.md §1.4).
+ * production rule (the vectors are binding).
  */
 class PingRuleVectorsTest {
   private fun vectors(): JSONObject {

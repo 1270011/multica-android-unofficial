@@ -73,7 +73,7 @@ export default function TabsLayout() {
           tabBarActiveTintColor: theme.foreground,
           tabBarInactiveTintColor: theme.mutedForeground,
           tabBarStyle: { backgroundColor: theme.background },
-          // 200 % font (N5): the bar has a fixed height, so the label scales
+          // 200 % font: the bar has a fixed height, so the label scales
           // only up to TAB_LABEL_MAX_FONT_SCALE and stays on one line; the
           // accessibility label keeps the full text for TalkBack.
           // In landscape bottom-tabs puts the label beside the icon; it then

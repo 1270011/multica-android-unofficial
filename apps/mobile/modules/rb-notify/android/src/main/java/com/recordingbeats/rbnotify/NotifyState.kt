@@ -17,10 +17,10 @@ data class NotifyIssue(
 )
 
 /**
- * Notification state on disk (review #14 Fix 2, point 8): after a process
+ * Notification state on disk (point 8): after a process
  * restart "Mark as read" still knows the issue's entries and a reconcile
  * can remove notifications of entries read elsewhere. The file lives in
- * noBackupFilesDir (no backup, T3) and is deleted on logout (T2). Contains
+ * noBackupFilesDir (no backup) and is deleted on logout. Contains
  * notification texts only, never credentials.
  */
 object NotifyStateCodec {

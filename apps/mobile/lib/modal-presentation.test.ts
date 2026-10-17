@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { describe, expect, it } from "vitest";
 import { modalPresentation } from "./modal-presentation";
 
-describe("modalPresentation (J3b, header in the status bar)", () => {
+describe("modalPresentation (header in the status bar)", () => {
   it("Android uses a card from the bottom, which gets the status bar inset", () => {
     expect(modalPresentation("android")).toEqual({ presentation: "card", animation: "slide_from_bottom" });
   });

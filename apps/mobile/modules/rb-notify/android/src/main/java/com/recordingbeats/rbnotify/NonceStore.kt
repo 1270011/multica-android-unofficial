@@ -6,8 +6,8 @@ import java.io.File
 import java.security.SecureRandom
 
 /**
- * One-time nonces for notification taps (security T5 narrow variant,
- * docs/UX.md §8.5). The notification's PendingIntent opens the chat deep
+ * One-time nonces for notification taps (narrow read
+ * rule "T5"). The notification's PendingIntent opens the chat deep
  * link with `n=<nonce>`; only a nonce this store issued (unguessable, single
  * use, expiring) lets the chat mark the issue read. A deep link fired by
  * another app cannot know one, so it only displays the chat. App-private,

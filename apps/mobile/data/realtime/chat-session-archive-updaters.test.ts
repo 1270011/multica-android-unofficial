@@ -59,7 +59,7 @@ describe("applySessionUpdated", () => {
   });
 });
 
-describe("single-session cache (open archived chat, review #23)", () => {
+describe("single-session cache (open archived chat)", () => {
   it("patches a renamed archived chat and refetches it on a status change", () => {
     const qc = setup();
     qc.setQueryData(chatKeys.session(WS, "old"), session("old", { status: "archived" }));

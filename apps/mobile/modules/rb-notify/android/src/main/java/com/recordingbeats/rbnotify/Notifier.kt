@@ -15,10 +15,10 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.Person
 
 /**
- * Local notifications (docs/UX.md §8.4–§8.6). One notification per issue
+ * Local notifications. One notification per issue
  * (tag = issue id), updated instead of stacked, MessagingStyle with up to
  * five lines, sound only the first time; a summary from two issues on.
- * Lock screen shows only the neutral public version (T6). Texts come from
+ * Lock screen shows only the neutral public version. Texts come from
  * the inbox entry (title = issue title, body = comment excerpt) and are
  * never logged.
  */
@@ -26,7 +26,7 @@ class Notifier(private val context: Context, private val prefs: NotifyPrefs) {
   private val nm = NotificationManagerCompat.from(context)
   private val nonces = NonceStore(context)
 
-  /** Survives process restarts (review #14 Fix 2), see NotifyStateCodec. */
+  /** Survives process restarts, see NotifyStateCodec. */
   private val stateFile = StateFile(java.io.File(context.noBackupFilesDir, STATE_FILE))
 
   fun ensureChannels() {
@@ -50,7 +50,7 @@ class Notifier(private val context: Context, private val prefs: NotifyPrefs) {
     )
   }
 
-  /** Ongoing notification of the foreground service (UX §8.6). Tap → notification settings. */
+  /** Ongoing notification of the foreground service. Tap → notification settings. */
   fun connectionNotification(connected: Boolean, count: Int, refused: Boolean = false): android.app.Notification {
     val title = when {
       refused && !connected -> prefs.string("connection_refused", "Multica · connection refused (Cloudflare Access?)")
@@ -93,7 +93,7 @@ class Notifier(private val context: Context, private val prefs: NotifyPrefs) {
     persist()
   }
 
-  /** Entry read/archived elsewhere → drop its line, cancel when empty (UX §8.4 "Abgleich"). */
+  /** Entry read/archived elsewhere → drop its line, cancel when empty. */
   @Synchronized
   fun removeItem(itemId: String) {
     forgetInvisible()
@@ -128,7 +128,7 @@ class Notifier(private val context: Context, private val prefs: NotifyPrefs) {
   }
 
   /**
-   * The user swiped an issue notification away (delete intent, R2): it
+   * The user swiped an issue notification away (delete intent): it
    * leaves the summary count at once, not only with the next ping. Ignored
    * when the issue was posted again after the swiped version.
    */
@@ -161,8 +161,8 @@ class Notifier(private val context: Context, private val prefs: NotifyPrefs) {
 
   @Synchronized
   fun cancelAll() {
-    // Logout (T2): close first, so a late handler-thread call can neither
-    // post nor write texts back to disk (N1).
+    // Logout: close first, so a late handler-thread call can neither
+    // post nor write texts back to disk.
     stateFile.close()
     main.removeCallbacks(reconcileRun)
     issues.clear()
@@ -198,7 +198,7 @@ class Notifier(private val context: Context, private val prefs: NotifyPrefs) {
   private val postedAt = HashMap<String, Long>()
   private var summaryPostedAt: Long? = null
 
-  /** Issues seen in the active list since their last post (R1). */
+  /** Issues seen in the active list since their last post. */
   private val seenActive = HashSet<String>()
 
   /** Summary in the active list at the last check (null: list not readable). */
@@ -233,7 +233,7 @@ class Notifier(private val context: Context, private val prefs: NotifyPrefs) {
   private val reconcileRun = Runnable { reconcile() }
 
   /**
-   * Second look after a post or cancel (R1): once Android has registered the
+   * Second look after a post or cancel: once Android has registered the
    * change, notifications it removed by itself (summary cascade, a swipe)
    * leave the count, and the summary follows. Debounced, never alerts.
    */
@@ -406,8 +406,8 @@ class Notifier(private val context: Context, private val prefs: NotifyPrefs) {
 
   /**
    * Summary tap → Inbox, segment "Unread", in the workspace of the newest
-   * entry (J3c). The Inbox is a tab root, so the tab bar is the
-   * anchor. Only shows data; nothing is marked read, so no nonce (T5).
+   * entry. The Inbox is a tab root, so the tab bar is the
+   * anchor. Only shows data; nothing is marked read, so no nonce.
    */
   private fun inboxIntent(): PendingIntent {
     val slug = NotifyDisplay.summarySlug(issues.values, prefs.workspaces) ?: return launchIntent(REQ_SUMMARY)

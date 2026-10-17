@@ -92,7 +92,7 @@ export type PasteResult =
  * Turn raw clipboard text into what the screen should apply. A header block
  * wins over the single value, so one copy fills both Cloudflare fields
  * whichever "Paste" button was tapped. Text naming the Client Secret never
- * lands in the URL or Client ID field (review S2/S5): it is applied as a
+ * lands in the URL or Client ID field: it is applied as a
  * block or rejected.
  */
 export function interpretPaste(raw: string | null | undefined, target: PasteTarget): PasteResult {

@@ -1,5 +1,5 @@
 /**
- * Board move + multi-select batch writes (UX §6 C/C2/J). Mirrors the
+ * Board move + multi-select batch writes. Mirrors the
  * endpoints behind packages/core/issues/mutations.ts `useMoveIssue` /
  * `useBatchUpdateIssues` / `useBatchDeleteIssues`, on mobile's flat caches.
  *

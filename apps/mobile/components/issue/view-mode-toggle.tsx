@@ -26,7 +26,7 @@ export function ViewModeToggle({
             variant="outline"
             size="sm"
             onPress={() => onChange(value)}
-            // sm button (36 dp) + 6 dp slop = 48 dp (docs/UX.md §4).
+            // sm button (36 dp) + 6 dp slop = 48 dp touch target.
             hitSlop={6}
             className={active ? "bg-accent" : ""}
             accessibilityRole="tab"

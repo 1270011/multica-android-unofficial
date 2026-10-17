@@ -44,11 +44,11 @@ export async function setToken(token: string): Promise<void> {
 }
 
 export async function clearToken(): Promise<void> {
-  // Security T2: the notification service's copy goes first and
+  // the notification service's copy goes first and
   // synchronously, so no path that ends a session (logout, 401, failed
   // restore) leaves a background connection holding the old token.
   clearNotifySession();
-  // Unsent chat/comment text must not reach the next account (review #30).
+  // Unsent chat/comment text must not reach the next account.
   clearAllDrafts();
   await serialize(() => SecureStore.deleteItemAsync(TOKEN_KEY));
 }

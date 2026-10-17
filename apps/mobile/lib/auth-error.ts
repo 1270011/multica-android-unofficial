@@ -49,8 +49,7 @@ export function tokenLoginErrorKey(
 ): "server.access_blocked" | "verify.network" | "token_login.failed" {
   if (err instanceof Error && err.name === "AccessBlockedError") return "server.access_blocked";
   // data/api.ts reports a request timeout as ApiError with status 0
-  // ("Request timed out after …"): no server answer, so a network problem
-  // (review #33).
+  // ("Request timed out after …"): no server answer, so a network problem.
   if (err instanceof Error && err.name === "ApiError" && (err as { status?: unknown }).status === 0) {
     return "verify.network";
   }

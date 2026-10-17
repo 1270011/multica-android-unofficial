@@ -16,7 +16,7 @@ export const propertyKeys = {
 /**
  * `includeArchived`: the issue detail needs archived definitions too, so a
  * value on an archived property stays visible and can be cleared (web uses
- * propertyListOptions(wsId, true) there; review #24).
+ * propertyListOptions(wsId, true) there).
  */
 export const propertyListOptions = (wsId: string | null, includeArchived = false) =>
   queryOptions({

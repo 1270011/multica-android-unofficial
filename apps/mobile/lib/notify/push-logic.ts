@@ -6,7 +6,7 @@
 import type { NotificationGroupKey, NotificationPreferences } from "@multica/core/types";
 import type { NotifyCategory, NotifySettings } from "./native";
 
-/** Server inbox group that has to be on for a category to produce entries (UX §8.7). */
+/** Server inbox group that has to be on for a category to produce entries. */
 export const SERVER_GROUP: Record<NotifyCategory, NotificationGroupKey> = {
   blocked: "status_changes",
   approvals: "status_changes",
@@ -61,7 +61,7 @@ export function dateFromHhmm(value: string, base: Date = new Date()): Date {
   return d;
 }
 
-// ── Permission card (UX §8.8) ────────────────────────────────────────────
+// ── Permission card ────────────────────────────────────────────
 
 export interface CardState {
   /** Card finished: enabled, denied, or second "later". */

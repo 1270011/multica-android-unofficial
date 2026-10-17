@@ -24,7 +24,7 @@
 import type { InboxItem, TimelineEntry } from "@multica/core/types";
 import { isDeletedComment } from "@multica/core/issues/comment-deletion";
 
-/** Same author within this window → one bubble group (UX §8.2). */
+/** Same author within this window → one bubble group. */
 export const GROUP_WINDOW_MS = 5 * 60 * 1000;
 /** Runs of at least this many plain system rows are folded (UX §8.2: "mehr als drei"). */
 export const SYSTEM_GROUP_MIN = 4;
@@ -248,13 +248,13 @@ export function buildChatItems(
   return out;
 }
 
-/** Inbox types whose tap opens the chat (UX §8.1); everything else opens the detail. */
+/** Inbox types whose tap opens the chat; everything else opens the detail. */
 const CHAT_TYPES: ReadonlySet<string> = new Set([
   "new_comment",
   "mentioned",
   "reaction_added",
   "task_failed",
-  // Known to the client type, not emitted by server v0.6.1 (UX §8.3).
+  // Known to the client type, not emitted by server v0.6.1.
   "review_requested",
   "agent_blocked",
 ]);
@@ -271,7 +271,7 @@ export function opensInChat(item: Pick<InboxItem, "type" | "details" | "issue_id
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-/** Deep links can come from any app (security T5): only accept a UUID id. */
+/** Deep links can come from any app: only accept a UUID id. */
 export function isIssueId(value: unknown): value is string {
   return typeof value === "string" && UUID_RE.test(value);
 }

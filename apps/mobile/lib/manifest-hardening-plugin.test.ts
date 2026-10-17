@@ -14,7 +14,7 @@ const { removeClipboardProvider, CLIPBOARD_PROVIDER } = require("../plugins/with
   CLIPBOARD_PROVIDER: string;
 };
 
-describe("with-android-manifest-hardening (security review N5)", () => {
+describe("with-android-manifest-hardening", () => {
   const base = (): Manifest => ({
     manifest: {
       $: { "xmlns:android": "http://schemas.android.com/apk/res/android" },
@@ -35,7 +35,7 @@ describe("with-android-manifest-hardening (security review N5)", () => {
     expect(out.manifest.application[0]!.provider!.filter((p) => p.$["android:name"] === CLIPBOARD_PROVIDER)).toHaveLength(1);
   });
 
-  it("app.config blocks SYSTEM_ALERT_WINDOW and loads the plugin (N6)", async () => {
+  it("app.config blocks SYSTEM_ALERT_WINDOW and loads the plugin", async () => {
     const { readFileSync } = await import("node:fs");
     const { join } = await import("node:path");
     const cfg = readFileSync(join(__dirname, "../app.config.ts"), "utf8");

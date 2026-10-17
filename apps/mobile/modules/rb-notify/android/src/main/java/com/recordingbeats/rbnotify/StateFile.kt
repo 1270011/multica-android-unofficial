@@ -3,11 +3,11 @@ package com.recordingbeats.rbnotify
 import java.io.File
 
 /**
- * The notification state file plus the session gate (review #14 Fix 3).
+ * The notification state file plus the session gate.
  *
  * - Writes are atomic: tmp file, then rename, so a crash never leaves a
  *   half-written file behind.
- * - `close()` ends the session (logout, T2): the file is deleted and every
+ * - `close()` ends the session (logout): the file is deleted and every
  *   later write is dropped until `reopen()` (next login / service start).
  *   A handler thread that was inside a REST call during the logout can
  *   therefore not bring notification texts back to disk.

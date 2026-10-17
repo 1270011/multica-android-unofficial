@@ -6,8 +6,8 @@ import android.content.Intent
 
 /**
  * Restarts the service after a reboot or an app update when it is switched
- * on and a session copy exists (docs/TECHNIK.md §1.7). Not exported; only
- * the two system broadcasts below are accepted (T4) — both may start a
+ * on and a session copy exists. Not exported; only
+ * the two system broadcasts below are accepted — both may start a
  * `specialUse` foreground service.
  */
 class BootReceiver : BroadcastReceiver() {

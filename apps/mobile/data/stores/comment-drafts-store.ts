@@ -8,7 +8,7 @@
  * `editId` marks a draft that edits a comment: the composer pre-fills the
  * comment once per edit target and keeps the user's changes after that.
  * `attachments` keeps picked files (and uploads still running) across the
- * same remounts (J3b); uploads finishing after a remount land here too.
+ * same remounts; uploads finishing after a remount land here too.
  */
 import { create } from "zustand";
 import type { ComposerAttachmentItem } from "@/components/issue/composer-attachment-row";

@@ -19,7 +19,7 @@ export const agentListOptions = (wsId: string | null) =>
         : false,
   });
 
-// Read-only agent detail (UX §6 H). Sits under the list prefix so the
+// Read-only agent detail. Sits under the list prefix so the
 // presence realtime invalidation of `["agents", wsId]` refreshes it too.
 export const agentDetailOptions = (wsId: string | null, id: string) =>
   queryOptions({

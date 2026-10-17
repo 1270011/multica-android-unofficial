@@ -71,7 +71,7 @@ export function needsArchivedLookup(id: string | null, active: readonly ChatSess
 }
 
 /**
- * Delete a chat session (J3b): leave the open chat only after the server
+ * Delete a chat session: leave the open chat only after the server
  * confirmed the delete; on failure the chat stays open and the user is told.
  */
 export async function deleteChatSessionFlow({

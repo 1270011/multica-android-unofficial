@@ -233,7 +233,7 @@ export function looksLikeAccessBlock(res: ResponseShape): boolean {
 }
 
 /**
- * Security review S3: the setup screen never prefills the stored Cloudflare
+ * the setup screen never prefills the stored Cloudflare
  * secret. While the user keeps it ("Saved · Replace"), the draft's secret
  * stays empty and is filled from the stored config only for validation and
  * the connection test. Any other case returns the draft unchanged.

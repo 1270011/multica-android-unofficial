@@ -32,7 +32,7 @@ vi.mock("./session-epoch", async (importOriginal) => ({
 vi.mock("./workspace-store", () => ({
   useWorkspaceStore: { getState: () => ({ restoreSlug: async () => {} }) },
 }));
-// Session data (S-1) has its own test (session-end.test.ts); its real
+// Session data has its own test (session-end.test.ts); its real
 // module loads the React Native query client.
 vi.mock("./session-end", () => ({ clearSessionData: vi.fn() }));
 
@@ -40,7 +40,7 @@ import { useAuthStore } from "./auth-store";
 import { useInboxFilterStore } from "./stores/inbox-filter-store";
 import { useIssueListFilterStore } from "./stores/issue-list-filter-store";
 
-// review #21: the next user on the device must not inherit filters.
+// The next user on the device must not inherit filters.
 describe("logout forgets remembered filters", () => {
   it("clears memory and SecureStore of inbox and list filters", async () => {
     useInboxFilterStore.getState().toggle("ws-a", "actors", "system");

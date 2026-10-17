@@ -203,7 +203,7 @@ export default function ChatTab() {
 
   // An archived chat is not in `sessions` (active only). Look it up in the
   // Archive cache, else read it on its own, so the read-only mode and the ⋮
-  // menu (Restore) work for it too (review #23).
+  // menu (Restore) work for it too.
   const offList = needsArchivedLookup(activeSessionId, sessions);
   const { data: archivedSessions } = useQuery({
     ...archivedChatSessionsOptions(wsId),
@@ -578,7 +578,7 @@ export default function ChatTab() {
         ) : currentAgent ? (
           <RuntimeRequiredBanner agentName={currentAgent.name} />
         ) : null}
-        {/* Messages waiting behind the current run (G2). */}
+        {/* Messages waiting behind the current run. */}
         {!isArchived ? (
           <ChatQueue
             tasks={queuedTasksOf(pendingTask)}

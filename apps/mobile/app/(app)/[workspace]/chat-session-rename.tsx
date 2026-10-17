@@ -95,7 +95,7 @@ export default function ChatSessionRenameRoute() {
         onSubmitEditing={onSave}
         invalid={tooLong}
         // maxLength counts UTF-16 units; 2× leaves room for emoji, the
-        // character check above enforces the server limit (review #23).
+        // character check above enforces the server limit.
         maxLength={CHAT_SESSION_TITLE_MAX * 2}
       />
       {tooLong ? (

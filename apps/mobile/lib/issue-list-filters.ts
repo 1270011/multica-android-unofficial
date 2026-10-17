@@ -5,7 +5,7 @@
  * packages/views/issues/utils/filter.ts: OR within a dimension, AND between
  * dimensions, empty = no filter; "No project" is its own option
  * (`includeNoProject`), labels match when the issue carries any selected
- * label. The due-date filter is mobile-only (docs/UX.md §3, Paket F):
+ * label. The due-date filter is mobile-only:
  * overdue, due this week, no due date.
  *
  * Filtering is client-side on the loaded list, so the board (which receives
@@ -197,8 +197,8 @@ export function serializeIssueListFilters(filters: IssueListFilters): string {
 /**
  * `GET /api/issues` returns at most 100 issues per request; the lists load
  * up to LIST_ISSUES_MAX_PAGES pages.
- * Client filters then only see those, so an empty result may hide matches
- * (review #22). Passing status/priority/project to the server comes with
+ * Client filters then only see those, so an empty result may hide matches.
+ * Passing status/priority/project to the server comes with
  * column-wise loading in a later wave.
  */
 export function filtersMayMissIssues(

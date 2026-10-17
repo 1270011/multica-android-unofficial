@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { api } from "./api";
 
-// security review S1: a refresh response that fails the schema must
+// A refresh response that fails the schema must
 // not put the new session token into the log (parseWithFallback used to log
 // the whole body as `received`).
 vi.mock("@/data/server-config-store", () => ({

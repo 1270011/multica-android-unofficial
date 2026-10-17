@@ -17,8 +17,8 @@ export function leftPaneWidth(width: number): number {
 }
 
 /**
- * Right pane plus the T5 read permission of the embedded chat (docs/UX.md
- * §8.5). Opening the detail shows the chat but marks nothing read — the
+ * Right pane plus the T5 read permission of the embedded chat.
+ * Opening the detail shows the chat but marks nothing read — the
  * detail may come from a deep link. Only an explicit tap on "Chat" (pill
  * or "Open as chat") allows it, for as long as this detail stays open.
  */

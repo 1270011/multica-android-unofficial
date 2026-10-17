@@ -70,7 +70,7 @@ export function useChatSessionMenu({ from }: { from: "sheet" | "chat" }) {
               text: t("alerts.delete_confirm"),
               style: "destructive",
               onPress: () => {
-                // Leave the chat only after the server deleted it (J3b);
+                // Leave the chat only after the server deleted it;
                 // mutateAsync, because the menu may unmount meanwhile.
                 void deleteChatSessionFlow({
                   remove: () => deleteSession.mutateAsync(session.id),

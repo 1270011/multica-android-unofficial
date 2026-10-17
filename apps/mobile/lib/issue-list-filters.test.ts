@@ -112,13 +112,13 @@ describe("toggle, count, project page", () => {
   });
 });
 
-describe("filtersMayMissIssues (100-cap hint, review #22)", () => {
+describe("filtersMayMissIssues (100-cap hint)", () => {
   it("warns only when the server cap was hit and a filter is active", () => {
     expect(filtersMayMissIssues(100, f({ labels: ["bug"] }))).toBe(true);
     expect(filtersMayMissIssues(99, f({ labels: ["bug"] }))).toBe(false);
     expect(filtersMayMissIssues(100, EMPTY_ISSUE_LIST_FILTERS)).toBe(false);
   });
-  it("uses the server total when known (J3a)", () => {
+  it("uses the server total when known", () => {
     expect(filtersMayMissIssues(100, f({ labels: ["bug"] }), 100)).toBe(false);
     expect(filtersMayMissIssues(100, f({ labels: ["bug"] }), 180)).toBe(true);
   });

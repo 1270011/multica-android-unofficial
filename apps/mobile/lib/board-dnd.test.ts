@@ -72,7 +72,7 @@ describe("dropOutcome", () => {
   });
 });
 
-describe("panUpdateAction (alive check in onUpdate, J3a / review #29)", () => {
+describe("panUpdateAction (alive check in onUpdate)", () => {
   it("ignores late updates after the reset dropped the drag", () => {
     expect(panUpdateAction(false, 10, false)).toBe("ignore");
     expect(panUpdateAction(false, 0, true)).toBe("ignore");

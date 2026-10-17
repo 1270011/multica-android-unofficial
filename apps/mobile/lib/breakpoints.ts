@@ -6,13 +6,13 @@
  *   medium   < 840 dp   small phone landscape, small tablet — several columns
  *   expanded ≥ 840 dp   tablet, and most phones in landscape (Pixel 7: 914 dp)
  *
- * Width alone decides the board columns (docs/ux/kanban.md: several columns
+ * Width alone decides the board columns (several columns
  * from 600 dp, phones in landscape included). The two-pane issue detail
- * (package I) additionally needs a height of at least 480 dp (Android's
+ * additionally needs a height of at least 480 dp (Android's
  * medium height class), so a phone in landscape keeps the single pane.
  *
  * React Native's window width is already in dp, so no density math here.
- * The board (package C) and the tablet detail read these instead of their
+ * The board and the tablet detail read these instead of their
  * own magic numbers.
  */
 import { useWindowDimensions } from "react-native";

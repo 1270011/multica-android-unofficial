@@ -30,7 +30,7 @@ describe("extractOtpCode", () => {
   });
 });
 
-describe("extractOtpCode is strict about grouping (review #33)", () => {
+describe("extractOtpCode is strict about grouping", () => {
   it("does not read a date or time as a code", () => {
     expect(extractOtpCode("16 Oct 2026 10:30")).toBeNull();
     expect(extractOtpCode("12 34 56")).toBeNull();

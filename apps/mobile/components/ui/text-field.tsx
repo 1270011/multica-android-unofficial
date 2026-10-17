@@ -4,7 +4,7 @@
  *   maps those to fontSize+lineHeight, and `lineHeight` on iOS TextInput
  *   clips descenders (RN issues #41240, #28012, #45268, #49886).
  * - `min-h-10` keeps the normal height and lets the field grow with the
- *   system font size, so text and placeholder are not cut at 200 % (N5).
+ *   system font size, so text and placeholder are not cut at 200 %.
  * - `includeFontPadding` / `textAlignVertical` are Android-only; iOS no-op,
  *   kept for when Android lands.
  * - Focus state is tracked manually because NativeWind's `focus:` variant

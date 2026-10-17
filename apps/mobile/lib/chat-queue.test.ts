@@ -99,7 +99,7 @@ describe("queue strings", () => {
   }
 });
 
-describe("pendingAfterSendNow (stopped run leaves at once, J3b)", () => {
+describe("pendingAfterSendNow (stopped run leaves at once)", () => {
   const q = (id: string) => ({ task_id: id, content: id }) as never;
   it("drops the stopped run and promotes the prioritized message", () => {
     const pending = { task_id: "run", status: "running", queued_tasks: [q("next"), q("later")] } as never;

@@ -17,8 +17,7 @@
  *     level filters don't bleed into the per-user view. Filters are kept
  *     per workspace and survive a restart.
  *
- * Not offered on mobile: assignee / creator / custom-property filters
- * (docs/UX.md §3).
+ * Not offered on mobile: assignee / creator / custom-property filters.
  */
 import { useMemo } from "react";
 import { SectionList, View } from "react-native";

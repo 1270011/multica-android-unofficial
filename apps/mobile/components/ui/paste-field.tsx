@@ -5,8 +5,8 @@
  * The paste button never focuses the field, so the keyboard stays closed.
  * Keyboard learning and autofill are off for every PasteField; a masked
  * secret additionally hides the copy/paste context menu, and a revealed one
- * switches to the `visible-password` keyboard so the IME does not learn it
- * (security review S4). Plain fields default to `visible-password` too,
+ * switches to the `visible-password` keyboard so the IME does not learn it.
+ * Plain fields default to `visible-password` too,
  * unless the caller picks a keyboard (the URL field uses `url`).
  *
  * `status` is announced politely to screen readers and must never contain

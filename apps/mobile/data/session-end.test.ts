@@ -1,5 +1,5 @@
 /**
- * (security review M1): every way a session ends clears the
+ * Every way a session ends clears the
  * account's caches and session stores, so the next account on the device
  * sees no old data and no "Retry" of old failed comments.
  */
@@ -78,7 +78,7 @@ beforeEach(() => {
   seedOldAccount();
 });
 
-describe("session end clears the old account's data (M1)", () => {
+describe("session end clears the old account's data", () => {
   // Settings → Sign out, the workspace selection, a 401 while the app runs
   // (_layout onUnauthorized) and the server setup (other server, "Forget
   // server") all end the session through logout().

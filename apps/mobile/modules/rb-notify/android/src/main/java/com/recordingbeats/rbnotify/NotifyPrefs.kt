@@ -5,7 +5,7 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 /**
- * Device settings of the operator notifications (docs/UX.md §8.7), the
+ * Device settings of the operator notifications, the
  * workspace list, UI strings and actor names handed over by JS. Nothing
  * secret lives here (the session is in CredentialStore); the backup rules
  * still exclude the file so a restored phone starts without a stale
@@ -18,7 +18,7 @@ class NotifyPrefs(context: Context) {
     get() = prefs.getBoolean("enabled", false)
     set(v) = prefs.edit().putBoolean("enabled", v).apply()
 
-  /** "Hintergrundverbindung" (UX §8.7): push on but connection off = no service. */
+  /** "Hintergrundverbindung": push on but connection off = no service. */
   var connectionEnabled: Boolean
     get() = prefs.getBoolean("connectionEnabled", true)
     set(v) = prefs.edit().putBoolean("connectionEnabled", v).apply()
@@ -46,7 +46,7 @@ class NotifyPrefs(context: Context) {
   /**
    * Issue whose chat is open in the foreground: no notification for it (UX
    * §8.4). Process-wide, not per instance: the module and the service each
-   * create their own NotifyPrefs (review #14, B2).
+   * create their own NotifyPrefs.
    */
   var foregroundIssueId: String?
     get() = foregroundIssue

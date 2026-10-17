@@ -43,7 +43,7 @@ export function InlineCommentComposer({ issueId }: { issueId: string }) {
   const clearEditTarget = useEditTargetStore((s) => s.clear);
   // Controlled text so edit mode can pre-fill it and a remount keeps it.
   const text = useCommentDraftsStore((s) => s.drafts[issueId]?.text ?? "");
-  // Picked files survive the same remounts as the text (J3b).
+  // Picked files survive the same remounts as the text.
   const attachments = useCommentDraftsStore((s) => s.drafts[issueId]?.attachments ?? NO_ATTACHMENTS);
   const updateAttachments = useCallback(
     (update: (prev: ComposerAttachmentItem[]) => ComposerAttachmentItem[]) =>

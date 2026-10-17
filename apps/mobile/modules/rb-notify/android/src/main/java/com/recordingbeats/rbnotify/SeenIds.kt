@@ -2,7 +2,7 @@ package com.recordingbeats.rbnotify
 
 /**
  * Inbox item ids already handled for one workspace, newest last, capped
- * (docs/TECHNIK.md §1.3: last 500 per workspace). Duplicates across the live
+ * (last 500 per workspace). Duplicates across the live
  * socket, the reconcile after a reconnect and a service restart are dropped
  * by id.
  */

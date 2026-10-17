@@ -52,7 +52,7 @@ export function useChatSessionsRealtime() {
           dropSessionFromList(qc, wsId, payload);
         }),
         // Reconnect: we may have missed events while disconnected — also
-        // archive/restore from another device (review #9).
+        // archive/restore from another device.
         ws.onReconnect(() => {
           invalidateSessions();
           qc.invalidateQueries({ queryKey: chatKeys.archivedSessions(wsId) });

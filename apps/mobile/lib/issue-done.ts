@@ -1,6 +1,6 @@
 /**
  * "Done": status first, archive only after it succeeded — a failed status
- * write must not archive the entry (review #12, same order as
+ * write must not archive the entry (same order as
  * useMarkInboxIssueDone). Returns whether the status write went through.
  */
 export async function markIssueDoneInOrder(

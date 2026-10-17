@@ -75,7 +75,7 @@ describe("usePresenceRealtime", () => {
     );
   });
 
-  it("a newly queued run reaches the agent detail at once (J3a)", () => {
+  it("a newly queued run reaches the agent detail at once", () => {
     usePresenceRealtime();
     const handlers = new Map<string, EventHandler>();
     const ws: MockWS = {

@@ -91,7 +91,7 @@ export function useBoardDrag({
   // A lifted card can lose its gesture without onFinalize: rotation to
   // portrait (drag off), or a refetch/WS update moving or removing the
   // issue. Then drop the drag state, or the board stays unscrollable and
-  // taps stay blocked (review #29).
+  // taps stay blocked.
   useEffect(() => {
     if (!drag) return;
     const column = columns.find((c) => c.status === drag.issue.status);
@@ -171,7 +171,7 @@ export function useBoardDrag({
         if (action === "stop") stopAutoScroll();
       })
       .onEnd((e, success) => {
-        // RNGH also calls onEnd for a cancelled gesture (review #29).
+        // RNGH also calls onEnd for a cancelled gesture.
         if (!success || !alive.current) return;
         const distance = Math.hypot(e.absoluteX - start.current.x, e.absoluteY - start.current.y);
         const outcome = dropOutcome(issue.status, hoverRef.current, distance);

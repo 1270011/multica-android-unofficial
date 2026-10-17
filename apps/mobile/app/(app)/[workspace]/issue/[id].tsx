@@ -158,7 +158,7 @@ export default function IssueDetail() {
   // Pane + T5 read permission of the embedded chat (lib/issue-detail-layout.ts).
   const [paneState, selectPane] = useReducer(selectDetailPane, INITIAL_DETAIL_PANE_STATE);
 
-  // Chat button + "Done" (docs/UX.md §8.1, §3 header order
+  // Chat button + "Done" (header order
   // "Chat, ⋮"): the button carries the issue's unread inbox count, "Done"
   // sits in ⋮ while the issue has inbox entries.
   const { unread: unreadInbox, active: activeInbox } = useIssueInbox(id);
@@ -176,7 +176,7 @@ export default function IssueDetail() {
       return;
     }
     markInAppChatOpen(id);
-    // Opened from the chat → swap back instead of stacking (review #12).
+    // Opened from the chat → swap back instead of stacking.
     if (from === "chat") {
       router.replace({ pathname: "/[workspace]/issue/[id]/chat", params: { workspace: wsSlug, id } });
       return;
@@ -305,7 +305,7 @@ export default function IssueDetail() {
                    *  active tasks, so it doesn't crowd the header in the
                    *  common case. See agent-header-badge.tsx. */}
                   <AgentHeaderBadge issueId={id} />
-                  {/* Two panes: the chat is the right pane (docs/UX.md §8.2). */}
+                  {/* Two panes: the chat is the right pane. */}
                   {twoPane ? null : <ChatButton unread={unreadInbox.length} onPress={openChat} />}
                   <IconButton
                     name="ellipsis-horizontal"

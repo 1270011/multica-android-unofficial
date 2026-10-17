@@ -1,5 +1,5 @@
 /**
- * Set / clear one custom property value on an issue (UX §6 E). Mirrors
+ * Set / clear one custom property value on an issue. Mirrors
  * packages/core/properties/mutations.ts on mobile's detail cache:
  *
  * - Optimistic merge into `issue.properties` (never replace the whole bag).

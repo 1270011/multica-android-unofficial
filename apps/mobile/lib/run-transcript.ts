@@ -11,7 +11,7 @@
  * - `error` is shown as an error block
  * - every shown string (text, thinking, tool input, output, error) goes
  *   through redactSecrets first, before any cut, like web's
- *   build-timeline.ts (review #26)
+ *   build-timeline.ts
  */
 import type { AgentTask, TaskMessagePayload } from "@multica/core/types";
 import { redactSecrets } from "./redact-secrets";

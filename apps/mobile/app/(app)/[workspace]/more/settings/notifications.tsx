@@ -103,7 +103,7 @@ export default function NotificationsSettingsScreen() {
       className="flex-1 bg-background"
       contentContainerClassName="px-4 py-4 gap-6"
     >
-      {/* device push settings above the server groups (UX §8.7). */}
+      {/* device push settings above the server groups. */}
       <PushSettingsSection serverPrefs={preferences} />
       <Section
         title={t("groups.inbox_notifications")}

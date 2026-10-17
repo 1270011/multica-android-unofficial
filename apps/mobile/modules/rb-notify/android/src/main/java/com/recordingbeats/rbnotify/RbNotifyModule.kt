@@ -39,9 +39,9 @@ class SettingsRecord : Record {
 }
 
 /**
- * JS bridge of the operator notifications (docs/TECHNIK.md §1.2). The
+ * JS bridge of the operator notifications. The
  * session hand-over/clear functions are synchronous so a logout cannot
- * return before the native copy is gone (T2).
+ * return before the native copy is gone.
  */
 class RbNotifyModule : Module() {
   private val ctx: Context
@@ -60,7 +60,7 @@ class RbNotifyModule : Module() {
     }
 
     Function("clearCredentials") {
-      // Stop first and synchronously (T2): a reconnect racing the logout must
+      // Stop first and synchronously: a reconnect racing the logout must
       // not report "please sign in again" for a session the user ended.
       OperatorConnectionService.stop(ctx)
       CredentialStore(ctx).clear()
@@ -107,7 +107,7 @@ class RbNotifyModule : Module() {
 
     // `dismiss` only for an open from inside the app or the app's own
     // notification (nonce): a deep link from another app must not remove
-    // the notification (review #14, B5; same rule as T5).
+    // the notification (same rule as T5).
     Function("setForegroundIssue") { issueId: String?, dismiss: Boolean ->
       NotifyPrefs(ctx).foregroundIssueId = issueId
       if (issueId != null && dismiss) Notifier.get(ctx).cancelIssue(issueId)

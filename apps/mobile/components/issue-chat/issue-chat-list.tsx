@@ -1,5 +1,5 @@
 /**
- * Scrolling message list of the issue chat (docs/UX.md §8.2).
+ * Scrolling message list of the issue chat.
  *
  * FlashList v2 like `components/chat/chat-message-list.tsx`: starts at the
  * bottom (`startRenderingFromBottom`) and follows new rows while the reader
@@ -250,7 +250,7 @@ function NewChip({ count, onPress }: { count: number; onPress: () => void }) {
   );
 }
 
-/** Three skeleton bubbles while the timeline loads (UX §8.2 "Zustände"). */
+/** Three skeleton bubbles while the timeline loads. */
 export function IssueChatLoading() {
   return (
     <View className="flex-1 justify-end gap-3 px-3 pb-4">

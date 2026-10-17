@@ -4,7 +4,7 @@
  * iOS, in Expo Go or in unit tests the module is missing and every call is a
  * no-op, so callers never branch on the platform themselves.
  *
- * Session functions are synchronous on purpose (T2): `clearCredentials()`
+ * Session functions are synchronous on purpose: `clearCredentials()`
  * has finished deleting the native copy and stopping the service when it
  * returns.
  */
@@ -65,7 +65,7 @@ interface RbNotifyNative {
   getSettings(): NotifySettings;
   setStrings(map: Record<string, string>): void;
   setActors(map: Record<string, string>): void;
-  /** `dismiss`: also remove the issue's notification (in-app or own-notification open only, B5). */
+  /** `dismiss`: also remove the issue's notification (in-app or own-notification open only). */
   setForegroundIssue(issueId: string | null, dismiss: boolean): void;
   start(): boolean;
   stop(): void;
@@ -110,7 +110,7 @@ const foreground = createForegroundTracker({
 
 export const rbNotify = {
   setCredentials: (c: NotifyCredentials) => safe(false, (m) => m.setCredentials(c)),
-  // Not wrapped in `safe`: a failing clear must surface, never pass silently (T2).
+  // Not wrapped in `safe`: a failing clear must surface, never pass silently.
   clearCredentials: () => {
     native?.clearCredentials();
   },
@@ -121,7 +121,7 @@ export const rbNotify = {
     safe(DEFAULT_SETTINGS, (m) => ({ ...DEFAULT_SETTINGS, ...m.getSettings() })),
   setStrings: (map: Record<string, string>) => safe(undefined, (m) => m.setStrings(map)),
   setActors: (map: Record<string, string>) => safe(undefined, (m) => m.setActors(map)),
-  /** Chat on screen; `dismiss` only for in-app / own-notification opens (B5). */
+  /** Chat on screen; `dismiss` only for in-app / own-notification opens. */
   setForegroundIssue: (id: string, dismiss = false) => foreground.set(id, dismiss),
   /** Chat left: clears only if it is still the current one. */
   clearForegroundIssue: (id: string) => foreground.clear(id),

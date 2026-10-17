@@ -47,7 +47,7 @@ describe("useCommentDraftsStore", () => {
   });
 });
 
-describe("comment draft attachments (J3b)", () => {
+describe("comment draft attachments", () => {
   beforeEach(() => useCommentDraftsStore.setState({ drafts: {} }));
   const file = (localId: string, status = "uploading") => ({ localId, status }) as never;
 

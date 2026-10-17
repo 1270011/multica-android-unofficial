@@ -10,7 +10,7 @@ import { api } from "@/data/api";
  * (listeners.go, SendToUser), handled in use-invitations-realtime.ts while a
  * workspace is open. The workspace selection has no socket, so the query
  * refetches whenever a screen showing it mounts (`staleTime: 0`, overriding
- * the client's 60 s default; review #27).
+ * the client's 60 s default).
  */
 export const invitationKeys = {
   mine: () => ["invitations", "mine"] as const,

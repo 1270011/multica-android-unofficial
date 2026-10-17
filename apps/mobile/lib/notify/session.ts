@@ -1,6 +1,6 @@
 /**
- * Session hand-over to the notification service (security T2,
- * docs/TECHNIK.md §1.5). One source of truth: JS passes the session only
+ * Session hand-over to the notification service (security
+ * rule T2). One source of truth: JS passes the session only
  * after it is committed (login, restore, renewal) and clears the native
  * copy synchronously before any local teardown continues (logout,
  * clearToken, 401, server reset).
@@ -29,7 +29,7 @@ export function clearNotifySession(): void {
 }
 
 /**
- * Same server, new Cloudflare Access credentials (security N3): there is no
+ * Same server, new Cloudflare Access credentials: there is no
  * sign-out, but the service still holds the old CF secret and would run
  * into 403. True when only the CF pair changed.
  */

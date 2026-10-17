@@ -7,7 +7,7 @@
  *
  * Entry points: the chat button in the detail header, inbox rows of
  * conversation/action types (lib/inbox-display.ts `getInboxOpenTarget`) and,
- * later, system notifications (P4b). The route is display-only (security
+ * later, system notifications. The route is display-only (security
  * T5): it reads `comment` only to scroll/flash, never acts on parameters, and
  * rejects ids that are not UUIDs. Unknown workspaces are rejected by the
  * workspace layout.
@@ -71,11 +71,11 @@ export default function IssueChatScreen() {
     comment?: string;
     h?: string;
     from?: string;
-    /** One-time nonce of the app's own notification (P4b, T5). */
+    /** One-time nonce of the app's own notification. */
     n?: string;
   }>();
   if (!isIssueId(params.id)) return <InvalidLink />;
-  // An invalid comment anchor is dropped silently (docs/UX.md §8.5).
+  // An invalid comment anchor is dropped silently.
   const comment = isIssueId(params.comment) ? params.comment : undefined;
   return <IssueChat {...params} comment={comment} />;
 }
@@ -105,7 +105,7 @@ export function IssueChat({
   from?: string;
   n?: string;
   embedded?: boolean;
-  /** Embedded only: the detail allows marking read (T5). */
+  /** Embedded only: the detail allows marking read. */
   readAllowed?: boolean;
 }) {
   const { t } = useT("issues");
@@ -119,7 +119,7 @@ export function IssueChat({
   const subscribed = useIsSubscribed(id);
   const toggleSubscription = useToggleIssueSubscription(id);
   const [expandedGroups, setExpandedGroups] = useState<ReadonlySet<string>>(new Set());
-  // T5 narrow variant (docs/UX.md §8.5): only an open from inside the app
+  // Narrow read rule "T5": only an open from inside the app
   // (or, with P4b, from the app's own notification) marks entries read.
   // The notification nonce is checked against the app-private store of the
   // native module; a link from another app cannot carry a valid one.
@@ -130,9 +130,9 @@ export function IssueChat({
       (consumeInAppChatOpen(id) || (!!n && /^[0-9a-f]{32}$/.test(n) && rbNotify.consumeNonce(n, id))),
   );
   const readAllowed = embedded ? embeddedReadAllowed : routeReadAllowed;
-  // No system notification for the issue whose chat is on screen (UX §8.4).
-  // Only an open the app vouches for (readAllowed, T5) also removes the
-  // existing notification; a link from another app must not (B5).
+  // No system notification for the issue whose chat is on screen.
+  // Only an open the app vouches for (readAllowed) also removes the
+  // existing notification; a link from another app must not.
   useFocusEffect(
     useCallback(() => {
       rbNotify.setForegroundIssue(id, readAllowed);
@@ -174,7 +174,7 @@ export function IssueChat({
   useEffect(() => {
     if (unreadKey && unreadSnapshot !== null) markReadIfAllowed();
     // markRead identity follows unreadKey; run once per new unread set and
-    // once more when the embedded chat gets the permission (T5).
+    // once more when the embedded chat gets the permission.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [unreadKey, unreadSnapshot !== null, readAllowed]);
 
@@ -208,7 +208,7 @@ export function IssueChat({
     // Came from the detail of this issue → go back instead of stacking it twice.
     if (from === "detail" && router.canGoBack()) router.back();
     // Otherwise the detail replaces the chat, so chat and detail never pile
-    // up: Inbox → Chat → Details → Chat → Back lands on the Inbox (review #12).
+    // up: Inbox → Chat → Details → Chat → Back lands on the Inbox.
     else router.replace({ pathname: "/[workspace]/issue/[id]", params: { workspace: wsSlug, id, from: "chat" } });
   }, [from, wsSlug, id]);
 
@@ -411,7 +411,7 @@ function ActionBar({ issue, wsSlug }: { issue: Issue; wsSlug: string }) {
   );
 }
 
-/** Invalid issue id from a deep link → Inbox with a toast (docs/UX.md §8.5). */
+/** Invalid issue id from a deep link → Inbox with a toast. */
 function InvalidLink() {
   const wsSlug = useWorkspaceStore((s) => s.currentWorkspaceSlug);
   useEffect(() => {

@@ -66,7 +66,7 @@ export default function IssuePropertyPickerRoute() {
 type WriteAsync = (next: IssuePropertyValue | undefined) => Promise<unknown>;
 
 /**
- * Local mirror for toggle lists (J3a): rapid toggles build on each other,
+ * Local mirror for toggle lists: rapid toggles build on each other,
  * their writes go out one after another, and only when none is pending
  * does the list follow the cache again (lib/issue-properties.ts).
  */
@@ -75,7 +75,7 @@ function useToggleMirror(value: IssuePropertyValue | undefined, writeAsync: Writ
   const [pending, setPending] = useState(0);
   const queue = useRef(createSerialQueue()).current;
   const current = toggleMirror(local, value, pending);
-  // Two taps before the next render build on each other (review #35).
+  // Two taps before the next render build on each other.
   const chain = useRef(createToggleChain(current)).current;
   chain.sync(current);
   const apply = (update: (prev: IssuePropertyValue | undefined) => IssuePropertyValue | undefined) => {
@@ -275,7 +275,7 @@ function MultiSelect({
   onClear: () => void;
 }) {
   // Toggles build on each other; a rollback resets the list once no write
-  // is pending (review #24, J3a).
+  // is pending.
   const [current, apply] = useToggleMirror(value, writeAsync);
   return (
     <OptionList

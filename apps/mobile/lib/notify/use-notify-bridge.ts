@@ -31,7 +31,7 @@ export function useNotifyBridge(): void {
   const locale = useLocale();
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const { data: workspaces } = useQuery({ ...workspaceListOptions(), enabled: notifyAvailable });
-  // Names of every workspace, the open one first (J3c: a ping from another
+  // Names of every workspace, the open one first (a ping from another
   // workspace showed "Multica" as sender).
   const ordered = [...(workspaces ?? [])].sort((a, b) => (a.id === wsId ? -1 : b.id === wsId ? 1 : 0));
   const actorQueries = useQueries({

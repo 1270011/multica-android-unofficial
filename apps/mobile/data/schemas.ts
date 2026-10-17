@@ -259,7 +259,7 @@ export const ChatSessionSchema: z.ZodType<ChatSession> = z.object({
   // unknown server values fall back to "active" so the row still renders.
   status: z.enum(["active", "archived"]).catch("active"),
   has_unread: z.boolean().default(false),
-  // Pin state drives the pinned group in the session sheet (UX §6 G). Optional
+  // Pin state drives the pinned group in the session sheet. Optional
   // like on web so older servers without the column still parse.
   pinned: z.boolean().optional(),
   // Unread assistant messages after the read cursor. Optional (not defaulted)

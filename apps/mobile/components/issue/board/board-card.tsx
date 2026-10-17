@@ -4,7 +4,7 @@
  * overdue). The whole card opens the issue. Font scaling stays on; the
  * card grows instead of cutting text.
  *
- * Drag & drop (C2): with `dragGesture` (columns layout only) the long
+ * Drag & drop: with `dragGesture` (columns layout only) the long
  * press lifts the card instead of opening the menu directly; the board
  * opens the menu when the lifted card is released without moving.
  */
@@ -63,7 +63,7 @@ export function BoardCard({
       onLongPress={dragGesture ? undefined : onLongPress}
       delayLongPress={400}
       // TalkBack: no swipe gestures on cards (they would fight the pager),
-      // so the column moves are custom actions (docs/ux/kanban.md).
+      // so the column moves are custom actions.
       accessibilityActions={[
         { name: "longpress", label: t("board.change_status") },
         ...(canMoveNext ? [{ name: "next_column", label: t("board.move_next") }] : []),

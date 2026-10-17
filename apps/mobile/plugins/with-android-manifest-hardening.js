@@ -7,7 +7,7 @@
  * getStringAsync), so the provider is unused attack surface. A
  * `tools:node="remove"` entry in the app manifest removes it at merge time.
  *
- * SYSTEM_ALERT_WINDOW from the Expo template (N6) is removed through
+ * SYSTEM_ALERT_WINDOW from the Expo template is removed through
  * `android.blockedPermissions` in app.config.ts, not here.
  */
 const { withAndroidManifest } = require("expo/config-plugins");

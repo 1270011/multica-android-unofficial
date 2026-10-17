@@ -1,5 +1,5 @@
 /**
- * One-time card at the top of the Inbox (docs/UX.md §8.8 step 1–5): asks
+ * One-time card at the top of the Inbox: asks
  * whether to notify when the operator is needed. Never at app start as a
  * system dialog; the dialog only follows "Aktivieren". "Später" hides the
  * card for 7 days, the second "Später" for good. Android only, and only

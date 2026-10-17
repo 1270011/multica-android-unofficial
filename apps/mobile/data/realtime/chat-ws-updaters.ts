@@ -89,8 +89,8 @@ export function applySessionUpdated(
 /**
  * Same order as the server (chat.sql `ListChatSessions`) and web
  * (`sortChatSessions` in packages/core/chat/queries.ts): pinned first, newest
- * pin first; then by last activity, `last_message.created_at ?? updated_at`
- * (J3b). The list payload carries no `pinned_at` today, so pinned rows keep
+ * pin first; then by last activity, `last_message.created_at ?? updated_at`.
+ * The list payload carries no `pinned_at` today, so pinned rows keep
  * their server order (the sort is stable) unless both carry one.
  */
 export function sortChatSessions(sessions: ChatSession[]): ChatSession[] {
@@ -120,7 +120,7 @@ export function dropSessionFromList(
   const drop = (old: ChatSession[] | undefined) =>
     old?.filter((s) => s.id !== payload.chat_session_id);
   qc.setQueryData<ChatSession[]>(chatKeys.sessions(wsId), drop);
-  // A deleted archived session must leave the Archive view too (review #9).
+  // A deleted archived session must leave the Archive view too.
   qc.setQueryData<ChatSession[]>(chatKeys.archivedSessions(wsId), drop);
   qc.removeQueries({ queryKey: chatKeys.messages(payload.chat_session_id) });
   qc.removeQueries({

@@ -5,7 +5,7 @@
  * Two ways to supply the token, neither of which logs or displays it:
  *   1. Type it into the masked field, or tap "Paste" (no keyboard; trimmed,
  *      a leading "Bearer " dropped, clipboard cleared afterwards when the
- * switch is on — security S5).
+ *      switch is on).
  *   2. "Load from file": reads `debug-token.txt` from the app's private
  *      documents directory, which a tester fills with adb
  *      (`adb shell run-as <applicationId> …`).
@@ -40,7 +40,7 @@ import { clearClipboard, useClearClipboardPref } from "@/lib/clipboard-clear-pre
 const SCREEN_CAPTURE_KEY = "token-login";
 
 export function TokenLoginScreen() {
-  // FLAG_SECURE while mounted (security S6).
+  // FLAG_SECURE while mounted.
   usePreventScreenCapture(SCREEN_CAPTURE_KEY);
   const { t } = useT("auth");
   const [clearAfterPaste, setClearAfterPaste] = useClearClipboardPref();

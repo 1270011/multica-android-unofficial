@@ -33,7 +33,7 @@ export function ActiveFilterChips({
 }: {
   list: IssueFilterList;
   filters: IssueListFilters;
-  /** Issues the screen loaded before filtering (cap hint, review #22). */
+  /** Issues the screen loaded before filtering (cap hint). */
   loadedCount: number;
   /** Server total of that list (data/queries/list-total.ts). */
   total?: number;

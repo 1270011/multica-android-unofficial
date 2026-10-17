@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "description": "Testvektoren der Ping-Regel (docs/TECHNIK.md §1.4). Jeder Vektor: Inbox-Eintrag + Geräteeinstellungen + lokale Uhrzeit -> erwartetes Ergebnis. 'settings' fehlt = alles an, keine Ruhezeit.",
+  "description": "Test vectors of the notification ping rule. Each vector: inbox entry + device settings + local time -> expected result. Missing 'settings' = everything on, no quiet hours.",
   "categories": ["blocked", "mentions", "approvals", "failed_runs", "assignments"],
   "channels": ["operator_blocked", "operator_mentions", "operator_approvals", "operator_assignments", "operator_quiet"],
   "vectors": [

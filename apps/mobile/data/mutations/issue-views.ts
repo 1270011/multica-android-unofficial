@@ -1,5 +1,5 @@
 /**
- * Saved issue views + view preferences (UX §6 J). No optimism: views are
+ * Saved issue views + view preferences. No optimism: views are
  * edited from a sheet where a round-trip is fine, and the server assigns
  * ids/revisions. Every write refreshes the workspace's view caches.
  */

@@ -90,14 +90,14 @@ describe("parseScalarInput", () => {
     expect(parseScalarInput("number", "3,5")).toEqual({ kind: "set", value: 3.5 });
     expect(parseScalarInput("number", "abc")).toEqual({ kind: "invalid", reason: "number" });
   });
-  it("urls need http(s) and a host; text is capped (review #24)", () => {
+  it("urls need http(s) and a host; text is capped", () => {
     expect(parseScalarInput("url", "https://x.test/a")).toEqual({ kind: "set", value: "https://x.test/a" });
     expect(parseScalarInput("url", "x.test")).toEqual({ kind: "invalid", reason: "url" });
     expect(parseScalarInput("url", "javascript:alert(1)")).toEqual({ kind: "invalid", reason: "url" });
     expect(parseScalarInput("url", "http://localhost:3000")).toEqual({ kind: "set", value: "http://localhost:3000" });
     expect(parseScalarInput("text", "a".repeat(2001))).toEqual({ kind: "invalid", reason: "length" });
   });
-  it("url rule is the server's, not stricter (J3a)", () => {
+  it("url rule is the server's, not stricter", () => {
     // Go url.Parse: scheme http(s) and a non-empty host — no dot needed.
     expect(parseScalarInput("url", "http://intranet/")).toEqual({ kind: "set", value: "http://intranet/" });
     expect(parseScalarInput("url", "HTTPS://wiki")).toEqual({ kind: "set", value: "HTTPS://wiki" });
@@ -111,7 +111,7 @@ describe("parseScalarInput", () => {
     expect(parseScalarInput("url", "ftp://host")).toEqual({ kind: "invalid", reason: "url" });
     expect(parseScalarInput("url", "http://a b")).toEqual({ kind: "invalid", reason: "url" });
   });
-  it("a space in the path is fine, as on the server; control characters are not (J3b)", () => {
+  it("a space in the path is fine, as on the server; control characters are not", () => {
     expect(parseScalarInput("url", "http://wiki/Team Seite")).toEqual({ kind: "set", value: "http://wiki/Team Seite" });
     expect(parseScalarInput("url", "http://h/a?q=x y#f g")).toEqual({ kind: "set", value: "http://h/a?q=x y#f g" });
     expect(parseScalarInput("url", "http://us er@host/")).toEqual({ kind: "invalid", reason: "url" });
@@ -142,7 +142,7 @@ describe("toggleOption / toggleActor", () => {
   });
 });
 
-describe("rapid toggles (J3a)", () => {
+describe("rapid toggles", () => {
   it("writes run one after another in call order, also after a failure", async () => {
     const queue = createSerialQueue();
     const log: string[] = [];
@@ -174,7 +174,7 @@ describe("rapid toggles (J3a)", () => {
   });
 });
 
-describe("createToggleChain (two taps in one render, review #35)", () => {
+describe("createToggleChain (two taps in one render)", () => {
   it("the second tap builds on the first, not on the rendered value", () => {
     const chain = createToggleChain<string[] | undefined>(["a"]);
     expect(chain.apply((prev) => toggleOption(prev, "b"))).toEqual(["a", "b"]);

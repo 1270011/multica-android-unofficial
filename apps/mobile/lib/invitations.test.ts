@@ -94,7 +94,7 @@ describe("acceptAndResolve", () => {
   });
 });
 
-describe("acceptAndResolve with 409 already a member (J3a)", () => {
+describe("acceptAndResolve with 409 already a member", () => {
   it("counts as joined and resolves the workspace", async () => {
     const ws = [{ id: "ws-1", slug: "reco", name: "Reco" }] as Workspace[];
     await expect(
@@ -120,7 +120,7 @@ describe("invitationErrorKind", () => {
     expect(invitationErrorKind({ status: 500 })).toBe("invalid");
     expect(invitationErrorKind(new TypeError("Network request failed"))).toBe("network");
   });
-  it("400 \"invitation is not pending\" means no longer available (J3a)", () => {
+  it("400 \"invitation is not pending\" means no longer available", () => {
     expect(invitationErrorKind({ status: 400, body: { error: "invitation is not pending" } })).toBe("gone");
     expect(invitationErrorKind({ status: 400, body: { error: "invalid invitation id" } })).toBe("invalid");
   });

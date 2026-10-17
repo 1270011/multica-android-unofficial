@@ -7,7 +7,7 @@ import android.content.Intent
 /**
  * Delete intent of an issue notification: the user swiped it
  * away, so it leaves the summary count at once. Not exported; reached only
- * through the app's own immutable PendingIntent (T4). Marks nothing read.
+ * through the app's own immutable PendingIntent. Marks nothing read.
  */
 class DismissReceiver : BroadcastReceiver() {
   override fun onReceive(context: Context, intent: Intent) {

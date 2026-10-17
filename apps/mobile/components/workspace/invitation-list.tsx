@@ -51,7 +51,7 @@ export function InvitationList({
   const nameOf = (inv: Invitation) =>
     inv.workspace_name?.trim() || t("invitations.workspace_fallback");
 
-  // Message by cause (review #27): gone (404/410), not processed (other
+  // Message by cause: gone (404/410), not processed (other
   // HTTP errors), or no connection.
   const showFailure = (err: unknown) => {
     const kind = invitationErrorKind(err);

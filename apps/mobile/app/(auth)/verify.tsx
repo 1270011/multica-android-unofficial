@@ -80,7 +80,7 @@ export default function Verify() {
     }
     setPasteHint(null);
     setError(null);
-    // Like the other paste buttons (security H5): the code leaves the
+    // Like the other paste buttons: the code leaves the
     // clipboard unless the user switched that off.
     if (clearAfterPaste) void clearClipboard();
     otpRef.current?.setValue(pasted);

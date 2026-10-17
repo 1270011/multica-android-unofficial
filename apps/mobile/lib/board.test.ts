@@ -62,7 +62,7 @@ describe("boardColumns", () => {
   });
 });
 
-describe("status filter vs hidden columns (review #17)", () => {
+describe("status filter vs hidden columns", () => {
   const entries = [
     entry("todo", "unstarted", 1),
     entry("done", "done", 1),
@@ -95,7 +95,7 @@ describe("status filter vs hidden columns (review #17)", () => {
   });
 });
 
-describe("truncation from the server total (J3a)", () => {
+describe("truncation from the server total", () => {
   it("uses total when the server sent one", () => {
     expect(isTruncated(100, 100)).toBe(false); // exactly 100: complete
     expect(isTruncated(100, 250)).toBe(true);
@@ -112,7 +112,7 @@ describe("truncation from the server total (J3a)", () => {
   });
 });
 
-describe("boardNotices: one notice, not two (J3a, review #22)", () => {
+describe("boardNotices: one notice, not two", () => {
   it("the filter chips carry the hint while a filter is active", () => {
     expect(boardNotices({ truncated: true, filtersActive: true, hiddenCount: 0 })).toEqual({
       truncated: false,

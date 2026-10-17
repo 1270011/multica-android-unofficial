@@ -8,7 +8,7 @@ package com.recordingbeats.rbnotify
  *  - Ping rule says no → remember as seen, nothing shown.
  *  - Issue whose chat is open in the foreground → seen, nothing shown (§8.4).
  *  - Reconciled entries older than 24 h → only counted in the summary
- *    (docs/TECHNIK.md §1.3: no flood after a long silence).
+ *    (no flood after a long silence).
  *  - Otherwise → notify in the rule's channel.
  */
 object InboxDecider {
@@ -40,7 +40,7 @@ object InboxDecider {
     return Action.Notify(result.channel, result.category)
   }
 
-  /** Higher wins when several reasons land on one issue notification (UX §8.4). */
+  /** Higher wins when several reasons land on one issue notification. */
   fun rank(channel: String): Int = when (channel) {
     Channels.BLOCKED -> 4
     Channels.MENTIONS -> 3

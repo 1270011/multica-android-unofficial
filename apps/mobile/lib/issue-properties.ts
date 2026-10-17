@@ -1,6 +1,6 @@
 /**
- * Custom issue properties in the issue detail (docs/UX.md §6
- * E). Pure helpers mirroring web's custom-property-picker.tsx and
+ * Custom issue properties in the issue detail.
+ * Pure helpers mirroring web's custom-property-picker.tsx and
  * issue-property-pills.tsx; value shapes are the server's:
  *
  *   text / url     string            number   number
@@ -112,9 +112,9 @@ function utf8Length(text: string): number {
 
 /**
  * The server's url rule (issueproperty/value.go): Go `url.Parse`, scheme
- * http or https, non-empty host. No stricter than that (J3a): a dotless
+ * http or https, non-empty host. No stricter than that: a dotless
  * intranet host like `http://intranet/` is fine, and so is a space in the
- * path (J3b); Go only rejects control characters and spaces in the host.
+ * path; Go only rejects control characters and spaces in the host.
  */
 export function isPropertyUrl(text: string): boolean {
   // eslint-disable-next-line no-control-regex
@@ -183,7 +183,7 @@ export function selectedMemberIds(value: IssuePropertyValue | undefined): string
 /**
  * Runs writes one after another in call order, also after a failure, so
  * the server sees rapid multi-select/multi-actor toggles in the order the
- * user made them (each PUT carries the whole list; J3a).
+ * user made them (each PUT carries the whole list).
  */
 export function createSerialQueue() {
   let tail: Promise<unknown> = Promise.resolve();
@@ -197,7 +197,7 @@ export function createSerialQueue() {
 /**
  * Value a toggle list shows and builds on. While own writes are in flight
  * the local value wins: a response or refetch for an earlier toggle must
- * not reset the mirror, or the next toggle would drop a selection (J3a).
+ * not reset the mirror, or the next toggle would drop a selection.
  * With nothing pending the cache wins again, also after a rollback.
  */
 export function toggleMirror<T>(local: T, cache: T, pending: number): T {
@@ -205,7 +205,7 @@ export function toggleMirror<T>(local: T, cache: T, pending: number): T {
 }
 
 /**
- * Latest toggle value between renders (review #35): two taps before the
+ * Latest toggle value between renders: two taps before the
  * next render must build on each other, not both on the rendered value.
  * `sync` takes the rendered value, `apply` folds a tap into the latest one.
  */

@@ -44,7 +44,7 @@ describe("buildTranscript", () => {
   });
 });
 
-describe("redaction in the transcript (review #26)", () => {
+describe("redaction in the transcript", () => {
   it("masks secrets in text, thinking, tool input, output and errors", () => {
     const secret = "ghp_" + "a".repeat(36);
     const blocks = buildTranscript([

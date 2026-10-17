@@ -76,7 +76,7 @@ function failed() {
   return Object.values(useFailedCommentsStore.getState().failed);
 }
 
-/** What logout does to the queue (auth-store → clearSessionData, M1). */
+/** What logout does to the queue (auth-store → clearSessionData). */
 function logout() {
   invalidateSessionEpoch();
   state.qc.clear();

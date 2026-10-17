@@ -1,8 +1,7 @@
 package com.recordingbeats.rbnotify
 
 /**
- * Pure display rules for several workspaces (docs/UX.md §8.4,
- * test report with two workspaces). JVM-tested in
+ * Pure display rules for several workspaces (test report with two workspaces). JVM-tested in
  * NotifyDisplayTest; Notifier and the service only apply them.
  */
 object NotifyDisplay {
@@ -46,7 +45,7 @@ object NotifyDisplay {
    * Returns the tracked issue ids to forget: not among the shown
    * notification tags (`activeTags`) and either already seen in the active
    * list since their last post (`seen`, so a removal by the system counts at
-   * once, R1) or not posted within [graceMs]. Android registers a posted
+   * once) or not posted within [graceMs]. Android registers a posted
    * notification asynchronously, so one posted a moment ago and never seen
    * may be missing from the active list yet. `postedAt` is null for issues
    * restored from disk without a post in this process.
@@ -62,7 +61,7 @@ object NotifyDisplay {
       id !in activeTags && (id in seen || at == null || now - at > graceMs)
     }.keys
 
-  /** What to do with the group summary after a change (R1, release test). */
+  /** What to do with the group summary after a change (release test). */
   enum class SummaryPlan { POST, CANCEL, NONE }
 
   /**
@@ -107,7 +106,7 @@ object NotifyDisplay {
 
   /**
    * A swipe reaches the app through the delete intent stamped with the post
-   * time (R2: the swiped issue leaves the count at once). It is stale when
+   * time (the swiped issue leaves the count at once). It is stale when
    * the issue was posted again after that stamp; null = no longer tracked.
    */
   fun dismissApplies(postedAt: Long?, intentStamp: Long): Boolean =

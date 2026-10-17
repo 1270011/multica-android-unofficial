@@ -1,6 +1,6 @@
 /**
- * Drag & drop on the issue board (docs/ux/kanban.md
- * "Querformat / Tablet"): pure geometry and payload, tested in
+ * Drag & drop on the issue board in landscape and on
+ * tablets: pure geometry and payload, tested in
  * lib/board-dnd.test.ts. The gesture lives in components/issue/board.
  *
  * - Only in the "columns" layout (≥ 600 dp: landscape, tablet). Portrait
@@ -13,7 +13,7 @@
  *   manual sort order; the board sorts newest first and mobile has no
  *   manual sort, so a drop never reorders.
  *   Without neighbour ids the server keeps the card's position, so Undo
- *   restores it exactly (as in C2a).
+ *   restores it exactly.
  */
 import type { IssueStatus } from "@multica/core/types";
 
@@ -107,7 +107,7 @@ export type PanUpdateAction = "ignore" | "start" | "stop" | "keep";
  * What a pan update does. Once the reset effect dropped the drag (rotation,
  * card moved by a refetch), late updates are ignored: no floating card, no
  * hover, and no auto-scroll timer that would scroll a board without a drag
- * (review #29, `alive`). Otherwise the edge step starts or stops the timer.
+ * (`alive`). Otherwise the edge step starts or stops the timer.
  */
 export function panUpdateAction(alive: boolean, step: number, timerRunning: boolean): PanUpdateAction {
   if (!alive) return "ignore";

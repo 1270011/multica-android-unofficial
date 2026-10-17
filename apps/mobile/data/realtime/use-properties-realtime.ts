@@ -1,6 +1,5 @@
 /**
- * Workspace-wide realtime for custom properties (review #24;
- * web use-realtime-sync.ts "issue_properties:changed" / "property:*"):
+ * Workspace-wide realtime for custom properties (web use-realtime-sync.ts "issue_properties:changed" / "property:*"):
  *
  * issue_properties:changed — patch the issue detail's value bag (only when
  *                            not older than the cache) and refetch the

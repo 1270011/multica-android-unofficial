@@ -34,7 +34,7 @@ describe("redact", () => {
     expect(redact(new Error(`bad ${JWT}`))).toEqual({ name: "Error", message: `bad ${REDACTED}` });
   });
 
-  it("masks the review's gap cases (S2): JSON, env, Basic auth, CF id keys", () => {
+  it("masks the review's gap cases: JSON, env, Basic auth, CF id keys", () => {
     const secret = "f".repeat(64);
     const out = (text: string) => {
       const r = redactString(text);

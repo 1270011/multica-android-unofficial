@@ -67,7 +67,7 @@ describe("composer queue strings", () => {
       const c = (file as unknown as { composer: Record<string, string> }).composer;
       expect(c.send_queued).toBeTypeOf("string");
       expect(c.working_queue).toBeTypeOf("string");
-      // Fits one line next to Stop on a 384 dp phone (smoke #31: 768 px).
+      // Fits one line next to Stop on a 384 dp phone (768 px).
       expect([...(c.working_queue as string)].length).toBeLessThanOrEqual(32);
     });
   }

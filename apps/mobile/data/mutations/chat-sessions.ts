@@ -1,5 +1,5 @@
 /**
- * Chat session management (UX §6 G): rename, pin, archive, queue (G2).
+ * Chat session management: rename, pin, archive, queue.
  * Mirrors packages/core/chat/mutations.ts. Rename and pin are predictable
  * field patches on the active list (optimistic, rolled back on error).
  * Archive moves a row between the active and archived lists, so it waits
@@ -56,7 +56,7 @@ function useOptimisticSessionPatch<V extends { sessionId: string }>(
     onSettled: () => {
       qc.invalidateQueries({ queryKey: key });
       // Rename/pin of an archived chat: the Archive view and a single-session
-      // read show the title too (review #23).
+      // read show the title too.
       qc.invalidateQueries({ queryKey: chatKeys.archivedSessions(wsId) });
       qc.invalidateQueries({ queryKey: chatKeys.sessionPrefix(wsId) });
     },
@@ -91,7 +91,7 @@ export function useSetChatSessionArchived() {
     onSettled: () => {
       qc.invalidateQueries({ queryKey: chatKeys.sessions(wsId) });
       qc.invalidateQueries({ queryKey: chatKeys.archivedSessions(wsId) });
-      // The open chat may be read on its own (archived, review #23).
+      // The open chat may be read on its own (archived).
       qc.invalidateQueries({ queryKey: chatKeys.sessionPrefix(wsId) });
     },
   });

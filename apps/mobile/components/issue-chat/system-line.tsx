@@ -1,5 +1,5 @@
 /**
- * Activity entries in the issue chat (docs/UX.md §8.2 "Systemzeilen"):
+ * Activity entries in the issue chat ("system lines"):
  * one centred, muted line without a bubble. Status changes to `blocked` /
  * `in_review` are emphasised with the status colour and bold text. Runs of
  * plain lines fold into "N changes" and expand in place.

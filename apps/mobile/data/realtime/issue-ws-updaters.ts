@@ -605,7 +605,7 @@ export function removeIssueReaction(
 // =====================================================
 
 /**
- * `issue_properties:changed` (review #24; web
+ * `issue_properties:changed` (web
  * onIssuePropertiesChanged): replace the detail's value bag when the event
  * is not older than the cached issue; without a revision just refetch.
  */

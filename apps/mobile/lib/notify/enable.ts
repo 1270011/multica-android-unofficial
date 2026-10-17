@@ -1,6 +1,6 @@
 /**
- * Switching operator notifications on and off (docs/UX.md §8.8
- * P4b). Order on "on": POST_NOTIFICATIONS (Android 13+) → settings +
+ * Switching operator notifications on and off.
+ * Order on "on": POST_NOTIFICATIONS (Android 13+) → settings +
  * session hand-over → start the service → battery-optimisation exemption as
  * a separate, explained second step. Never called at app start.
  */
@@ -28,7 +28,7 @@ export async function requestNotificationPermission(): Promise<PermissionOutcome
 export async function enablePush(): Promise<PermissionOutcome> {
   const outcome = await requestNotificationPermission();
   if (outcome === "blocked") {
-    // Second refusal: Android no longer shows the dialog (UX §8.8.4).
+    // Second refusal: Android no longer shows the dialog.
     rbNotify.openNotificationSettings(null);
     return outcome;
   }
@@ -59,7 +59,7 @@ export function applySettings(next: NotifySettings): void {
   if (next.enabled) rbNotify.start();
 }
 
-/** Second step (UX §8.8, TECHNIK §1.7): explained before the system dialog. */
+/** Second step (TECHNIK §1.7): explained before the system dialog. */
 export function askBatteryExemption(): void {
   const status = rbNotify.getStatus();
   if (!status || status.batteryExempt) return;

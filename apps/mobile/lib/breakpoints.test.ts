@@ -20,7 +20,7 @@ describe("breakpointFor", () => {
   it("phone portrait → compact; phone landscape → wide class by width, never two panes", () => {
     expect(breakpointFor(411, 914)).toMatchObject({ windowClass: "compact", landscape: false, twoPane: false });
     // Pixel 7 landscape: expanded by width (board: several columns), but too
-    // low for the two-pane detail (review #16).
+    // low for the two-pane detail.
     expect(breakpointFor(914, 411)).toMatchObject({ windowClass: "expanded", landscape: true, twoPane: false });
     expect(breakpointFor(780, 360)).toMatchObject({ windowClass: "medium", landscape: true, twoPane: false });
   });

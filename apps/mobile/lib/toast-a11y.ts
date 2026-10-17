@@ -1,5 +1,5 @@
 /**
- * How long an action toast ("Undo") stays (review #19): 6 s are too short
+ * How long an action toast ("Undo") stays: 6 s are too short
  * to reach the button with TalkBack. Android's "time to take action"
  * setting (getRecommendedTimeoutMillis) always applies, also without a
  * screen reader (switch access, motor impairments; the CI

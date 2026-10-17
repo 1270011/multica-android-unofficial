@@ -86,7 +86,7 @@ describe("chat session strings", () => {
   }
 });
 
-describe("deleteChatSessionFlow (leave only after the server, J3b)", () => {
+describe("deleteChatSessionFlow (leave only after the server)", () => {
   it("leaves the open chat after the server deleted it", async () => {
     const log: string[] = [];
     let resolve!: () => void;

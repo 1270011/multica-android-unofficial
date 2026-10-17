@@ -54,7 +54,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   isLoading: true,
 
   initialize: async () => {
-    // T2 (review #14 N2): read the epoch before the first await, so a logout
+    // Security rule T2: read the epoch before the first await, so a logout
     // during restoreSlug()/getToken()/getMe() is never overwritten.
     const epoch = currentSessionEpoch();
     // Restore the persisted workspace slug alongside the auth token so the
@@ -95,7 +95,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         await clearToken();
         api.setToken(null);
         // The session ended without a logout: forget its filters and data
-        // too (review #22, S-1), otherwise the next sign-in inherits them.
+        // too, otherwise the next sign-in inherits them.
         await forgetRememberedFilters();
         clearSessionData();
       }
@@ -115,7 +115,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     invalidateSessionEpoch();
     const epoch = currentSessionEpoch();
     await setToken(token);
-    // A logout during the Keychain write wins (security H1, same check as
+    // A logout during the Keychain write wins (same check as
     // session-renewal): no user, no handover of the dead session.
     if (sessionEpochChanged(epoch)) return user;
     api.setToken(token);
@@ -152,7 +152,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     await clearToken();
     api.setToken(null);
     await forgetRememberedFilters();
-    // Caches, failed comments, viewed markers, saved route (S-1, M1).
+    // Caches, failed comments, viewed markers, saved route.
     clearSessionData();
     set({ user: null });
   },

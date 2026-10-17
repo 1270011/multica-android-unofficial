@@ -18,7 +18,7 @@ android {
   testOptions {
     unitTests.returnDefaultValues = true
     unitTests.all {
-      // Binding ping-rule vectors (docs/TECHNIK.md §1.4), shared with the
+      // Binding ping-rule vectors, shared with the
       // JS file check in lib/ping-rule-vectors.test.ts.
       systemProperty "rb.pingVectors", file("../../../../../docs/technik/ping-rule-vectors.json").absolutePath
     }
@@ -28,7 +28,7 @@ android {
 dependencies {
   implementation "androidx.core:core-ktx:1.17.0"
   // Same OkHttp as React Native (react-native/gradle/libs.versions.toml);
-  // no logging interceptor anywhere (security T6).
+  // no logging interceptor anywhere.
   implementation "com.squareup.okhttp3:okhttp:4.9.2"
 
   testImplementation "junit:junit:4.13.2"

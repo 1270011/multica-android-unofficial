@@ -40,7 +40,7 @@ export function useDeleteChatSession() {
   return useMutation({
     mutationFn: (id: string) => api.deleteChatSession(id),
     // Delete awaits the server (root AGENTS.md "do not optimistically
-    // delete", J3b): the row leaves the list only after the server agreed.
+    // delete"): the row leaves the list only after the server agreed.
     onSuccess: (_data, id) => {
       const drop = (old: ChatSession[] | undefined) => old?.filter((s) => s.id !== id);
       qc.setQueryData<ChatSession[]>(chatKeys.sessions(wsId), drop);
@@ -48,7 +48,7 @@ export function useDeleteChatSession() {
     },
     onSettled: (_data, _err, id) => {
       qc.invalidateQueries({ queryKey: chatKeys.sessions(wsId) });
-      // Deleting from the Archive view: refresh it too (review #9).
+      // Deleting from the Archive view: refresh it too.
       qc.invalidateQueries({ queryKey: chatKeys.archivedSessions(wsId) });
       // Detail-side caches the screen may still hold for this id — only
       // once it is really gone; a failed delete keeps the chat usable.

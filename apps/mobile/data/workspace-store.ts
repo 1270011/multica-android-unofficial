@@ -37,7 +37,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   currentWorkspaceSlug: null,
 
   setCurrentWorkspace: async (id, slug) => {
-    // Drafts belong to the workspace they were typed in (review #30).
+    // Drafts belong to the workspace they were typed in.
     if (get().currentWorkspaceId !== id) clearAllDrafts();
     set({ currentWorkspaceId: id, currentWorkspaceSlug: slug });
     await SecureStore.setItemAsync(SLUG_KEY, slug);

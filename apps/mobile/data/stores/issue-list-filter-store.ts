@@ -1,7 +1,7 @@
 /**
  * Issue-list filters per list and workspace: status, priority,
  * project, label, due date. Same build as the inbox filter
- * (inbox-filter-store.ts, F1): remembered across restarts in SecureStore,
+ * (inbox-filter-store.ts): remembered across restarts in SecureStore,
  * one entry per list and workspace (`rb.issue_filters.<list>.<wsId>`), and
  * a toggle before hydration finished wins over the stored value.
  *

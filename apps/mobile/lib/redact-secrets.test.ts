@@ -35,8 +35,8 @@ describe("redactSecrets (copy of web redact.ts)", () => {
   });
 });
 
-// Security review M2: shapes web and server still miss.
-describe("redactSecrets, mobile additions (M2)", () => {
+// shapes web and server still miss.
+describe("redactSecrets, mobile additions", () => {
   const mul = "mul_" + "a1B2".repeat(10);
   const mat = "mat_" + "Z9y8".repeat(10);
   it.each([
@@ -78,8 +78,8 @@ describe("redactSecrets, mobile additions (M2)", () => {
   });
 });
 
-// Security review M3: a prepared 80 KB output must not freeze the JS thread.
-describe("redactSecrets stays fast on large input (M3)", () => {
+// a prepared 80 KB output must not freeze the JS thread.
+describe("redactSecrets stays fast on large input", () => {
   it("cuts the input to MAX_REDACT_INPUT before matching", () => {
     expect(redactSecrets("x".repeat(MAX_REDACT_INPUT + 500))).toHaveLength(MAX_REDACT_INPUT);
   });

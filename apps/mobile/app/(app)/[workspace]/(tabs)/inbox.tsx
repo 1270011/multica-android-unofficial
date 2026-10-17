@@ -73,7 +73,7 @@ export default function Inbox() {
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const wsSlug = useWorkspaceStore((s) => s.currentWorkspaceSlug);
   const { colorScheme } = useColorScheme();
-  // `?view=unread` from the summary notification (J3c) picks the segment,
+  // `?view=unread` from the summary notification picks the segment,
   // also when the Inbox was already open (warm start).
   const { view: viewParam } = useLocalSearchParams<{ view?: string }>();
   const [view, setView] = useState<InboxView>(() => inboxViewFromParam(viewParam) ?? "all");
@@ -266,7 +266,7 @@ export default function Inbox() {
           )
         }
       />
-      {/* one-time push opt-in (docs/UX.md §8.8). */}
+      {/* One-time push opt-in. */}
       {!showArchived ? <PushPermissionCard /> : null}
       {source.isLoading ? (
         <InboxLoading />

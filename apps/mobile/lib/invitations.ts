@@ -38,7 +38,7 @@ export function inviterLabel(inv: Pick<Invitation, "inviter_name" | "inviter_ema
 }
 
 /**
- * Accept, then resolve the joined workspace (review #27). Only the accept
+ * Accept, then resolve the joined workspace. Only the accept
  * may fail the operation; a failing list read afterwards yields null ("the
  * workspace appears shortly"), never "invitation not available".
  */
@@ -51,7 +51,7 @@ export async function acceptAndResolve(
     await accept(invitation.id);
   } catch (err) {
     // 409 "already a member": the goal is reached (e.g. accepted on
-    // another device a moment ago) — a success, not a failure (J3a).
+    // another device a moment ago) — a success, not a failure.
     if (!isAlreadyMember(err)) throw err;
   }
   try {
@@ -84,7 +84,7 @@ export function isAlreadyMember(err: unknown): boolean {
 /**
  * Which message an accept/decline failure gets: 404/410 and 400
  * "invitation is not pending" → no longer available (answered elsewhere,
- * revoked, expired; J3a); other HTTP errors → could not be processed; no
+ * revoked, expired); other HTTP errors → could not be processed; no
  * HTTP status → connection problem.
  */
 export function invitationErrorKind(err: unknown): InvitationErrorKind {

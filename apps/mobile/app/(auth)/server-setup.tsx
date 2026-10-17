@@ -80,7 +80,7 @@ type TestResult =
   | { kind: "not_multica" }
   | { kind: "failed"; reason: string };
 
-/** The stored secret is never put into the draft (S3); see withStoredSecret. */
+/** The stored secret is never put into the draft; see withStoredSecret. */
 function draftFrom(config: ServerConfig | null): ServerConfigDraft {
   if (config) {
     return {
@@ -274,7 +274,7 @@ export default function ServerSetup() {
     if (result.kind === "block" && target === "url" && draft.mode !== "cloudflare") {
       result = { kind: "secret_rejected" };
     }
-    // Secret header text is cleared whatever the switch says (review S5).
+    // Secret header text is cleared whatever the switch says.
     if (containsCfSecret(raw) || (clearPref && (result.kind === "block" || target === "cfClientSecret"))) {
       void clearClipboard();
     }
@@ -337,7 +337,7 @@ export default function ServerSetup() {
     const changed =
       !stored || stored.baseUrl !== next.baseUrl || stored.mode !== next.mode;
     if (changed && user) {
-      // logout() also clears caches and session stores (S-1).
+      // logout() also clears caches and session stores.
       await clearWorkspace();
       await logout();
     }
@@ -351,7 +351,7 @@ export default function ServerSetup() {
       await signOutIfNeeded(validated.config);
       await saveConfig(validated.config);
       // Same server, new CF credentials: no sign-out, but the notification
-      // service needs the new headers (security N3).
+      // service needs the new headers.
       if (useAuthStore.getState().user) {
         renewNotifySessionForConfig(previous, validated.config, api.getToken());
       }

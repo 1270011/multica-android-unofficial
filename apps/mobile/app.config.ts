@@ -102,7 +102,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         // registers its observer when it loads, and without the (install-
         // time, no-prompt) permission Android 14+ throws at app start.
         "android.permission.READ_MEDIA_IMAGES",
-        // From the Expo template, not used (security review N6, S-2).
+        // From the Expo template, not used.
         "android.permission.SYSTEM_ALERT_WINDOW",
       ],
     },
@@ -140,14 +140,14 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       "./plugins/with-bundled-debug-js",
       "./plugins/with-fbjni-pin",
       // Return to the open route after Android recreates the
-      // activity (font-size / display-size change, M4) and give system
-      // dialogs the brand accent (N1).
+      // activity (font-size / display-size change) and give system
+      // dialogs the brand accent.
       "./plugins/with-android-restore-route",
       "./plugins/with-android-theme-colors",
       // Operator notifications (modules/rb-notify) — backup rules
-      // that exclude the notification state (T3).
+      // that exclude the notification state.
       "./plugins/with-rb-notify",
-      // Removes expo-clipboard's exported ClipboardFileProvider (N5, S-2).
+      // Removes expo-clipboard's exported ClipboardFileProvider.
       "./plugins/with-android-manifest-hardening",
     ],
     extra: { APP_ENV: env },

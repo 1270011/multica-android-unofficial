@@ -1,6 +1,5 @@
 /**
- * Which issue's chat is on screen, for the native ping suppression
- * (docs/UX.md §8.4; review #14 Fix 3).
+ * Which issue's chat is on screen, for the native ping suppression.
  *
  * - `clear(id)` only clears when `id` is still the current one: going from
  *   chat A to chat B fires A's blur after B's focus, which must not wipe B.

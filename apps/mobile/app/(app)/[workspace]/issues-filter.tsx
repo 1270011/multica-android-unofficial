@@ -104,8 +104,8 @@ export default function IssuesFilterRoute() {
         ) : null}
       </View>
       {list === "project" ? (
-        // One remembered filter for every project page of the workspace
-        // (review #22); say so instead of surprising on the next project.
+        // One remembered filter for every project page of the workspace;
+        // say so instead of surprising on the next project.
         <Text className="px-4 pb-2 text-xs text-muted-foreground">
           {t("filters.project_scope_hint")}
         </Text>

@@ -106,7 +106,7 @@ function RealtimeSubscriptions() {
 }
 
 /**
- * A route (usually a deep link, docs/UX.md §8.5 / T5) names a workspace the
+ * A route (usually a deep link) names a workspace the
  * account does not belong to: stay in the current workspace and say so,
  * without echoing the foreign slug. Without a current workspace fall back to
  * the workspace selection as before.
@@ -168,7 +168,7 @@ export default function WorkspaceLayout() {
   // iOS keeps the native back button and its system label.
   // Android stack headers: the title scales only up to HEADER_MAX_FONT_SCALE,
   // so it stays inside the bar at 200 %. Screens
-  // with their own headerTitle (chat) override this. Not on iOS (review #28).
+  // with their own headerTitle (chat) override this. Not on iOS.
   const headerTitle = ({ children, tintColor }: { children: string; tintColor?: string }) => (
     <HeaderTitle tintColor={tintColor} numberOfLines={1} maxFontSizeMultiplier={HEADER_MAX_FONT_SCALE}>
       {children}

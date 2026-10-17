@@ -22,10 +22,10 @@ import java.util.Calendar
 
 /**
  * Foreground service `specialUse` holding ONE Multica WebSocket for all
- * workspaces (docs/TECHNIK.md §1.3, review #14 B2): the server delivers
+ * workspaces: the server delivers
  * `inbox:*` to every connection of the user, so entries are matched to
  * their workspace by `item.workspace_id` (WorkspaceRouting). Runs fully
- * native, no JS in the background. Not exported (T4). Started only from the
+ * native, no JS in the background. Not exported. Started only from the
  * app in the foreground (settings switch, app start) or from BootReceiver.
  *
  * Event flow: `inbox:new` → InboxDecider → Notifier; `inbox:read/archived`
@@ -33,7 +33,7 @@ import java.util.Calendar
  * enabled workspace (new unseen entries are notified, older than 24 h only
  * counted in the summary, notifications of entries read elsewhere
  * disappear). Only an explicit token rejection stops the service, deletes
- * the session copy and shows "please sign in again" once (T2); network
+ * the session copy and shows "please sign in again" once; network
  * errors and the 10 s auth timeout just reconnect (InboxSocket).
  */
 class OperatorConnectionService : Service(), InboxSocket.Listener {
@@ -130,7 +130,7 @@ class OperatorConnectionService : Service(), InboxSocket.Listener {
       current.start(via.slug)
     } else if (current.connected) {
       // Switches changed while connected: reconcile the enabled set and
-      // recount the status line (J3c: "1 of 2" still said "2 workspaces").
+      // recount the status line ("1 of 2" still said "2 workspaces").
       updateConnectionNotification()
       reconcileAll()
     }
@@ -190,7 +190,7 @@ class OperatorConnectionService : Service(), InboxSocket.Listener {
     lostSlugs.add(slug)
     updateConnectionNotification()
     // Nothing left to deliver once every enabled workspace is gone: stop and
-    // say so instead of idling on a switched-off one (review #14). With no
+    // say so instead of idling on a switched-off one. With no
     // enabled workspace at all there is nothing "lost" to report.
     val enabled = enabledWorkspaces()
     if (enabled.isEmpty()) {
@@ -243,7 +243,7 @@ class OperatorConnectionService : Service(), InboxSocket.Listener {
     entry: InboxEntry,
     fromReconcile: Boolean,
   ): InboxDecider.Action {
-    // Logout while this thread was in a REST call: nothing after it (N1).
+    // Logout while this thread was in a REST call: nothing after it.
     if (stopRequested) return InboxDecider.Action.Ignore
     val ids = seen.getOrPut(workspace.slug) { loadSeen(workspace.slug) }
     val cal = Calendar.getInstance()
@@ -333,7 +333,7 @@ class OperatorConnectionService : Service(), InboxSocket.Listener {
       private set
 
     /**
-     * Set synchronously by [stop] (T2): the service may still be running its
+     * Set synchronously by [stop]: the service may still be running its
      * last callbacks; none of them may restart the socket or report "sign in
      * again" after an intended stop. Cleared by [start].
      */
@@ -362,7 +362,7 @@ class OperatorConnectionService : Service(), InboxSocket.Listener {
   }
 }
 
-/** OkHttp behind InboxSocket.Transport; CF headers as for every request (T6). */
+/** OkHttp behind InboxSocket.Transport; CF headers as for every request. */
 private class OkHttpTransport(private val store: CredentialStore) : InboxSocket.Transport {
   override fun connect(url: String, events: InboxSocket.Events): InboxSocket.Connection {
     val b = Request.Builder().url(url)

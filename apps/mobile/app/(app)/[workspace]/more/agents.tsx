@@ -1,13 +1,12 @@
 /**
- * Agents and squads, read-only (docs/UX.md §3 Navigation,
- * §6 Paket H). Replaces the "coming soon" placeholder under More → Agents.
+ * Agents and squads, read-only. Replaces the "coming soon" placeholder under More → Agents.
  *
  * - Agents: avatar with presence dot, status (working / queued / online /
  *   unstable / offline / no runtime), runtime and the last finished run.
  *   Archived agents are not listed (web hides them by default too).
  * - Squads: name, member count and preview; tap opens the squad detail.
  *
- * Creating or editing agents and squads stays on the web (UX §3).
+ * Creating or editing agents and squads stays on the web.
  */
 import { useMemo, useState } from "react";
 import { FlatList, Pressable, View } from "react-native";

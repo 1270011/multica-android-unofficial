@@ -46,8 +46,7 @@ export { LIST_ISSUES_LIMIT, isTruncated } from "./list-cap";
 /**
  * Which notices the board shows above its columns. With an active filter
  * the filter chips already say "filters apply to the first n issues",
- * so the board drops its own "narrow it down with filters" (one notice,
- * review #22).
+ * so the board drops its own "narrow it down with filters" (one notice).
  */
 export function boardNotices({
   truncated,

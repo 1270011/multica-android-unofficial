@@ -68,7 +68,7 @@ export async function sendQueuedNow(
 }
 
 /**
- * Pending task after a successful "Send now" (J3b): the run the server
+ * Pending task after a successful "Send now": the run the server
  * stopped leaves the cache at once, like web's cancel path
  * (`removePendingChatTask`), instead of staying "running" until a refetch.
  */

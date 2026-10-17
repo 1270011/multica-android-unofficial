@@ -10,11 +10,11 @@
  * - "columns"  ≥ 600 dp (landscape, tablet): columns side by side, free
  *              horizontal scrolling, no column bar.
  *
- * Status changes (C2a): long press on a card opens the status sheet
+ * Status changes: long press on a card opens the status sheet
  * (`issue/[id]/picker/board-status`); TalkBack gets "move to next /
  * previous column" actions. Both go through `/move` with an Undo toast.
  *
- * Drag & drop (C2, "columns" layout only): hold a card, drag it onto
+ * Drag & drop ("columns" layout only): hold a card, drag it onto
  * another column, release → same `/move` + Undo toast. Holding without
  * dragging still opens the status sheet. See use-board-drag.tsx.
  *
@@ -171,7 +171,7 @@ export function IssueBoard({
   );
 
   // Every match sits in a hidden column (Cancelled): an empty state with
-  // the hidden notice instead of empty columns (review #17).
+  // the hidden notice instead of empty columns.
   if (boardIsEmpty(columns)) {
     return (
       <View style={height ? { height } : undefined} testID="board-empty">
@@ -247,7 +247,7 @@ export function IssueBoard({
       <FlatList
         ref={pager}
         // Remount on a new column width (rotation, font size) and keep the
-        // column the bar shows (review #17).
+        // column the bar shows.
         key={`pager-${layout.columnWidth}`}
         initialScrollIndex={index}
         horizontal
@@ -269,7 +269,7 @@ interface CardActions {
   openStatus: (issue: Issue) => void;
   neighbor: (issue: Issue, delta: -1 | 1) => string | null;
   move: (issue: Issue, delta: -1 | 1) => void;
-  /** Drag & drop, "columns" layout only (C2). */
+  /** Drag & drop, "columns" layout only. */
   drag?: {
     gestureFor: (issue: Issue) => GestureType | undefined;
     guardPress: (fn: () => void) => () => void;
@@ -397,7 +397,7 @@ function ColumnBar({
             key={c.status}
             onLayout={(e) => (offsets.current[i] = e.nativeEvent.layout.x)}
             onPress={() => onSelect(i)}
-            // 36 dp chip + 6 dp slop = 48 dp touch target (docs/UX.md §4).
+            // 36 dp chip + 6 dp slop = 48 dp touch target.
             hitSlop={6}
             accessibilityRole="tab"
             accessibilityState={{ selected }}

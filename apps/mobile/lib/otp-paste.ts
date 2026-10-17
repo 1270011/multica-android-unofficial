@@ -1,6 +1,6 @@
 /**
  * "Paste" for the e-mail code: the code from the clipboard,
- * without focusing the field. Like the server-setup paste buttons (A1) the
+ * without focusing the field. Like the server-setup paste buttons the
  * text is trimmed and only digits are taken over.
  *
  * Accepted: exactly `length` digits as one block or as two halves
@@ -15,7 +15,7 @@ export function extractOtpCode(raw: string | null | undefined, length = 6): stri
   // Digit runs, allowing single spaces/dashes between digits.
   const runs = text.match(/\d(?:[  -]?\d)*/g) ?? [];
   // Only a solid block or two equal halves ("123 456"); "2026 10" from a
-  // date is not a code (review #33).
+  // date is not a code.
   const half = length / 2;
   const grouped = Number.isInteger(half)
     ? new RegExp(`^\\d{${half}}[ \\u00a0-]\\d{${half}}$`)

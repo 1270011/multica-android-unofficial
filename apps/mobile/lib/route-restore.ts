@@ -61,7 +61,7 @@ const TAB_ROOTS = ["inbox", "my-issues", "chat", "more"];
 export const RESTORE_PUSH_DELAY_MS = 250;
 
 /**
- * Open a restored route with a real back stack (M4). `withAnchor` did not
+ * Open a restored route with a real back stack. `withAnchor` did not
  * put the tabs under a restored detail after a font-size change (smoke
  * test no back arrow, Back left the app), so the stack is built
  * explicitly: replace with the Inbox tab, then push the restored screen.

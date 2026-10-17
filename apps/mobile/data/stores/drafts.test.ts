@@ -21,7 +21,7 @@ function typeDrafts() {
 const chatDrafts = () => useChatDraftsStore.getState().drafts;
 const commentDrafts = () => useCommentDraftsStore.getState().drafts;
 
-describe("drafts never outlive the session or workspace (review #30)", () => {
+describe("drafts never outlive the session or workspace", () => {
   beforeEach(() => {
     clearAllDrafts();
     useWorkspaceStore.setState({ currentWorkspaceId: "ws-a", currentWorkspaceSlug: "a" });

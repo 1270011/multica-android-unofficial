@@ -8,7 +8,7 @@ const { applyBackupRules, BACKUP, EXTRACTION } = require("../plugins/with-rb-not
   EXTRACTION: string;
 };
 
-describe("with-rb-notify backup rules (T3)", () => {
+describe("with-rb-notify backup rules", () => {
   it("points both Auto Backup attributes at the module's rules, also over expo-secure-store's", () => {
     const manifest = {
       manifest: {
@@ -40,7 +40,7 @@ describe("with-rb-notify backup rules (T3)", () => {
       expect(xml).toContain('exclude domain="sharedpref" path="rb_notify.xml"');
     }
     const extraction = fs.readFileSync(path.join(dir, "rb_notify_data_extraction_rules.xml"), "utf8");
-    // Cloud backup AND device transfer (T3).
+    // Cloud backup AND device transfer.
     expect(extraction.match(/rb_notify\.xml/g)).toHaveLength(2);
   });
 });

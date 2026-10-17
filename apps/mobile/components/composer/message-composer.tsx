@@ -104,7 +104,7 @@ interface Props {
   value?: string;
   onChangeText?: (next: string) => void;
   /** Optional controlled attachments, same idea as `value`: the parent keeps
-   *  them across remounts (comment drafts, J3b). `updateAttachments` gets a
+   *  them across remounts (comment drafts). `updateAttachments` gets a
    *  functional update, so an upload finishing after a remount still lands
    *  on the current list. */
   attachments?: ComposerAttachmentItem[];

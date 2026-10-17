@@ -7,5 +7,5 @@
  */
 export const HEADER_MAX_FONT_SCALE = 1.3;
 
-/** Gap between a modal's ✕ (headerLeft) and the Android title (J3a). */
+/** Gap between a modal's ✕ (headerLeft) and the Android title. */
 export const MODAL_CLOSE_TITLE_GAP_DP = 12;

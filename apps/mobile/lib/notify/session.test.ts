@@ -1,6 +1,6 @@
 // @vitest-environment node
 /**
- * Security T2 (docs/TECHNIK.md §1.5): the native session copy is handed
+ * Security rule T2: the native session copy is handed
  * over only after a commit and cleared synchronously, before the local
  * teardown continues, on every path that ends a session.
  */
@@ -121,7 +121,7 @@ describe("clearing", () => {
   });
 });
 
-describe("new Cloudflare credentials on the same server (security N3)", () => {
+describe("new Cloudflare credentials on the same server", () => {
   const cf = (id: string, secret: string) => ({
     mode: "cloudflare" as const,
     baseUrl: "https://multica.example",

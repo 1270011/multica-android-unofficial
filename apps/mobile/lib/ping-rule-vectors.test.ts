@@ -1,6 +1,6 @@
 /**
  * Guards docs/technik/ping-rule-vectors.json — the binding spec of the
- * notification ping rule (docs/TECHNIK.md §1.4). The production rule lives in
+ * notification ping rule. The production rule lives in
  * the native notification service (Kotlin) and must run every vector; this
  * test keeps the file well-formed and self-consistent by evaluating it against
  * a reference implementation of the documented rule. Change both together.

@@ -1,7 +1,7 @@
 package com.recordingbeats.rbnotify
 
 /**
- * Ping rule (docs/TECHNIK.md §1.4, docs/UX.md §8.3). Pure function of the
+ * Ping rule. Pure function of the
  * inbox entry, the device settings and the local time; the binding test
  * vectors live in docs/technik/ping-rule-vectors.json and run in
  * PingRuleVectorsTest.
@@ -90,7 +90,7 @@ object PingRule {
   }
 }
 
-/** Channel ids (docs/UX.md §8.6). Changing an id orphans the user's channel settings. */
+/** Channel ids. Changing an id orphans the user's channel settings. */
 object Channels {
   const val BLOCKED = "operator_blocked"
   const val MENTIONS = "operator_mentions"

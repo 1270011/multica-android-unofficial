@@ -809,7 +809,7 @@ class ApiClient {
     });
   }
 
-  // Read-only agent/squad detail (UX §6 H). `null` = drifted body; the
+  // Read-only agent/squad detail. `null` = drifted body; the
   // screen shows its not-found state instead of a half-empty record.
   async getAgent(id: string, opts?: { signal?: AbortSignal }): Promise<Agent | null> {
     return this.fetchValidated<Agent | null>(

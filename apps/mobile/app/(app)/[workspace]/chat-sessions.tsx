@@ -56,7 +56,7 @@ export default function ChatSessionsRoute() {
     enabled: !!wsId && showArchived,
   });
   const shown = showArchived ? archived.data : active.data;
-  // Web order at render time (J3b), also after WS patches of last_message.
+  // Web order at render time, also after WS patches of last_message.
   const sessions = useMemo(() => sortChatSessions(shown ?? []), [shown]);
   const activeSessionId = useChatSessionPickerStore((s) => s.activeSessionId);
   const requestSelect = useChatSessionPickerStore((s) => s.requestSelect);

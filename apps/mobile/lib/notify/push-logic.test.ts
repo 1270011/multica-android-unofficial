@@ -53,7 +53,7 @@ describe("settings helpers", () => {
   });
 });
 
-describe("permission card (UX §8.8)", () => {
+describe("permission card", () => {
   const ctx = { available: true, enabled: false, now: 1000 };
 
   it("shows once by default, never when unavailable or already on", () => {

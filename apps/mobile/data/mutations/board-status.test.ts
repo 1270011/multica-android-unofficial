@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 const state = vi.hoisted(() => ({ qc: undefined as unknown as QueryClient, screenReader: false }));
 
 // Real mutation lifecycle; the observer is never subscribed, exactly like a
-// hook whose sheet already closed (review #19: per-call onSuccess of an
+// hook whose sheet already closed (per-call onSuccess of an
 // unmounted observer never runs).
 vi.mock("@tanstack/react-query", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@tanstack/react-query")>();
@@ -48,7 +48,7 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-describe("useBoardStatusChange (review #19)", () => {
+describe("useBoardStatusChange", () => {
   it("shows the Undo toast although the sheet's observer is gone", async () => {
     vi.mocked(api.moveIssue).mockResolvedValue({ id: "i-1", status: "in_review" } as Issue);
     const change = useBoardStatusChange((label) => `Moved to ${label}`);
@@ -87,8 +87,8 @@ describe("useBoardStatusChange (review #19)", () => {
   });
 });
 
-// Drag & drop (C2) uses the same payload: status only, never a position,
-// because mobile has no manual sort order (review #17/#29).
+// Drag & drop uses the same payload: status only, never a position,
+// because mobile has no manual sort order.
 describe("statusMoveBody (drop payload)", () => {
   it("carries the status and no neighbour ids", () => {
     expect(statusMoveBody("in_review")).toEqual({ status: "in_review", before_id: null, after_id: null });

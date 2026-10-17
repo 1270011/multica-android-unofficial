@@ -42,7 +42,7 @@ export default function Index() {
   return <Redirect href={`/${slug}/inbox`} />;
 }
 
-/** Inbox tab, then the restored screen (lib/route-restore.ts, M4). */
+/** Inbox tab, then the restored screen (lib/route-restore.ts). */
 function RestoreRoute({ target, slug }: { target: string; slug: string }) {
   useEffect(() => {
     openRestoredRoute(

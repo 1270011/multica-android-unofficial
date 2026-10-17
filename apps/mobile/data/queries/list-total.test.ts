@@ -9,7 +9,7 @@ import { issueListOptions } from "./issues";
 import { issueKeys } from "./issue-keys";
 import { listTotalKey, listTotalQueryOptions, rememberListTotal } from "./list-total";
 
-describe("list totals (J3a, review #35)", () => {
+describe("list totals", () => {
   let client: QueryClient;
   beforeEach(() => {
     client = new QueryClient({ defaultOptions: { queries: { retry: false } } });

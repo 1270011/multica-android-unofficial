@@ -152,7 +152,7 @@ describe("More menu entry", () => {
   }
 });
 
-describe("runsSectionState (J3a, J3b)", () => {
+describe("runsSectionState", () => {
   const none = { hasData: false, count: 0 };
   it("a failed first load is an error state, not \"no runs yet\"", () => {
     expect(runsSectionState({ ...none, isLoading: false, error: new Error("network") })).toBe("error");

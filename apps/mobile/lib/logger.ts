@@ -25,10 +25,10 @@ const SECRET_KEY =
   /token|secret|password|passwd|authorization|cookie|credential|jwt|api_?key|^cf[-_]?(?:access|client)|^x-api-key$|^received$|^otp$|^(?:verification|login|auth)_?code$/i;
 
 /** `code` is mostly an error code (`ECONNREFUSED`, 401, close code 1006);
- *  only a 6-digit string is an e-mail login code and gets masked (N1). */
+ *  only a 6-digit string is an e-mail login code and gets masked. */
 const OTP_SHAPE = /^\d{6}$/;
 
-/** Array items / object keys logged per level; the rest is summarised (N1). */
+/** Array items / object keys logged per level; the rest is summarised. */
 export const MAX_LOG_ITEMS = 100;
 
 /** Longer strings are cut before matching: bounds the regex work per log
@@ -81,7 +81,7 @@ const isSecretEntry = (key: string, v: unknown) =>
 /**
  * Deep copy with secrets masked. Depth and width are bounded; `[circular]`
  * marks only a real cycle (an object inside itself), not an object that is
- * referenced twice side by side (N1).
+ * referenced twice side by side.
  */
 export function redact(value: unknown, depth = 0, ancestors = new Set<object>()): unknown {
   if (typeof value === "string") return redactString(value);

@@ -129,7 +129,7 @@ export async function renewSessionNow(): Promise<void> {
       // clear the in-memory token too, so stay out of its way.
       if (sessionEpochChanged(epochAtStart)) return;
       api.setToken(result.token);
-      // Only a committed renewal reaches the notification service (T2).
+      // Only a committed renewal reaches the notification service.
       handOverSession(result.token);
     } catch (err) {
       // A 401 has already been routed to the sign-out path by the client's

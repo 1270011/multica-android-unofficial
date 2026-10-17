@@ -25,7 +25,7 @@ vi.mock("@/data/api", () => ({ api: {} }));
 import { invitationKeys } from "@/data/queries/invitations";
 import { useInvitationsRealtime } from "./use-invitations-realtime";
 
-describe("useInvitationsRealtime (review #27)", () => {
+describe("useInvitationsRealtime", () => {
   beforeEach(() => {
     invalidateQueries.mockReset();
     setups.length = 0;

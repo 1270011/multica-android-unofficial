@@ -5,9 +5,9 @@ import android.content.Context
 import android.content.Intent
 
 /**
- * "Mark as read" action on an issue notification (docs/UX.md §8.4). Not
- * exported; reached only through the app's own immutable PendingIntent
- * (T4). Marks the issue's inbox entries read on the server, then removes
+ * "Mark as read" action on an issue notification. Not
+ * exported; reached only through the app's own immutable PendingIntent.
+ * Marks the issue's inbox entries read on the server, then removes
  * the notification.
  */
 class MarkReadReceiver : BroadcastReceiver() {
