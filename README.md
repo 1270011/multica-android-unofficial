@@ -7,6 +7,9 @@
 [![Release](https://img.shields.io/github/v/release/1270011/multica-android-unofficial?include_prereleases&sort=semver)](https://github.com/1270011/multica-android-unofficial/releases)
 [![License](https://img.shields.io/badge/license-Multica%20License%20(Apache--2.0%20based)-blue)](LICENSE)
 [![Downloads](https://img.shields.io/github/downloads/1270011/multica-android-unofficial/total)](https://github.com/1270011/multica-android-unofficial/releases)
+[![Website](https://img.shields.io/badge/website-1270011.github.io-blue)](https://1270011.github.io/multica-android-unofficial/)
+
+**🌐 Website: [https://1270011.github.io/multica-android-unofficial/](https://1270011.github.io/multica-android-unofficial/)**
 
 **Multica for Android (unofficial)** is a source-available (Multica License, Apache-2.0-based) Android app for [Multica](https://github.com/multica-ai/multica), the platform where people and AI coding agents work on the same issues. Use it to follow your AI agents on the go: inbox and on-device notifications, issues and a Kanban board, comments, agent runs and agent chat, connected to your own Multica server – self-hosted or cloud.
 
