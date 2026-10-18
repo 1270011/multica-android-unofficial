@@ -23,9 +23,9 @@
  * without them the folded-away module still reached the release bundle
  * through the shared cache).
  *
- * Proof lives in docs/ANDROID.md ("Debug-Token-Login"): the marker strings
- * (`debug-token.txt`, the screen title) are grepped out of the release
- * bundle and must be absent.
+ * Proof lives in scripts/check-release-bundle.sh (see apps/mobile/README.md,
+ * "Debug build"): the marker strings (`debug-token.txt`, the screen title)
+ * are grepped out of the release bundle and must be absent.
  *
  * The token is never logged, never echoed into an alert and never written
  * anywhere except the same SecureStore slot the e-mail login uses.

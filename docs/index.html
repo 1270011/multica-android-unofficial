@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Multica for Android (unofficial) – AI agent and task management app</title>
+<meta name="description" content="Unofficial, source-available Android app for Multica: inbox and notifications without Firebase, issues and Kanban board, comments, agent runs and chat with AI coding agents – for self-hosted or cloud Multica servers.">
+<link rel="canonical" href="https://1270011.github.io/multica-android-unofficial/">
+<meta name="robots" content="index, follow">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Multica for Android (unofficial)">
+<meta property="og:title" content="Multica for Android (unofficial)">
+<meta property="og:description" content="Follow and steer your AI coding agents from your Android phone: inbox, notifications without Google services, Kanban board, issue chat and agent chat.">
+<meta property="og:url" content="https://1270011.github.io/multica-android-unofficial/">
+<meta property="og:image" content="https://1270011.github.io/multica-android-unofficial/social-preview.png">
+<meta property="og:image:alt" content="Multica for Android (unofficial) – screenshots of board, issue chat and My Issues">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Multica for Android (unofficial)">
+<meta name="twitter:description" content="Follow and steer your AI coding agents from your Android phone: inbox, notifications without Google services, Kanban board, issue chat and agent chat.">
+<meta name="twitter:image" content="https://1270011.github.io/multica-android-unofficial/social-preview.png">
+<meta name="twitter:image:alt" content="Multica for Android (unofficial) – screenshots of board, issue chat and My Issues">
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "SoftwareApplication",
+  "name": "Multica for Android (unofficial)",
+  "description": "Unofficial, source-available Android client for Multica, the platform where people and AI coding agents work on the same issues.",
+  "operatingSystem": "Android 7.0 or newer",
+  "applicationCategory": "BusinessApplication",
+  "applicationSubCategory": "Project management",
+  "softwareVersion": "1.0.0",
+  "downloadUrl": "https://github.com/1270011/multica-android-unofficial/releases",
+  "installUrl": "https://github.com/1270011/multica-android-unofficial/releases",
+  "url": "https://1270011.github.io/multica-android-unofficial/",
+  "codeRepository": "https://github.com/1270011/multica-android-unofficial",
+  "license": "https://github.com/1270011/multica-android-unofficial/blob/main/LICENSE",
+  "image": "https://1270011.github.io/multica-android-unofficial/social-preview.png",
+  "screenshot": [
+    "https://1270011.github.io/multica-android-unofficial/screenshots/01-board.png",
+    "https://1270011.github.io/multica-android-unofficial/screenshots/02-issue-detail.png",
+    "https://1270011.github.io/multica-android-unofficial/screenshots/03-issue-chat.png",
+    "https://1270011.github.io/multica-android-unofficial/screenshots/04-my-issues.png",
+    "https://1270011.github.io/multica-android-unofficial/screenshots/05-dark-mode.png"
+  ],
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  }
+}
+</script>
+<style>
+  :root { color-scheme: light dark; --fg: #1b1f24; --muted: #57606a; --bg: #ffffff; --card: #f6f8fa; --accent: #0969da; --border: #d0d7de; }
+  @media (prefers-color-scheme: dark) { :root { --fg: #e6edf3; --muted: #9da7b3; --bg: #0d1117; --card: #161b22; --accent: #58a6ff; --border: #30363d; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.6 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--fg); background: var(--bg); }
+  main { max-width: 960px; margin: 0 auto; padding: 2rem 1.25rem 3rem; }
+  h1 { font-size: 2rem; line-height: 1.25; margin: 0 0 .5rem; }
+  h2 { margin-top: 2.5rem; border-bottom: 1px solid var(--border); padding-bottom: .3rem; }
+  a { color: var(--accent); }
+  .lead { font-size: 1.15rem; color: var(--muted); }
+  .note { background: var(--card); border: 1px solid var(--border); border-radius: 8px; padding: .75rem 1rem; margin: 1rem 0; }
+  .buttons { display: flex; flex-wrap: wrap; gap: .75rem; margin: 1.5rem 0; }
+  .button { display: inline-block; padding: .6rem 1.1rem; border-radius: 8px; border: 1px solid var(--border); text-decoration: none; font-weight: 600; }
+  .button.primary { background: var(--accent); border-color: var(--accent); color: #ffffff; }
+  .shots { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin: 0; padding: 0; list-style: none; }
+  .shots figure { margin: 0; }
+  .shots img { width: 100%; height: auto; border-radius: 12px; border: 1px solid var(--border); }
+  .shots figcaption { text-align: center; color: var(--muted); font-size: .9rem; margin-top: .3rem; }
+  ul.features li { margin: .35rem 0; }
+  dt { font-weight: 600; margin-top: 1rem; }
+  dd { margin: .25rem 0 0; }
+  footer { margin-top: 3rem; color: var(--muted); font-size: .9rem; border-top: 1px solid var(--border); padding-top: 1rem; }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <h1>Multica for Android (unofficial)</h1>
+  <p class="lead">An Android app for <a href="https://github.com/multica-ai/multica">Multica</a>, the platform where people and AI coding agents work on the same issues. Follow and steer your agents on the go – connected to your own Multica server, self-hosted or cloud.</p>
+  <p class="note"><strong>Early release (v1.0.0).</strong> The app was built fast and is not extensively end-to-end tested. It is functional and usable, but has rough edges. Known issues are being fixed for <strong>v2.0.0</strong> – see <a href="https://github.com/1270011/multica-android-unofficial/blob/main/KNOWN_ISSUES.md">Known issues</a>.</p>
+  <div class="buttons">
+    <a class="button primary" href="https://github.com/1270011/multica-android-unofficial/releases">Download the APK (Releases)</a>
+    <a class="button" href="https://github.com/1270011/multica-android-unofficial">Source code on GitHub</a>
+  </div>
+</header>
+
+<section aria-labelledby="screenshots">
+  <h2 id="screenshots">Screenshots</h2>
+  <ul class="shots">
+    <li><figure><img src="screenshots/01-board.png" alt="Project with progress and Kanban board" loading="lazy"><figcaption>Board</figcaption></figure></li>
+    <li><figure><img src="screenshots/02-issue-detail.png" alt="Issue detail with status, priority, labels and description" loading="lazy"><figcaption>Issue detail</figcaption></figure></li>
+    <li><figure><img src="screenshots/03-issue-chat.png" alt="Chat-style view of an issue timeline" loading="lazy"><figcaption>Issue chat</figcaption></figure></li>
+    <li><figure><img src="screenshots/04-my-issues.png" alt="My Issues list grouped by status" loading="lazy"><figcaption>My Issues</figcaption></figure></li>
+    <li><figure><img src="screenshots/05-dark-mode.png" alt="My Issues in dark mode" loading="lazy"><figcaption>Dark mode</figcaption></figure></li>
+  </ul>
+</section>
+
+<section aria-labelledby="features">
+  <h2 id="features">Features</h2>
+  <ul class="features">
+    <li><strong>Inbox</strong> with live updates, unread and archive views, filters, row and bulk actions, and a “Done” action.</li>
+    <li><strong>Notifications without Firebase or Google Play Services</strong>: an optional foreground service keeps one WebSocket connection to your own server.</li>
+    <li><strong>Issues and Kanban board</strong>: lists grouped by status, board with drag and drop in landscape and on tablets, remembered filters.</li>
+    <li><strong>Issue detail</strong>: all common fields, sub-issues by stage, custom properties, conflict protection when editing.</li>
+    <li><strong>Comments and issue chat</strong>: threads, reactions, mentions, attachments, offline comments, and a chat-style timeline view.</li>
+    <li><strong>AI agents</strong>: run transcripts with secret redaction, cancel and re-run, chat sessions with a message queue to steer an agent.</li>
+    <li><strong>Projects, agents, squads and workspaces</strong>: project management, read-only agent and squad views, workspace switcher and invitations.</li>
+    <li><strong>Android</strong>: portrait and landscape, two-pane layout on tablets, TalkBack labels, 200 % font size, English, German and Simplified Chinese.</li>
+    <li><strong>Connection and security</strong>: server URL at runtime, Cloudflare Access service tokens, private CAs, secrets in the Android Keystore, no camera, microphone or storage permissions.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="use-cases">
+  <h2 id="use-cases">Use cases</h2>
+  <ul>
+    <li><strong>Steer AI coding agents from your phone</strong> – see when an agent has finished or needs input, read the transcript, answer and re-run.</li>
+    <li><strong>Notifications on devices without Google services</strong> – notifications come from your own server, not from a third-party push service.</li>
+    <li><strong>Self-hosted teams</strong> – the same APK works for every server: on a LAN, behind a VPN, behind Cloudflare Access or with a private CA.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="requirements">
+  <h2 id="requirements">Requirements</h2>
+  <ul>
+    <li>Your own Multica instance (self-hosted or Multica Cloud) and an account on it. Developed and tested against a self-hosted Multica server v0.6.1.</li>
+    <li>Android 7.0 (API 24) or newer on an ARM device (<code>arm64-v8a</code> or <code>armeabi-v7a</code>). There is no Play Store release; signed APKs with SHA-256 checksums are on the <a href="https://github.com/1270011/multica-android-unofficial/releases">Releases</a> page.</li>
+  </ul>
+</section>
+
+<section aria-labelledby="faq">
+  <h2 id="faq">FAQ</h2>
+  <dl>
+    <dt>Is there a Multica Android app?</dt>
+    <dd>The official Multica mobile client is built for iOS only. This project is an unofficial Android port of that client. It is not affiliated with or endorsed by Multica / Index Labs.</dd>
+    <dt>How can I manage AI coding agents from my phone?</dt>
+    <dd>Connect the app to your Multica server. Agent results and questions arrive in the inbox; you can read run transcripts, reply in the issue chat, re-run or cancel runs and chat with an agent directly.</dd>
+    <dt>Does it work with self-hosted Multica?</dt>
+    <dd>Yes – it was built and tested with a self-hosted Multica server. Enter your server URL on first start.</dd>
+    <dt>Is this app open source?</dt>
+    <dd>It is source-available: the complete source is published under the Multica License, the Apache License 2.0 together with additional conditions. Because of those conditions it is not an OSI-approved license. See the <a href="https://github.com/1270011/multica-android-unofficial/blob/main/LICENSE">LICENSE</a>.</dd>
+    <dt>Is my data sent anywhere else?</dt>
+    <dd>No. The app talks only to the Multica server you configure (plus Cloudflare, if you use the Cloudflare Access mode). No Firebase, no analytics, no tracking.</dd>
+  </dl>
+  <p>More questions, troubleshooting and a detailed feature list are in the <a href="https://github.com/1270011/multica-android-unofficial#readme">README</a>.</p>
+</section>
+
+<footer>
+  <p><strong>Unofficial.</strong> This project is not affiliated with or endorsed by Multica / Index Labs (Hong Kong) Limited, and it is not supported by them. “Multica” and the Multica logo belong to their owners.</p>
+  <p>Source-available under the <a href="https://github.com/1270011/multica-android-unofficial/blob/main/LICENSE">Multica License</a> (Apache-2.0 based). · <a href="https://github.com/1270011/multica-android-unofficial">Repository</a> · <a href="https://github.com/1270011/multica-android-unofficial/releases">Releases</a> · <a href="https://github.com/1270011/multica-android-unofficial/blob/main/CHANGELOG.md">Changelog</a></p>
+</footer>
+</main>
+</body>
+</html>

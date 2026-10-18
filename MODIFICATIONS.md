@@ -27,14 +27,31 @@ Modified by Multica Android (unofficial) contributors.
 - Standalone workspace: root `package.json`, `pnpm-workspace.yaml` and
   `pnpm-lock.yaml` reduced to the app and the packages above; the
   `eslint-config` package lost its Next.js preset.
+- Documentation for this repository: `README.md` and a GitHub Pages landing
+  page (`docs/`, with screenshots and a social preview image);
+  `apps/mobile/README.md` rewritten for building, signing and
+  connecting the Android app (it was the upstream iOS guide);
+  `apps/mobile/AGENTS.md` adapted to the standalone Android repository
+  (no monorepo, web/desktop or iOS-first references); a note on top of
+  `apps/mobile/docs/markdown-rendering-adr.md` that it is a historical
+  upstream decision record.
+- Comments only (no values or code changed): the `.env*` files,
+  `app.config.ts`, `lib/debug-token-login.ts` and
+  `scripts/check-release-bundle.sh` in `apps/mobile` no longer refer to
+  iPhone-only scripts, the desktop/web apps or a missing `docs/ANDROID.md`.
 
-## Modified files (156)
+## Modified files (162)
 
 - `.gitattributes`
 - `.gitignore`
 - `README.md`
 - `apps/mobile/.env.example`
+- `apps/mobile/.env.production`
+- `apps/mobile/.env.production.example`
+- `apps/mobile/.env.staging`
 - `apps/mobile/.gitignore`
+- `apps/mobile/AGENTS.md`
+- `apps/mobile/README.md`
 - `apps/mobile/app.config.ts`
 - `apps/mobile/app/(app)/[workspace]/(tabs)/_layout.tsx`
 - `apps/mobile/app/(app)/[workspace]/(tabs)/chat.tsx`
@@ -145,6 +162,7 @@ Modified by Multica Android (unofficial) contributors.
 - `apps/mobile/data/stores/issues-view-store.ts`
 - `apps/mobile/data/stores/my-issues-view-store.ts`
 - `apps/mobile/data/workspace-store.ts`
+- `apps/mobile/docs/markdown-rendering-adr.md`
 - `apps/mobile/eslint.config.js`
 - `apps/mobile/lib/attachment-url.test.ts`
 - `apps/mobile/lib/attachment-url.ts`
@@ -187,7 +205,7 @@ Modified by Multica Android (unofficial) contributors.
 - `pnpm-lock.yaml`
 - `pnpm-workspace.yaml`
 
-## Added files (264)
+## Added files (268)
 
 Files that do not exist in upstream `v0.6.1`.
 
@@ -448,11 +466,15 @@ Files that do not exist in upstream `v0.6.1`.
 - `apps/mobile/scripts/check-release-bundle.test.sh`
 - `apps/mobile/scripts/prebuild-stamp.sh`
 - `apps/mobile/scripts/prebuild-stamp.test.sh`
-- `docs/screenshots/01-inbox.png`
-- `docs/screenshots/02-board.png`
-- `docs/screenshots/03-issue-detail.png`
-- `docs/screenshots/04-issue-chat.png`
-- `docs/screenshots/05-agent-chat.png`
+- `docs/index.html`
+- `docs/robots.txt`
+- `docs/screenshots/01-board.png`
+- `docs/screenshots/02-issue-detail.png`
+- `docs/screenshots/03-issue-chat.png`
+- `docs/screenshots/04-my-issues.png`
+- `docs/screenshots/05-dark-mode.png`
+- `docs/sitemap.xml`
+- `docs/social-preview.png`
 - `docs/technik/ping-rule-vectors.json`
 - `patches/react-native-screens@4.23.0.patch`
 

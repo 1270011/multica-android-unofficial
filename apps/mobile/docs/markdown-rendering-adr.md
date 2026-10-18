@@ -1,5 +1,7 @@
 # ADR — Markdown rendering on `apps/mobile/`
 
+> **Note (Android fork):** This ADR was written in the upstream Multica repository and is kept as a historical decision record. Mentions of web/desktop refer to the upstream web and desktop clients, which are not part of this repository. The decision applies unchanged to the Android build.
+
 **Status**: Accepted
 **Date**: 2026-05-19
 

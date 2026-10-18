@@ -4,7 +4,7 @@
 #   scripts/check-release-bundle.sh [--expect-debug] <app.apk|index.android.bundle>
 #
 # Default: fails when the JS bundle still contains a marker of the debug
-# token login (docs/ANDROID.md "Debug-Token-Login"). build-release.sh runs
+# token login (apps/mobile/README.md, "Debug build"). build-release.sh runs
 # this on every signed APK.
 # --expect-debug: the opposite check for debug APKs — fails when a marker
 # is MISSING. CI runs it on its debug APK so the marker list is proven to

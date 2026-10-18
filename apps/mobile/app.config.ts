@@ -40,8 +40,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     userInterfaceStyle: "automatic",
     scheme: "multica",
     // 1024x1024 full-bleed, no-alpha source that belongs to mobile alone. Do
-    // not point this back at the desktop icon (apps/desktop/build/icon.png):
-    // that one is padded for macOS, and iOS would mask it a second time, which
+    // not point this back at the upstream desktop icon: that one is padded
+    // for macOS, and iOS would mask it a second time, which
     // is the white ring from #6995. Expo prebuild generates every required iOS
     // icon size from this single PNG.
     icon: "./assets/icon.png",

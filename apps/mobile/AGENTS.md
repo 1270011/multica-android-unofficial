@@ -1,18 +1,19 @@
 # Mobile App Instructions
 
-These rules apply only to `apps/mobile/`, in addition to the [root instructions](../../AGENTS.md). Paths below are relative to `apps/mobile/` unless prefixed with `packages/` or `.github/`.
+These rules apply to the Android app in `apps/mobile/`. Paths below are relative to `apps/mobile/` unless prefixed with `packages/`. The repository contains only this app and the shared packages `packages/core`, `packages/tsconfig` and `packages/eslint-config`; the Multica server and the web and desktop clients live in the upstream repository (<https://github.com/multica-ai/multica>).
 
 ## Sharing and Dependencies
 
-- Mobile owns its UI, state, hooks, providers, API client, QueryClient, i18n, and build/release workflow. Import core types with `import type`; runtime imports are limited to pure utilities and platform-independent schemas. Do not import web/desktop stores, hooks, Query factories, or WS updaters.
+- Mobile owns its UI, state, hooks, providers, API client, QueryClient, i18n, and build/release workflow. Import core types with `import type`; runtime imports are limited to pure utilities and platform-independent schemas. Do not import the stores, hooks, Query factories, or WS updaters in `packages/core`; they belong to the upstream web/desktop clients.
 - Use `package.json` and the lockfile for current versions. Mobile pins Expo/React Native dependencies rather than taking the root React catalog.
 - Add SDK-aligned native packages with `pnpm exec expo install <package>` from this directory. Check compatibility before adding other dependencies; do not pick versions from memory.
-- Follow [README.md](README.md) for setup, simulator/device builds, and environment variants. Keep iOS scripts routed through `scripts/ios-run.sh`, which prebuilds before running iOS so config plugins are reapplied. Preserve the caller's `APP_ENV`; avoid clean prebuilds in the normal edit loop.
-- Generated `ios/` and `android/` directories are not source. Check new source paths with `git check-ignore -v <path>` when they could match the root ignore rules, particularly `data/`, `build/`, and `bin/`.
+- Follow [README.md](README.md) for setup, debug and release builds, and signing. Build Android through `scripts/android-build.sh` (or `scripts/build-release.sh`), which prebuilds so config plugins are reapplied and checks the native patches. Preserve the caller's `APP_ENV`; avoid `--clean` prebuilds in the normal edit loop.
+- The upstream iOS setup (`scripts/ios-run.sh`, the `ios*` scripts in `package.json`) is still in the code base but untested in this fork. Keep iOS code paths compiling; do not rely on them.
+- Generated `ios/` and `android/` directories are not source. Check new source paths with `git check-ignore -v <path>` when they could match the root ignore rules, particularly `build/` and `.env*`.
 
 ## Behavioral Parity
 
-- Before implementing a feature, inspect its web/desktop implementation in `packages/views/` and `packages/core/`: endpoints, permissions, state transitions, display transforms, and cross-cache side effects.
+- Before implementing a feature, inspect its web/desktop implementation in the upstream repository (`packages/views/`) and in `packages/core/`: endpoints, permissions, state transitions, display transforms, and cross-cache side effects.
 - Match product semantics: counts/visibility, permissions, enums, and canonical IDs/fields. Adapt UI and navigation to the phone; document meaningful divergences with the source behavior they preserve.
 - Mirror the relevant behavior using mobile-owned caches and helpers; do not copy cache shapes or UI preprocessing blindly. List transforms must preserve pagination, grouping, and visibility semantics.
 - Reuse `lib/inbox-display.ts` for inbox list display. Badge counts come from the server unread summary via `lib/unread-counts.ts` and `data/queries/inbox.ts`; do not derive them from the downloaded list. Inbox writes/events refresh both the list and unread summary through `data/realtime/inbox-ws-updaters.ts`.
@@ -21,8 +22,8 @@ These rules apply only to `apps/mobile/`, in addition to the [root instructions]
 ## UI Components
 
 - Inspect existing rows, pickers, forms, and domain visuals before adding components. Extend a suitable existing pattern; do not rewrite a domain component merely because a new feature uses it.
-- For a new interaction, prefer a native iOS/RN API, then an RNR component. If neither fits, compose existing primitives inline for a local need. A new generic primitive requires at least three callers and no suitable native/RNR alternative; clarify unresolved interaction requirements before inventing one.
-- Native examples: `Alert.prompt` for text prompts, `Alert.alert` for confirmation, `ActionSheetIOS` for action menus, existing native date/media/document pickers, `Share.share`, and `expo-haptics`.
+- For a new interaction, prefer a native React Native/Android API, then an RNR component. If neither fits, compose existing primitives inline for a local need. A new generic primitive requires at least three callers and no suitable native/RNR alternative; clarify unresolved interaction requirements before inventing one.
+- Native examples: `Alert.alert` for confirmation, `showActionSheet` from `lib/action-sheet.ts` for action menus (Material bottom sheet on Android; never call `ActionSheetIOS` directly, it is a no-op on Android), existing native date/media/document pickers, `Share.share`, and `expo-haptics`. Android has no `Alert.prompt`; use a small formSheet route with one field instead (see `app/(app)/[workspace]/chat-session-rename.tsx`).
 - Add RNR components with `npx @react-native-reusables/cli@latest add <name>`. Review generated changes and preserve local customizations. Keep default variants/spacing unless a concrete product need requires changes.
 - Generic primitives live in `components/ui/`; domain compositions live in `components/<domain>/`. Use the existing `cn()` in `lib/utils.ts` and semantic tokens.
 - Screens have titles, tab bars have icons, secondary labels use type-aware helpers, and multiple trailing row elements stack vertically. Check long text, keyboard, safe areas, scrolling, and both themes.
@@ -37,8 +38,9 @@ These rules apply only to `apps/mobile/`, in addition to the [root instructions]
 
 | Content | Container |
 | --- | --- |
-| Confirmation or text prompt | Native alert/prompt |
-| Short action menu | Native action sheet; reuse existing local popover patterns when appropriate |
+| Confirmation | `Alert.alert` |
+| Text prompt | Expo Router `presentation: "formSheet"` route with one field |
+| Short action menu | `showActionSheet` (`lib/action-sheet.ts`); reuse existing local popover patterns when appropriate |
 | Long list, search, form, or keyboard interaction | Expo Router `presentation: "formSheet"` route |
 | Multi-screen modal flow | Expo Router `presentation: "modal"` |
 
@@ -60,12 +62,12 @@ Use the existing helpers rather than rebuilding request or subscription plumbing
 | Query lifecycle | `data/query-client.ts`: AppState focus and NetInfo connectivity |
 | Realtime lifecycle | `data/realtime/ws-client.ts`, `data/realtime/realtime-provider.tsx`, `lib/use-ws-subscriptions.ts` |
 
-- UI-consumed responses follow the root API compatibility rules. Raw `fetch` is reserved for writes whose response body is unused. Fallback values must satisfy the expected success type.
+- UI-consumed responses go through the validated helpers and schemas above, so a field the server adds, drops or renames degrades to a fallback instead of crashing the screen. Raw `fetch` is reserved for writes whose response body is unused. Fallback values must satisfy the expected success type.
 - Forward each query's `signal` through the API method to fetch. Preserve the request timeout and caller-abort forwarding in `data/api.ts`; do not replace its cancellation implementation without checking the supported mobile runtime.
 - Preserve the API client's request IDs/logging and the idempotent 401 cleanup in `app/_layout.tsx` (auth, workspace, Query cache, navigation). Mobile uses bearer auth; do not copy browser cookie/CSRF plumbing.
 - Use feature key factories, with `wsId` for workspace data and separate account-level keys for cross-workspace summaries. Do not hardcode keys or require every key to have the same number of segments.
-- **Optimistic-update exception:** inbox mark-read may patch synchronously before navigation to avoid an unread row in the iOS transition snapshot. Keep this inside the mutation, capture rollback state before patching, and refresh on settle. It is not permission to optimistically create/delete/leave or to generalize navigation-time optimism.
-- Other mutations follow the root optimistic-update policy; message sends retain visible pending/retry states.
+- **Optimistic-update exception:** inbox mark-read may patch synchronously before navigation to avoid an unread row in the screen transition. Keep this inside the mutation, capture rollback state before patching, and refresh on settle. It is not permission to optimistically create/delete/leave or to generalize navigation-time optimism.
+- Other mutations follow the existing patterns in `data/mutations/`; message sends retain visible pending/retry states.
 
 ## Realtime
 
@@ -86,7 +88,7 @@ pnpm --filter @multica/mobile lint
 pnpm --filter @multica/mobile test
 ```
 
-- Root frontend checks exclude mobile. `.github/workflows/mobile-verify.yml` defines the current mobile CI scope; these checks do not build an IPA or verify native rendering.
-- For UI changes, verify the affected flow in the simulator/device, including themes, keyboard/scrolling, and navigation. For shared semantics or realtime changes, change the same data from web and confirm mobile catches up without manual refresh, including after reconnect.
-- Test parsing/transforms in the existing Vitest setup. Preserve `scripts/ios-run.test.sh` coverage when changing the native build wrapper.
+- These checks do not build an APK or verify native rendering. For that, build a debug APK with `scripts/android-build.sh debug` (see [README.md](README.md)).
+- For UI changes, verify the affected flow on an emulator or device, including both themes, keyboard/scrolling, landscape, large font sizes, and navigation. For shared semantics or realtime changes, change the same data from the Multica web app and confirm the app catches up without manual refresh, including after reconnect.
+- Test parsing/transforms in the existing Vitest setup. Scripts in `scripts/` have a `*.test.sh` next to them; run the matching one (`bash scripts/<name>.test.sh`) when changing a script.
 - Report which checks ran and which native/cross-client checks were unavailable. Do not claim visual or release verification from typecheck/unit tests alone.

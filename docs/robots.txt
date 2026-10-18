@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://1270011.github.io/multica-android-unofficial/sitemap.xml

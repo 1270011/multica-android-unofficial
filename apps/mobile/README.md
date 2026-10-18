@@ -1,113 +1,115 @@
-# Multica Mobile (iOS)
+# Multica for Android (unofficial) – app package
 
-Expo + React Native iOS client for Multica. Independent from web/desktop — shares types and pure utilities from `@multica/core/`. See [`AGENTS.md`](./AGENTS.md) for mobile architecture and development rules; `package.json` records the current dependency versions.
+Expo + React Native Android client for [Multica](https://github.com/multica-ai/multica). This directory is the app itself; it shares types and pure utilities with `packages/core`. Development rules are in [`AGENTS.md`](./AGENTS.md); `package.json` records the current dependency versions. For what the app does, see the [repository README](../../README.md).
 
-## Just want to use it on your phone? (no development)
+This is an unofficial community port, not affiliated with or endorsed by Multica / Index Labs. Signed APKs are on the [Releases](https://github.com/1270011/multica-android-unofficial/releases) page; everything below is for building the app yourself.
 
-Multica isn't on the App Store yet — until that changes, anyone who wants it on their iPhone builds from source. One command:
+The code base still contains the upstream iOS setup; iOS builds are untested in this fork.
 
-```bash
-pnpm ios:mobile:device:prod:release
-```
+## Requirements
 
-This connects to the same backend as `multica.ai`, so your existing account just works. To use a private backend or your own bundle ID, copy `apps/mobile/.env.production.example` to `apps/mobile/.env.production.local` and edit the copy — it overrides the committed `.env.production` key by key and is gitignored, so personal values stay local.
+- Node.js 22 (`.nvmrc`; `package.json` requires `>=22`)
+- pnpm in the version from `packageManager` in the root `package.json`, e.g. via `corepack enable`
+- JDK 17 (`JAVA_HOME`)
+- Android SDK with platform 36, build-tools 36 and NDK 27 (`ANDROID_HOME`)
+- Python 3 (used by the APK checks in `scripts/`)
 
-**Prerequisites**: Mac with Xcode, a free Apple ID added under Xcode → Settings → Accounts, iPhone connected via USB with [Developer Mode enabled](https://docs.expo.dev/guides/ios-developer-mode/). Walk through Expo's [Set up your environment](https://docs.expo.dev/get-started/set-up-your-environment/) (pick **Development build → iOS Device**) if any of that is missing.
-
-Xcode signs the build with the "Personal Team" your Apple ID automatically owns — created silently the first time you signed into Xcode, no setup needed. The first build downloads CocoaPods + compiles React Native from source — expect 10–20 minutes. Subsequent builds reuse Xcode's cache.
-
-**If Xcode rejects signing with "No matching provisioning profiles found"** — rare, happens if someone has claimed the default bundle id `ai.multica.mobile` on Apple's developer portal. Pick any reverse-domain you own and re-run:
+Install the dependencies once from the repository root, and again after every pull:
 
 ```bash
-export EXPO_BUNDLE_IDENTIFIER_PROD=com.yourname.multica
-pnpm ios:mobile:device:prod:release
+pnpm install --frozen-lockfile
 ```
 
-**If your Apple ID belongs to more than one Apple Developer team** — a personal team plus an employer's, say — the build signs with the first identity it finds, which may not be the team you meant, and it keeps reusing that choice on every later build. Pin the right one (find the id in the Apple Developer Portal under Membership):
-
-```bash
-export EXPO_APPLE_TEAM_ID=ABCDE12345
-pnpm ios:mobile:device:prod:release
-```
-
-**7-day signing limit**: a free Apple ID signs builds for 7 days. After that, plug back into the Mac and re-run the command to re-sign. An Apple Developer Program account ($99/yr) extends this to 1 year.
-
-Everything below is for app developers — you can ignore the rest if you only wanted a personal install.
+The lockfile also applies the native fix in `patches/`. The build stops if it is missing (`scripts/check-native-patches.sh`).
 
 ## Scripts
 
-| Command | What it does | Backend |
-|---|---|---|
-| `pnpm dev:mobile` | Metro only (reuse existing install) | local (`.env.development.local`) |
-| `pnpm dev:mobile:staging` | Metro only (reuse existing install) | staging (`.env.staging`) |
-| `pnpm dev:mobile:prod` | Metro only (reuse existing install) | production (`.env.production`, overridden by `.env.production.local`) |
-| `pnpm ios:mobile` | Full rebuild + install on **iOS Simulator**, Debug | local |
-| `pnpm ios:mobile:staging` | Full rebuild + install on **iOS Simulator**, Debug | staging |
-| `pnpm ios:mobile:prod` | Full rebuild + install on **iOS Simulator**, Debug | production |
-| `pnpm ios:mobile:device` | Full rebuild + install on **USB iPhone**, Debug | local |
-| `pnpm ios:mobile:device:staging` | Full rebuild + install on **USB iPhone**, Debug | staging |
-| `pnpm ios:mobile:device:staging:release` | Full rebuild + install on **USB iPhone**, Release (standalone) | staging |
-| `pnpm ios:mobile:device:prod` | Full rebuild + install on **USB iPhone**, Debug | production |
-| `pnpm ios:mobile:device:prod:release` | Full rebuild + install on **USB iPhone**, Release (standalone) | production |
+Run from the repository root. The root `package.json` forwards the app scripts:
 
-`dev:*` runs Metro only — assumes the matching variant is already installed. `ios:mobile*` does a full native rebuild + install.
+| Command | What it does |
+|---|---|
+| `pnpm android:debug` | Debug APK via `scripts/android-build.sh debug` |
+| `pnpm android:release` | Signed release APK via `scripts/build-release.sh` (needs your own keystore, see below) |
+| `pnpm android:prebuild` | Only regenerate `apps/mobile/android/` with `expo prebuild` |
+| `pnpm dev` | Metro dev server (`expo start`) for a debug APK that is already installed |
+| `pnpm typecheck` / `pnpm lint` | TypeScript and ESLint for the app |
+| `pnpm test` | Unit tests of the app and of `packages/core` |
+| `pnpm check:native-patches` | Check that the patched native dependency is installed |
 
-Bundle id and display name switch on `APP_ENV` (see `app.config.ts`), so Dev / Staging / Production variants can coexist on the same device or simulator.
+The same checks for the app alone: `pnpm --filter @multica/mobile typecheck`, `pnpm --filter @multica/mobile lint`, `pnpm --filter @multica/mobile test`.
 
-## First-time setup
+Always build through `scripts/android-build.sh` (or the `android:*` scripts). `android/` is generated by `expo prebuild` and not committed; the script regenerates it when `app.config.ts`, `package.json` or `plugins/` changed, and checks the finished APK for the native patch. The header comments of `scripts/android-build.sh` and `scripts/build-release.sh` describe all options and environment variables; print them with `--help`, called from `apps/mobile` (`cd apps/mobile && scripts/android-build.sh --help`), not from the repository root.
 
-`.env.staging` is committed (public staging URL). `.env.development.local` is gitignored — copy the template once:
+## Debug build
 
 ```bash
-cp apps/mobile/.env.example apps/mobile/.env.development.local
-# then edit EXPO_PUBLIC_API_URL inside it to your Mac's LAN IP, e.g. http://192.168.1.42:8080
+export ANDROID_HOME=/path/to/android-sdk JAVA_HOME=/path/to/jdk-17
+apps/mobile/scripts/android-build.sh debug                    # x86_64, for the emulator
+apps/mobile/scripts/android-build.sh debug --archs arm64-v8a  # for a phone
+# -> apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-If your Apple ID isn't on the Multica Apple Developer team yet, also set `EXPO_BUNDLE_IDENTIFIER_DEV` to a reverse-domain you own (e.g. `com.yourname.multica.dev`). For a personal production build, set `EXPO_BUNDLE_IDENTIFIER_PROD` in `.env.production.local`.
+Options: `--archs <list>` (comma-separated ABIs, also `RB_ARCHS`), `--clean` (clean prebuild), `ANDROID_VERSION_CODE` (default 1).
 
-If your Apple ID belongs to more than one Apple Developer team, also set `EXPO_APPLE_TEAM_ID` to the team that should sign your builds. Unlike the bundle id overrides it applies to every variant, and it is re-applied on each run — so it also fixes a checkout that has already latched onto the wrong team.
+The debug APK contains the JS bundle, so it runs without Metro. With `pnpm dev` running and the device able to reach your machine (for an emulator or USB device: `adb reverse tcp:8081 tcp:8081`), **Reload** in the dev menu loads the current JS from Metro.
 
-## Build it onto your iPhone
+Debug builds only: verbose logs and a sign-in with a personal access token for automated tests. Release builds contain neither; `scripts/check-release-bundle.sh` checks this on every release APK.
 
-Two paths, depending on what you want to do:
+## Release build with your own key
 
-### Day-to-day development (Mac in front of you)
+Release APKs are signed with your own keystore. Create one with the JDK's `keytool` if you do not have one:
 
 ```bash
-pnpm ios:mobile:device:staging
+keytool -genkeypair -v -keystore /secure/path/release.jks -alias <alias> \
+  -keyalg RSA -keysize 4096 -validity 10000
 ```
 
-Produces a **Debug build** with `expo-dev-launcher` embedded. Every launch the app probes Metro on your Mac and pulls fresh JS — perfect for hot-reload, painful when the Mac is asleep or you're on a different WiFi.
-
-### Standalone / "just use it" (walk away from the Mac)
+Put the signing values into a file that only you can read (`chmod 600`), outside the repository:
 
 ```bash
-pnpm ios:mobile:device:staging:release
+RB_RELEASE_STORE_FILE=/secure/path/release.jks
+RB_RELEASE_STORE_PASSWORD=<store password>
+RB_RELEASE_KEY_ALIAS=<alias>
+RB_RELEASE_KEY_PASSWORD=<key password>
 ```
 
-Produces a **Release build**. No `expo-dev-launcher`, no Metro probe, no "Downloading…" screen. Splash → app, exactly like an App Store install. Trade-off: every JS change requires re-running this command.
+`plugins/with-release-signing.js` adds a release signing config that reads exactly these four Gradle properties. `scripts/build-release.sh` loads the file named by `RB_SIGNING_ENV` and passes the values to Gradle through a temporary `gradle.properties` in a private `GRADLE_USER_HOME`, not on the command line. Without the properties a release build falls back to the debug key; never commit a keystore, its passwords or a `gradle.properties` with these values.
 
-Both paths share the same prerequisites: Mac with Xcode, free Apple ID added under Xcode → Settings → Accounts, iPhone connected via USB with Developer Mode enabled. Follow Expo's [Set up your environment](https://docs.expo.dev/get-started/set-up-your-environment/) — pick **Development build → iOS Device** — if any of that is missing.
-
-First build of either variant downloads CocoaPods + compiles React Native from source — expect 10-20 minutes. Subsequent builds reuse Xcode's DerivedData cache.
-
-## Try it in the iOS Simulator (no iPhone needed)
+The script compares the signer certificate with `release-signer.sha256`. That file holds the SHA-256 of the certificate used for the published releases, so replace its content with the SHA-256 of your own certificate (from `keytool -list -v -keystore /secure/path/release.jks`, without colons, lower case) or delete it to skip the check.
 
 ```bash
-pnpm ios:mobile:staging
+export ANDROID_HOME=/path/to/android-sdk JAVA_HOME=/path/to/jdk-17
+export RB_SIGNING_ENV=/secure/path/signing.env
+export ANDROID_VERSION_NAME=1.0.0 ANDROID_VERSION_CODE=1
+pnpm android:release
+# -> apps/mobile/build/release-apk/multica-unofficial-1.0.0.apk (+ .sha256)
 ```
 
-Boots the simulator, builds, installs the dev-client. Faster to iterate than a device build because no signing / provisioning step. Same `dev:mobile:staging` Metro flow afterward.
+Options of `scripts/build-release.sh`: `--version-code N`, `--out <dir>` (also `RB_OUT_DIR`), `--clean`, `--abi-suffix`. The default ABIs are `arm64-v8a,armeabi-v7a` (`RB_ARCHS`). The script refuses to run when a debug-only switch is set in the environment, verifies the APK with `apksigner` and writes a SHA-256 checksum next to it.
 
-## 7-day signing limit (device only)
+Android only installs an update over an existing app if it is signed with the same key and has a higher `versionCode`. An app you signed yourself cannot be updated with a published release APK (or the other way round); uninstall it first.
 
-A free Apple ID signs builds for **7 days only**, Debug and Release both. After that the app refuses to launch on the iPhone. Plug back into the Mac and re-run the corresponding `ios:mobile:device*` script to re-sign. Simulator builds are unaffected. The only workaround for the device limit is an Apple Developer Program account ($99/yr), which extends to 1 year.
+## Server setup in the app
 
-## Pointing at a different backend
+Nothing server-specific is built into the APK. On first start the app asks for the server connection; you can change it later under **Settings → Server connection** (this signs you out).
 
-Edit `EXPO_PUBLIC_API_URL` in `.env.staging`, `.env.production.local`, or `.env.development.local` (whichever variant you're running). Then:
+- **Local / VPN** – a direct connection to the server URL, e.g. `https://multica.example.com`. Works for any server you can reach directly, on a LAN, over a VPN or on the internet. The app trusts CA certificates installed by the user, so a server with a private CA works without rebuilding.
+- **Cloudflare Access** – the server URL plus the Client ID and Client Secret of a Cloudflare Access service token for a server behind Cloudflare Zero Trust.
 
-- For an installed **Debug build**: restart Metro (`pnpm dev:mobile:staging`) so the next JS bundle picks up the new value.
-- For an installed **Release build**: re-run the `ios:mobile:device:staging:release` command — the value is baked into the embedded bundle at build time.
+**Test connection** calls `GET /health` on the server. Then sign in with the e-mail code.
 
-For local backend testing, use your Mac's LAN IP (`ipconfig getifaddr en0`), not `localhost`.
+The URL must use `https://`: the app's network security config disallows cleartext HTTP.
+
+Optional at build time: `EXPO_PUBLIC_DEFAULT_SERVER_URL` prefills the URL field in Cloudflare Access mode. The server address is never taken from `EXPO_PUBLIC_API_URL`; the committed `apps/mobile/.env*` files come from upstream and do not choose a server for this app.
+
+## Project layout
+
+| Path | Content |
+|---|---|
+| `app/` | Expo Router screens |
+| `components/`, `lib/`, `data/` | UI components, pure helpers, API client, queries, stores and realtime |
+| `locales/` | Translations (`en`, `de`, `zh-Hans`) |
+| `modules/rb-notify/` | Native Android module for on-device notifications (foreground service + WebSocket) |
+| `plugins/` | Expo config plugins applied by `expo prebuild` (signing, network security, manifest hardening, …) |
+| `scripts/` | Build, release and check scripts |
+| `docs/` | Architecture decision records |
