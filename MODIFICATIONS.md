@@ -187,12 +187,13 @@ Modified by Multica Android (unofficial) contributors.
 - `pnpm-lock.yaml`
 - `pnpm-workspace.yaml`
 
-## Added files (260)
+## Added files (264)
 
 Files that do not exist in upstream `v0.6.1`.
 
 - `.gitleaks.toml`
 - `CHANGELOG.md`
+- `KNOWN_ISSUES.md`
 - `apps/mobile/app/(app)/[workspace]/agent/[id].tsx`
 - `apps/mobile/app/(app)/[workspace]/chat-session-rename.tsx`
 - `apps/mobile/app/(app)/[workspace]/inbox-filter.tsx`
@@ -447,9 +448,12 @@ Files that do not exist in upstream `v0.6.1`.
 - `apps/mobile/scripts/check-release-bundle.test.sh`
 - `apps/mobile/scripts/prebuild-stamp.sh`
 - `apps/mobile/scripts/prebuild-stamp.test.sh`
-- `docs/github-metadata.md`
+- `docs/screenshots/01-inbox.png`
+- `docs/screenshots/02-board.png`
+- `docs/screenshots/03-issue-detail.png`
+- `docs/screenshots/04-issue-chat.png`
+- `docs/screenshots/05-agent-chat.png`
 - `docs/technik/ping-rule-vectors.json`
-- `docs/upstream-plan.md`
 - `patches/react-native-screens@4.23.0.patch`
 
 ## Removed files (3)

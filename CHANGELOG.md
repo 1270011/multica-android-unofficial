@@ -4,7 +4,9 @@ All notable changes of this unofficial Android app are listed here. The format f
 
 The baseline is the upstream Multica mobile client (`apps/mobile`) at tag `v0.6.1` of <https://github.com/multica-ai/multica>, which supports iOS only.
 
-## [1.0.0] – unreleased
+## [1.0.0] – 2026-10-18
+
+> ⚠️ **Early release.** v1.0.0 was built fast and may have rough edges. It is not extensively end-to-end tested. It is functional and usable, but not state of the art. Known issues are listed in [KNOWN_ISSUES.md](KNOWN_ISSUES.md) and are being fixed for v2.0.0.
 
 First public release as a standalone repository. Earlier builds were private test builds; this release contains everything from them.
 
