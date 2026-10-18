@@ -2,11 +2,11 @@
 
 > ⚠️ **Early release (v1.0.0).** This app was built fast and may have rough edges. It is **not extensively end-to-end tested**. It is functional and usable, but not state of the art. Known issues are being fixed for **v2.0.0** → [Known issues](KNOWN_ISSUES.md)
 
-[![Release](https://img.shields.io/github/v/release/127001/multica-android-unofficial?include_prereleases&sort=semver)](https://github.com/127001/multica-android-unofficial/releases)
+[![Release](https://img.shields.io/github/v/release/1270011/multica-android-unofficial?include_prereleases&sort=semver)](https://github.com/1270011/multica-android-unofficial/releases)
 [![License](https://img.shields.io/badge/license-Multica%20License%20(Apache--2.0%20based)-blue)](LICENSE)
-[![Downloads](https://img.shields.io/github/downloads/127001/multica-android-unofficial/total)](https://github.com/127001/multica-android-unofficial/releases)
+[![Downloads](https://img.shields.io/github/downloads/1270011/multica-android-unofficial/total)](https://github.com/1270011/multica-android-unofficial/releases)
 
-**Multica for Android (unofficial)** is an open-source Android app for [Multica](https://github.com/multica-ai/multica), the platform where people and AI coding agents work on the same issues. Use it to follow your AI agents on the go: inbox and on-device notifications, issues and a Kanban board, comments, agent runs and agent chat, connected to your own Multica server – self-hosted or cloud.
+**Multica for Android (unofficial)** is a source-available (Multica License, Apache-2.0-based) Android app for [Multica](https://github.com/multica-ai/multica), the platform where people and AI coding agents work on the same issues. Use it to follow your AI agents on the go: inbox and on-device notifications, issues and a Kanban board, comments, agent runs and agent chat, connected to your own Multica server – self-hosted or cloud.
 
 > **Unofficial.** This project is not affiliated with or endorsed by Multica / Index Labs (Hong Kong) Limited, and it is not supported by them. "Multica" and the Multica logo belong to their owners and are used here only as required by the [Multica License](LICENSE).
 
@@ -67,7 +67,7 @@ Not included on purpose: workspace administration, agent/skill/runtime/autopilot
 
 ## Installation
 
-Signed APKs are published on the [Releases](https://github.com/127001/multica-android-unofficial/releases) page. There is no Play Store release.
+Signed APKs are published on the [Releases](https://github.com/1270011/multica-android-unofficial/releases) page. There is no Play Store release.
 
 1. Download `multica-unofficial-<version>.apk` and its `.sha256` file from the release.
 2. Check the checksum before installing:
@@ -97,6 +97,9 @@ You can change or forget the server later under **Settings → Server connection
 **Is this the official Multica app?**
 No. It is an independent, community-made Android port of the official mobile client. It is not affiliated with or endorsed by Multica / Index Labs. The app still shows Multica's name, logo and attribution, as the license requires. Please report problems with this app here, not in the Multica repository.
 
+**Is it open source?**
+Not in the OSI sense. The app is source-available (Multica License, Apache-2.0-based): the complete source is in this repository under the same license as upstream Multica – the Apache License 2.0 together with additional conditions. For example, Multica's name, logo and attribution must stay unchanged in the app, and running a Multica-based hosted service for third parties needs a commercial license from Index Labs. Within those terms you can read, build, modify and contribute to the code. See [License](#license).
+
 **Does it work with self-hosted Multica?**
 Yes – that is what it was built and tested with (Multica v0.6.1). Enter your server URL on first start. Servers behind Cloudflare Access and servers with a private CA are supported as well.
 
@@ -124,7 +127,7 @@ v1.0.0 is a first, early release. **v2.0.0** focuses on fixing the [known issues
 Requirements: Node.js 22, pnpm (version from `packageManager` in `package.json`, via `corepack enable`), JDK 17, Android SDK with platform 36, build-tools 36 and NDK 27.
 
 ```bash
-git clone https://github.com/127001/multica-android-unofficial.git
+git clone https://github.com/1270011/multica-android-unofficial.git
 cd multica-android-unofficial
 pnpm install --frozen-lockfile
 
