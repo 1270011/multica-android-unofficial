@@ -315,6 +315,10 @@ Notes:
 - We want to offer generally useful changes back to upstream as small pull requests. Product decisions, support for the Multica server, and the official apps stay with the Multica team.
 - Please report problems with this app here, not in the Multica repository.
 
+## Maintainer
+
+Maintained by [Recordingbeats](https://recordingbeats.com).
+
 ## License
 
 This project is distributed under the **Multica License**, the same license as the upstream code: the Apache License 2.0 together with additional conditions (Part I). The full text is in [LICENSE](LICENSE).
