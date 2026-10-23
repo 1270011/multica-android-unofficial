@@ -4,7 +4,7 @@ All notable changes of this unofficial Android app are listed here. The format f
 
 The baseline is the upstream Multica mobile client (`apps/mobile`) at tag `v0.6.1` of <https://github.com/multica-ai/multica>, which supports iOS only.
 
-## [2.0.0] – 2026-10-24
+## [2.0.0] – 2026-10-23
 
 Supported server: Multica v0.6.1 (self-hosted). Features the server does not offer (for example Autopilots) stay hidden.
 
