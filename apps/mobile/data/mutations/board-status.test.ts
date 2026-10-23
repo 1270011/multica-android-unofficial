@@ -93,4 +93,29 @@ describe("statusMoveBody (drop payload)", () => {
   it("carries the status and no neighbour ids", () => {
     expect(statusMoveBody("in_review")).toEqual({ status: "in_review", before_id: null, after_id: null });
   });
+  // Any sort other than "Manual" never sends a position.
+  it("sends no neighbour ids with a sort other than Manual", () => {
+    const neighbours = { before_id: "i-2", after_id: "i-3" };
+    expect(statusMoveBody("done", { field: "priority", direction: "desc" }, neighbours)).toEqual({
+      status: "done",
+      before_id: null,
+      after_id: null,
+    });
+    expect(statusMoveBody("done", { field: "position", direction: "asc" }, neighbours)).toEqual({
+      status: "done",
+      ...neighbours,
+    });
+  });
+});
+
+describe("useBoardStatusChange with a sort", () => {
+  it("moves and undoes without before_id/after_id", async () => {
+    vi.mocked(api.moveIssue).mockResolvedValue({ id: "i-1" } as Issue);
+    await useBoardStatusChange(String, { field: "created_at", direction: "desc" })("i-1", "todo", "done", "Done");
+    expect(api.moveIssue).toHaveBeenCalledWith("i-1", { status: "done", before_id: null, after_id: null });
+    pressToastAction();
+    await vi.waitFor(() =>
+      expect(api.moveIssue).toHaveBeenLastCalledWith("i-1", { status: "todo", before_id: null, after_id: null }),
+    );
+  });
 });

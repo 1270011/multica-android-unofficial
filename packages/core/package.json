@@ -70,6 +70,7 @@
     "./chat/use-quick-actions-pending-timeout": "./chat/use-quick-actions-pending-timeout.ts",
     "./chat/unread": "./chat/unread.ts",
     "./runtimes": "./runtimes/index.ts",
+    "./runtimes/derive-health": "./runtimes/derive-health.ts",
     "./runtimes/queries": "./runtimes/queries.ts",
     "./runtimes/mutations": "./runtimes/mutations.ts",
     "./runtimes/custom-pricing-store": "./runtimes/custom-pricing-store.ts",

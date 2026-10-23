@@ -1,8 +1,9 @@
 /**
  * Removable chips for the active issue-list filters, shared by
  * All, My and Project. Tapping a chip removes that one value. Status and
- * priority chips keep their previous look; project, label and due chips
- * resolve names from the workspace lists.
+ * priority chips keep their previous look; project, label, due and the
+ * assignee/creator chips (lib/actor-filter-options.ts) resolve
+ * names from the workspace lists.
  */
 import { Pressable, View } from "react-native";
 import { useQuery } from "@tanstack/react-query";
@@ -10,6 +11,11 @@ import { Text } from "@/components/ui/text";
 import { Ionicons } from "@/components/ui/ionicons";
 import { labelListOptions } from "@/data/queries/labels";
 import { projectListOptions } from "@/data/queries/projects";
+import { memberListOptions } from "@/data/queries/members";
+import { agentListOptions } from "@/data/queries/agents";
+import { squadListOptions } from "@/data/queries/squads";
+import { useAuthStore } from "@/data/auth-store";
+import { actorFilterChips } from "@/lib/actor-filter-options";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import {
   type IssueFilterList,
@@ -51,8 +57,24 @@ export function ActiveFilterChips({
     ...labelListOptions(wsId),
     enabled: !!wsId && needsLabels,
   });
+  // Names for the assignee/creator chips (D3b); unknown ids → "Unknown".
+  const needsActors = filters.assignees.length > 0 || filters.creators.length > 0;
+  const userId = useAuthStore((s) => s.user?.id ?? null);
+  const { data: members = [] } = useQuery({
+    ...memberListOptions(wsId),
+    enabled: !!wsId && needsActors,
+  });
+  const { data: agents = [] } = useQuery({
+    ...agentListOptions(wsId),
+    enabled: !!wsId && needsActors,
+  });
+  const { data: squads = [] } = useQuery({
+    ...squadListOptions(wsId),
+    enabled: !!wsId && filters.assignees.length > 0,
+  });
   if (!wsId) return null;
   const store = useIssueListFilterStore.getState();
+  const actorChips = actorFilterChips(filters, { members, agents, squads }, userId, t);
 
   const capped = filtersMayMissIssues(loadedCount, filters, total);
   return (
@@ -66,6 +88,20 @@ export function ActiveFilterChips({
         </Text>
       ) : null}
       <View className="flex-row flex-wrap gap-1.5 px-4">
+        {filters.involvesMe ? (
+          <Chip
+            label={t("filters.involves_me")}
+            onClear={() => store.setInvolvesMe(list, wsId, false)}
+          />
+        ) : null}
+        {actorChips.map((c) => (
+          <Chip
+            key={c.id}
+            label={c.label}
+            a11yLabel={c.a11yLabel}
+            onClear={() => store.clearActorChip(list, wsId, c.clear)}
+          />
+        ))}
         {filters.statuses.map((s) => (
           <Chip
             key={`s-${s}`}
@@ -112,7 +148,15 @@ export function ActiveFilterChips({
   );
 }
 
-function Chip({ label, onClear }: { label: string; onClear: () => void }) {
+function Chip({
+  label,
+  a11yLabel,
+  onClear,
+}: {
+  label: string;
+  a11yLabel?: string;
+  onClear: () => void;
+}) {
   const { t } = useT("issues");
   const { colorScheme } = useColorScheme();
   return (
@@ -120,7 +164,7 @@ function Chip({ label, onClear }: { label: string; onClear: () => void }) {
       onPress={onClear}
       hitSlop={6}
       accessibilityRole="button"
-      accessibilityLabel={t("filters.remove_chip", { label })}
+      accessibilityLabel={a11yLabel ?? t("filters.remove_chip", { label })}
       className="flex-row items-center gap-1 pl-2.5 pr-2 py-1 rounded-full border border-border bg-secondary/40 active:bg-secondary"
     >
       <Text className="text-xs text-foreground">{label}</Text>

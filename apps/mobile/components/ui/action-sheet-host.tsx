@@ -27,7 +27,8 @@ export function ActionSheetHost() {
 
   useEffect(() => {
     if (Platform.OS === "ios") return;
-    registerActionSheetPresenter((next) => {
+    // Unregisters only this host: a newer one may already be mounted.
+    return registerActionSheetPresenter((next) => {
       // A second sheet while one is open replaces it; the first one is
       // reported as cancelled so its caller can reset pressed state.
       setRequest((current) => {
@@ -37,7 +38,6 @@ export function ActionSheetHost() {
         return next;
       });
     });
-    return () => registerActionSheetPresenter(null);
   }, []);
 
   if (Platform.OS === "ios" || !request) return null;

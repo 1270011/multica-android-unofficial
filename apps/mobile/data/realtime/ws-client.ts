@@ -104,6 +104,7 @@ export class WSClient {
   private pongTimer: ReturnType<typeof setTimeout> | null = null;
   private awaitingPong = false;
   private hasConnectedBefore = false;
+  private authenticatedAt: number | null = null;
 
   private readonly handlers = new Map<WSEventType, Set<EventHandler>>();
   private readonly anyHandlers = new Set<AnyHandler>();
@@ -202,6 +203,15 @@ export class WSClient {
     };
   }
 
+  /** Epoch ms of the auth_ack on the CURRENT socket, or null while there is
+   *  no authenticated socket (dialing, backoff, paused, idle). Data fetched
+   *  before this moment may have missed events from the gap before it; data
+   *  fetched after it is kept fresh by events. Read by the focus refresh
+   *  (data/realtime/live-refresh.ts) to decide whether a refetch is needed. */
+  connectedSince(): number | null {
+    return this.authenticatedAt;
+  }
+
   send(message: WSMessage) {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message));
@@ -290,6 +300,7 @@ export class WSClient {
       if (!wasOurs) return;
 
       this.ws = null;
+      this.authenticatedAt = null;
       this.clearHeartbeat();
       this.logger.warn("[ws] socket closed");
       if (this.state === "active") this.scheduleReconnect();
@@ -298,6 +309,7 @@ export class WSClient {
 
   private onAuthenticated() {
     this.reconnectAttempt = 0;
+    this.authenticatedAt = Date.now();
     this.logger.info("[ws] authenticated");
     this.startHeartbeat();
     if (this.hasConnectedBefore) {
@@ -406,6 +418,7 @@ export class WSClient {
   }
 
   private teardownSocket() {
+    this.authenticatedAt = null;
     this.clearHeartbeat();
     if (!this.ws) return;
     const ws = this.ws;

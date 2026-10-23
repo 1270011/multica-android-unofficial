@@ -20,6 +20,10 @@
  *   - Run `marked.lexer` (we already depend on it for preprocess).
  *   - Walk the top-level token list.
  *   - `code` token → emit a `code` segment.
+ *   - `table` token → emit a `table` segment: rendered by
+ *     `MarkdownTable` in an RN horizontal ScrollView, because enriched's
+ *     native table scroller loses the swipe to the bubble's long-press
+ *     and clips wide tables (see `table-model.ts`).
  *   - `paragraph` token containing image tokens → split the paragraph
  *     at each image boundary. Each image becomes its own `image`
  *     segment; the surrounding text rejoins the prose stream. (RN's
@@ -44,11 +48,13 @@
  * otherwise.
  */
 import { marked, type Tokens } from "marked";
+import { tableFromToken, type TableModel } from "./table-model";
 
 export type MarkdownSegment =
   | { type: "prose"; content: string }
   | { type: "code"; lang: string | undefined; code: string }
-  | { type: "image"; uri: string; alt: string };
+  | { type: "image"; uri: string; alt: string }
+  | { type: "table"; table: TableModel };
 
 export function splitMarkdown(input: string): MarkdownSegment[] {
   if (!input) return [];
@@ -74,6 +80,12 @@ export function splitMarkdown(input: string): MarkdownSegment[] {
         lang: t.lang ? t.lang : undefined,
         code: t.text,
       });
+      continue;
+    }
+
+    if (token.type === "table") {
+      flushProse();
+      out.push({ type: "table", table: tableFromToken(token as Tokens.Table) });
       continue;
     }
 
@@ -118,8 +130,9 @@ export function splitMarkdown(input: string): MarkdownSegment[] {
       continue;
     }
 
-    // Every other top-level block (heading, list, blockquote, table,
-    // hr, html, space, def, …) goes to prose verbatim via token.raw.
+    // Every other top-level block (heading, list, blockquote, hr, html,
+    // space, def, …) goes to prose verbatim via token.raw. Tables nested
+    // in a list or quote stay there too (same trade-off as nested code).
     proseBuffer += (token as { raw?: string }).raw ?? "";
   }
 

@@ -14,12 +14,17 @@
  * (`issue/[id]/picker/board-status`); TalkBack gets "move to next /
  * previous column" actions. Both go through `/move` with an Undo toast.
  *
- * Drag & drop ("columns" layout only): hold a card, drag it onto
+ * Drag & drop (C2, "columns" layout only): hold a card, drag it onto
  * another column, release → same `/move` + Undo toast. Holding without
  * dragging still opens the status sheet. See use-board-drag.tsx.
  *
- * Works on the list the screen already loaded (up to 10 pages of 100).
- * When the server has more, the board says so and shows counts
+ * Selection mode: with `selection` the board is in the
+ * screen's selection mode: no dragging, cards carry a checkbox and a tap
+ * toggles them instead of opening the issue (lib/board-selection.ts). The
+ * screen owns the store and the batch bar.
+ *
+ * Works on the list the screen already loaded (up to 10 pages of
+ * 100). When the server has more, the board says so and shows counts
  * as "n+" (per-column paging via /api/issues/grouped: wave 2).
  */
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -52,7 +57,10 @@ import {
   type BoardColumn,
 } from "@/lib/board";
 import { useBoardStatusChange } from "@/data/mutations/board-status";
+import { isManualSort, type IssueListSort, MANUAL_SORT } from "@/lib/issue-list-sort";
+import { showToast } from "@/lib/toast";
 import { useBoardDrag } from "@/components/issue/board/use-board-drag";
+import { boardCardInteraction, type BoardCardInteraction } from "@/lib/board-selection";
 import type { GestureType } from "react-native-gesture-handler";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useIssueStatuses } from "@/lib/use-issue-statuses";
@@ -71,11 +79,15 @@ interface Props {
   filtersActive?: boolean;
   /** Active status filter: shows exactly these columns, hidden ones too. */
   statusFilters?: readonly string[];
+  /** List sort: card order and the drag reorder rule. */
+  sort?: IssueListSort;
   onOpenIssue: (issue: Issue) => void;
   /** Fixed height when the board sits inside a vertical ScrollView. */
   height?: number;
   /** Overrides the window width (e.g. a padded container). */
   width?: number;
+  /** Selection mode (D5b): selected ids, and what a tap toggles. */
+  selection?: { ids: ReadonlySet<string>; onToggle: (issue: Issue) => void };
 }
 
 export function IssueBoard({
@@ -84,17 +96,19 @@ export function IssueBoard({
   total,
   filtersActive = false,
   statusFilters = [],
+  sort = MANUAL_SORT,
   onOpenIssue,
   height,
   width: widthProp,
+  selection,
 }: Props) {
   const window = useWindowDimensions();
   const width = widthProp ?? window.width;
   const catalog = useIssueStatuses();
   const { t } = useT("issues");
   const columns = useMemo(
-    () => boardColumns(issues, catalog.statuses, { statusFilters }),
-    [issues, catalog.statuses, statusFilters],
+    () => boardColumns(issues, catalog.statuses, { statusFilters, sort }),
+    [issues, catalog.statuses, statusFilters, sort],
   );
   const truncated = isTruncated(loadedCount, total);
   const hiddenCount = hiddenIssueCount(issues, { statusFilters });
@@ -109,9 +123,12 @@ export function IssueBoard({
   const index = stepColumn(active, 0, columns.length);
   const pager = useRef<FlatList<BoardColumn>>(null);
   const wsSlug = useWorkspaceStore((s) => s.currentWorkspaceSlug);
-  const change = useBoardStatusChange((label) => t("board.moved_to", { status: label }));
+  const change = useBoardStatusChange((label) => t("board.moved_to", { status: label }), sort);
+  const interaction = boardCardInteraction(!!selection, layout.mode);
 
   const actions: CardActions = {
+    interaction,
+    selection,
     openStatus: (issue) => {
       if (!wsSlug) return;
       router.push({
@@ -129,16 +146,18 @@ export function IssueBoard({
   // Drag & drop only with several columns side by side (kanban.md).
   // Matches contentContainerClassName "gap-3 px-3" of the columns view.
   const dnd = useBoardDrag({
-    enabled: layout.mode === "columns",
+    enabled: interaction.drag,
     columns,
     columnWidth: layout.columnWidth,
     paddingLeft: 12,
     gap: 12,
     onMove: (issue, to) => void change(issue.id, issue.status, to, catalog.labelOf(to)),
     onMenu: (issue) => actions.openStatus(issue),
+    manualSort: isManualSort(sort),
+    onReorderBlocked: () => showToast({ key: "issues:sort.reorder_manual_only" }),
   });
   actions.drag =
-    layout.mode === "columns"
+    interaction.drag
       ? { gestureFor: dnd.gestureFor, guardPress: dnd.guardPress, draggingId: dnd.drag?.issue.id ?? null }
       : undefined;
 
@@ -266,6 +285,8 @@ export function IssueBoard({
 }
 
 interface CardActions {
+  interaction: BoardCardInteraction;
+  selection?: Props["selection"];
   openStatus: (issue: Issue) => void;
   neighbor: (issue: Issue, delta: -1 | 1) => string | null;
   move: (issue: Issue, delta: -1 | 1) => void;
@@ -294,9 +315,11 @@ function ColumnView({
 }) {
   const { t } = useT("issues");
   const press = (item: Issue) => {
+    if (actions.interaction.tap === "toggle") return () => actions.selection?.onToggle(item);
     const open = () => onOpenIssue(item);
     return actions.drag ? actions.drag.guardPress(open) : open;
   };
+  const selected = (item: Issue) => actions.selection?.ids.has(item.id);
   if (embedded) {
     return (
       <ScrollView style={{ width, flex: 1 }} nestedScrollEnabled contentContainerClassName="gap-2 px-2 pt-2 pb-6">
@@ -311,10 +334,11 @@ function ColumnView({
               onPress={press(item)}
               dragGesture={actions.drag?.gestureFor(item)}
               dragging={actions.drag?.draggingId === item.id}
+              selected={selected(item)}
               onLongPress={() => actions.openStatus(item)}
               onMove={(delta) => actions.move(item, delta)}
-              canMovePrev={actions.neighbor(item, -1) !== null}
-              canMoveNext={actions.neighbor(item, 1) !== null}
+              canMovePrev={actions.interaction.columnMoves && actions.neighbor(item, -1) !== null}
+              canMoveNext={actions.interaction.columnMoves && actions.neighbor(item, 1) !== null}
             />
           ))
         )}
@@ -326,8 +350,9 @@ function ColumnView({
       style={{ width, flex: 1 }}
       data={column.issues}
       keyExtractor={(i) => i.id}
-      // Re-render cards when a drag starts/ends (dimmed card, press guard).
-      extraData={actions.drag?.draggingId}
+      // Re-render cards when a drag starts/ends (dimmed card, press guard)
+      // or the selection changes (checkboxes).
+      extraData={[actions.drag?.draggingId, actions.selection?.ids]}
       contentContainerClassName="gap-2 px-2 pt-2 pb-6"
       nestedScrollEnabled
       renderItem={({ item }) => (
@@ -337,10 +362,11 @@ function ColumnView({
           onPress={press(item)}
           dragGesture={actions.drag?.gestureFor(item)}
           dragging={actions.drag?.draggingId === item.id}
+          selected={selected(item)}
           onLongPress={() => actions.openStatus(item)}
           onMove={(delta) => actions.move(item, delta)}
-          canMovePrev={actions.neighbor(item, -1) !== null}
-          canMoveNext={actions.neighbor(item, 1) !== null}
+          canMovePrev={actions.interaction.columnMoves && actions.neighbor(item, -1) !== null}
+          canMoveNext={actions.interaction.columnMoves && actions.neighbor(item, 1) !== null}
         />
       )}
       ListEmptyComponent={

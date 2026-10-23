@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("expo-secure-store", () => ({ getItemAsync: vi.fn(), setItemAsync: vi.fn() }));
-vi.mock("expo-clipboard", () => ({ setStringAsync: vi.fn() }));
+vi.mock("./clipboard", () => ({ setStringAsync: vi.fn() }));
 
-import * as Clipboard from "expo-clipboard";
+import * as Clipboard from "./clipboard";
 import { clearClipboard, parseClearPref } from "./clipboard-clear-pref";
 
 describe("clipboard clear preference", () => {

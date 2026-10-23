@@ -19,7 +19,7 @@ class NotifyDisplayTest {
   @Test
   fun workspaceLabelOnlyWithSeveralEnabled() {
     assertEquals("Test", NotifyDisplay.workspaceLabel(listOf(reco, test), "test"))
-    // One switched off: back to a single workspace, no label (§8.4).
+    // One switched off: back to a single workspace, no label.
     assertNull(NotifyDisplay.workspaceLabel(listOf(reco, test.copy(enabled = false)), "recordingbeats"))
     assertNull(NotifyDisplay.workspaceLabel(listOf(reco), "recordingbeats"))
     assertNull(NotifyDisplay.workspaceLabel(listOf(reco, test), "unknown"))
@@ -98,7 +98,7 @@ class NotifyDisplayTest {
   @Test
   fun summaryIsNeverCancelledWhileAChildIsVisible() {
     val plan = NotifyDisplay::summaryPlan
-    // R1: one child left and the summary shown → update, never cancel.
+    // One child left and the summary shown → update, never cancel.
     assertEquals(NotifyDisplay.SummaryPlan.POST, plan(1, 0, false, true))
     // One child, no summary yet → nothing (Android shows the child alone).
     assertEquals(NotifyDisplay.SummaryPlan.NONE, plan(1, 0, false, false))
@@ -237,5 +237,60 @@ class NotifyDisplayTest {
     assertFalse(NotifyDisplay.dismissApplies(postedAt = 22_000L, intentStamp = 21_000L))
     assertTrue(NotifyDisplay.dismissApplies(postedAt = 21_000L, intentStamp = 21_000L))
     assertTrue(NotifyDisplay.dismissApplies(postedAt = null, intentStamp = 21_000L))
+  }
+
+  @Test
+  fun assignedTitleWithAndWithoutKey() {
+    // Key in front of the title, title alone without key.
+    assertEquals("Dir zugewiesen: MUL-12 Fix login", NotifyDisplay.assignedTitle("Dir zugewiesen: {title}", "MUL-12", "Fix login"))
+    assertEquals("Dir zugewiesen: Fix login", NotifyDisplay.assignedTitle("Dir zugewiesen: {title}", null, "Fix login"))
+    assertEquals("Dir zugewiesen: Fix login", NotifyDisplay.assignedTitle("Dir zugewiesen: {title}", " ", "Fix login"))
+    assertEquals("Assigned to you: MUL-12 Fix login", NotifyDisplay.assignedTitle("Assigned to you: {title}", "MUL-12", "Fix login"))
+  }
+
+  @Test
+  fun assignedLineWithAndWithoutName() {
+    val with = "{name} hat dir das Issue zugewiesen."
+    val unknown = "Dir wurde ein Issue zugewiesen."
+    assertEquals("Anna hat dir das Issue zugewiesen.", NotifyDisplay.assignedLine(with, unknown, "Anna"))
+    assertEquals(unknown, NotifyDisplay.assignedLine(with, unknown, null))
+    assertEquals(unknown, NotifyDisplay.assignedLine(with, unknown, ""))
+    assertEquals("planner assigned this issue to you.", NotifyDisplay.assignedLine("{name} assigned this issue to you.", "x", "planner"))
+  }
+
+  @Test
+  fun visibleTitleShowsHeadlineOnlyForAssignments() {
+    // MessagingStyle shows the conversation title, so an
+    // assignment puts its headline there; other categories keep the issue title.
+    val head = "Dir zugewiesen: MUL-126 Fix login"
+    assertEquals(head, NotifyDisplay.visibleTitle(PingRule.ASSIGNMENTS, head, "Fix login", null))
+    assertEquals("$head · Team B", NotifyDisplay.visibleTitle(PingRule.ASSIGNMENTS, head, "Fix login", "Team B"))
+    for (other in listOf(PingRule.BLOCKED, PingRule.MENTIONS, PingRule.APPROVALS, PingRule.FAILED_RUNS)) {
+      assertEquals("Fix login", NotifyDisplay.visibleTitle(other, "Fix login · x", "Fix login", null))
+      assertEquals("Fix login · Team B", NotifyDisplay.visibleTitle(other, "Fix login · x", "Fix login", "Team B"))
+    }
+    assertEquals("Fix login", NotifyDisplay.visibleTitle(null, "Fix login", "Fix login", null))
+  }
+
+  @Test
+  fun assignmentShowsNoHistoryOfEarlierAssignments() {
+    // The same issue assigned 5 times showed 4 old
+    // "coder-3 assigned this issue to you." lines below the new one.
+    val lines = (1..5).map { NotifyLine("a$it", "coder-3 assigned this issue to you.", "coder-3", it * 1000L) }
+    assertEquals(listOf(lines.last()), NotifyDisplay.visibleLines(PingRule.ASSIGNMENTS, lines, "a5"))
+    // The entry just notified stands, also when it is not the newest line.
+    assertEquals(listOf(lines[1]), NotifyDisplay.visibleLines(PingRule.ASSIGNMENTS, lines, "a2"))
+    // Entry already gone or unknown: the newest line.
+    assertEquals(listOf(lines.last()), NotifyDisplay.visibleLines(PingRule.ASSIGNMENTS, lines, "x"))
+    assertEquals(listOf(lines.last()), NotifyDisplay.visibleLines(PingRule.ASSIGNMENTS, lines, null))
+    assertTrue(NotifyDisplay.visibleLines(PingRule.ASSIGNMENTS, emptyList(), "a1").isEmpty())
+  }
+
+  @Test
+  fun otherCategoriesKeepTheirHistory() {
+    val lines = (1..3).map { NotifyLine("c$it", "comment $it", "Anna", it * 1000L) }
+    for (other in listOf(PingRule.BLOCKED, PingRule.MENTIONS, PingRule.APPROVALS, PingRule.FAILED_RUNS, null)) {
+      assertEquals(lines, NotifyDisplay.visibleLines(other, lines, "c3"))
+    }
   }
 }

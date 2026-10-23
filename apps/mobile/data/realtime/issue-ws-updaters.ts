@@ -35,7 +35,8 @@ import type {
   Reaction,
   TimelineEntry,
 } from "@multica/core/types";
-import { issueKeys } from "@/data/queries/issue-keys";
+import { issueKeys, issueScreenQueryKeys } from "@/data/queries/issue-keys";
+import { invalidateAfterReconnect } from "./reconnect-refresh";
 
 type TimelinePredicate = (entry: TimelineEntry) => boolean;
 type TimelineMutate = (entry: TimelineEntry) => TimelineEntry;
@@ -227,11 +228,11 @@ export function invalidateIssueAfterReconnect(
   wsId: string,
   issueId: string,
 ) {
-  qc.invalidateQueries({ queryKey: issueKeys.detail(wsId, issueId) });
-  qc.invalidateQueries({ queryKey: issueKeys.timeline(wsId, issueId) });
-  qc.invalidateQueries({ queryKey: issueKeys.attachments(wsId, issueId) });
-  qc.invalidateQueries({ queryKey: issueKeys.activeTasks(wsId, issueId) });
-  qc.invalidateQueries({ queryKey: issueKeys.tasks(wsId, issueId) });
+  // Stale-mark everything; refetch now only if this issue's screen is not
+  // parked in the back stack (see live-refresh.ts).
+  for (const queryKey of issueScreenQueryKeys(wsId, issueId)) {
+    invalidateAfterReconnect(qc, queryKey);
+  }
 }
 
 // =====================================================
@@ -285,21 +286,32 @@ export function replaceCommentTimelineEntry(
   if (entry.revision === undefined) {
     qc.invalidateQueries({ queryKey: issueKeys.timeline(wsId, issueId) });
   }
-  patchTimelineEntry(
-    qc,
-    wsId,
-    issueId,
-    (current) => current.type === "comment" && current.id === entry.id,
-    (current) =>
-      acceptsRevision(current.revision, entry.revision)
-        ? {
-            ...entry,
-            actor_name: entry.actor_name ?? current.actor_name,
-            actor_avatar_url:
-              entry.actor_avatar_url ?? current.actor_avatar_url,
-          }
-        : current,
+  qc.setQueryData<TimelineEntry[]>(
+    issueKeys.timeline(wsId, issueId),
+    (old) => (old ? withCommentReplaced(old, entry) : old),
   );
+}
+
+/** The timeline with one comment replaced by its newer version (edit,
+ *  tombstone, resolve). Same array when the comment is missing or the
+ *  event is older than the cached revision. Also used for the on-device
+ *  cache. */
+export function withCommentReplaced(
+  entries: TimelineEntry[],
+  entry: TimelineEntry,
+): TimelineEntry[] {
+  let changed = false;
+  const next = entries.map((current) => {
+    if (current.type !== "comment" || current.id !== entry.id) return current;
+    if (!acceptsRevision(current.revision, entry.revision)) return current;
+    changed = true;
+    return {
+      ...entry,
+      actor_name: entry.actor_name ?? current.actor_name,
+      actor_avatar_url: entry.actor_avatar_url ?? current.actor_avatar_url,
+    };
+  });
+  return changed ? next : entries;
 }
 
 export function advanceCommentRevision(
@@ -357,33 +369,39 @@ export function removeCommentCascade(
 ) {
   qc.setQueryData<TimelineEntry[]>(
     issueKeys.timeline(wsId, issueId),
-    (old) => {
-      if (!old) return old;
-      const removed = new Set<string>([commentId]);
-      // Iterate to fixed point — a single forward pass catches direct
-      // children; later passes catch reply-to-reply chains. Bounded by
-      // the timeline length, so worst case O(N²) on a degenerate chain
-      // but N is p99 30 and chains are typically depth 1-2.
-      let changed = true;
-      while (changed) {
-        changed = false;
-        for (const e of old) {
-          if (
-            e.type === "comment" &&
-            e.parent_id &&
-            removed.has(e.parent_id) &&
-            !removed.has(e.id)
-          ) {
-            removed.add(e.id);
-            changed = true;
-          }
-        }
-      }
-      return old.filter(
-        (e) => !(e.type === "comment" && removed.has(e.id)),
-      );
-    },
+    (old) => (old ? withoutCommentCascade(old, commentId) : old),
   );
+}
+
+/** The timeline without a comment and its cached descendants (see
+ *  removeCommentCascade). Same array when nothing was removed. Also
+ *  used for the on-device cache. */
+export function withoutCommentCascade(
+  old: TimelineEntry[],
+  commentId: string,
+): TimelineEntry[] {
+  const removed = new Set<string>([commentId]);
+  // Iterate to fixed point — a single forward pass catches direct
+  // children; later passes catch reply-to-reply chains. Bounded by
+  // the timeline length, so worst case O(N²) on a degenerate chain
+  // but N is p99 30 and chains are typically depth 1-2.
+  let changed = true;
+  while (changed) {
+    changed = false;
+    for (const e of old) {
+      if (
+        e.type === "comment" &&
+        e.parent_id &&
+        removed.has(e.parent_id) &&
+        !removed.has(e.id)
+      ) {
+        removed.add(e.id);
+        changed = true;
+      }
+    }
+  }
+  const next = old.filter((e) => !(e.type === "comment" && removed.has(e.id)));
+  return next.length === old.length ? old : next;
 }
 
 // =====================================================

@@ -8,10 +8,12 @@
   },
   "more_menu": {
     "pinned": "Angepinnt",
-    "issues": "Issues",
     "projects": "Projekte",
     "account_settings": "Kontoeinstellungen",
-    "agents": "Agents"
+    "agents": "Agents",
+    "ai_team": "AI Team",
+    "autopilots": "Autopilots",
+    "runtimes": "Runtimes"
   },
   "routes": {
     "issues": "Issues",
@@ -34,6 +36,28 @@
     "runs": "Läufe",
     "add_resource": "Ressource hinzufügen",
     "recent": "Zuletzt",
-    "issue_chat": "Chat"
+    "issue_chat": "Chat",
+    "autopilots": "Autopilots",
+    "runtimes": "Runtimes",
+    "autopilot": "Autopilot",
+    "autopilot_runs": "Läufe",
+    "autopilot_runs_of": "Läufe: {{title}}",
+    "wakeup_runs": "Läufe des Wakeups",
+    "wakeup_runs_of": "Läufe: {{agent}}"
+  },
+  "ai_team": {
+    "segment_label": "Ansicht",
+    "segment_hint": "Öffnet die Liste der Ansichten",
+    "tab_autopilots": "Autopilots",
+    "tab_wakeups": "Wakeups",
+    "autopilots_title": "Autopilots",
+    "autopilots_placeholder": "Die Liste der Autopilots kommt mit der nächsten App-Version. Bis dahin in der Web-App.",
+    "wakeups_title": "Wakeups",
+    "wakeups_placeholder": "Die Übersicht aller Wakeups im Workspace kommt mit der nächsten App-Version.",
+    "runtimes_title": "Runtimes",
+    "runtimes_placeholder": "Die Liste der Runtimes kommt mit der nächsten App-Version. Bis dahin in der Web-App.",
+    "feature_missing": "Dieser Server bietet diese Funktion nicht an.",
+    "detail_empty_title": "Nichts ausgewählt",
+    "detail_empty_body": "Wähle einen Eintrag aus der Liste."
   }
 }

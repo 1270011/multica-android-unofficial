@@ -134,6 +134,17 @@ describe("custom properties", () => {
   });
 });
 
+describe("pins", () => {
+  it("listPins opts in to view pins and keeps their type", async () => {
+    fetchMock.mockResolvedValue(
+      jsonResponse([{ id: "p-1", item_type: "view", item_id: "v-1", position: 1 }]),
+    );
+    const res = await api.listPins();
+    expect(lastCall().url).toBe(`${BASE}/api/pins?include=view`);
+    expect(res[0]?.item_type).toBe("view");
+  });
+});
+
 describe("saved views", () => {
   const view = { id: "v-1", name: "Meine offenen", revision: 3 };
 

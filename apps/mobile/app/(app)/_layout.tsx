@@ -1,6 +1,7 @@
 import { ActivityIndicator, View } from "react-native";
 import { Stack, Redirect } from "expo-router";
 import { useAuthStore } from "@/data/auth-store";
+import { perfMark } from "@/lib/perf-mark";
 
 /**
  * Auth-required layout. Redirects to /login when no user is loaded.
@@ -16,6 +17,7 @@ import { useAuthStore } from "@/data/auth-store";
  * workspace-less.
  */
 export default function AppLayout() {
+  perfMark("render:app");
   const user = useAuthStore((s) => s.user);
   const isLoading = useAuthStore((s) => s.isLoading);
   if (!user && isLoading) {

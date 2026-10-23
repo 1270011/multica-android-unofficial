@@ -9,6 +9,9 @@
  *     highlighting, copy button, and horizontal scroll. Shares the
  *     `github-light` / `github-dark` themes with web for byte-identical
  *     palettes.
+ *   - Top-level tables → in-house `MarkdownTable` in a horizontal
+ *     ScrollView (enriched's native table scroller lost the
+ *     swipe to the bubble gestures and clipped wide tables).
  *   - Images → in-house `MarkdownImage` with expo-image + auto aspect
  *     ratio + tap-to-lightbox dispatch.
  *
@@ -27,7 +30,7 @@
  *                                   "  \n" (canonical CommonMark hard
  *                                   break)
  *     ↓ splitMarkdown               marked.lexer → segments[]
- *     ↓ render per-segment          prose / code / image components
+ *     ↓ render per-segment          prose / code / table / image components
  *
  * Mention chip note: mobile renders `mention://` links via enriched's
  * default link styling (brand-colored, underlined), matching web's
@@ -43,11 +46,11 @@ import { router } from "expo-router";
 import { EnrichedMarkdownText } from "react-native-enriched-markdown";
 import type { Attachment } from "@multica/core/types";
 import { useWorkspaceStore } from "@/data/workspace-store";
-import { preprocessMobileMarkdown } from "./preprocess";
 import { useMarkdownStyle } from "./markdown-style";
-import { splitMarkdown } from "./split-markdown";
+import { getMarkdownSegments } from "./segment-cache";
 import { CodeBlock } from "./code-block";
 import { MarkdownImage } from "./markdown-image";
+import { MarkdownTable } from "./markdown-table";
 
 interface Props {
   content: string;
@@ -128,10 +131,8 @@ export function Markdown({
     [baseStyle, compact],
   );
 
-  const segments = useMemo(() => {
-    const processed = preprocessMobileMarkdown(content);
-    return splitMarkdown(processed);
-  }, [content]);
+  // Module-wide LRU: survives FlashList cell recycling.
+  const segments = useMemo(() => getMarkdownSegments(content), [content]);
 
   const onLinkPress = useCallback(
     ({ url }: { url: string }) => {
@@ -203,6 +204,15 @@ export function Markdown({
                 code={seg.code}
                 lang={seg.lang}
                 selectable={selectable}
+              />
+            );
+          case "table":
+            return (
+              <MarkdownTable
+                key={i}
+                table={seg.table}
+                selectable={selectable}
+                onLinkPress={onLinkPress}
               />
             );
           case "image":

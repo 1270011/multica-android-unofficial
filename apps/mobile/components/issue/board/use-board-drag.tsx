@@ -22,7 +22,7 @@ import {
   View,
 } from "react-native";
 import { Gesture, type GestureType } from "react-native-gesture-handler";
-import * as Haptics from "expo-haptics";
+import * as Haptics from "@/lib/haptics";
 import type { Issue, IssueStatus } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
 import { PriorityIcon } from "@/components/ui/priority-icon";
@@ -56,6 +56,8 @@ export function useBoardDrag({
   gap,
   onMove,
   onMenu,
+  manualSort = true,
+  onReorderBlocked,
 }: {
   enabled: boolean;
   columns: BoardColumn[];
@@ -64,6 +66,9 @@ export function useBoardDrag({
   gap: number;
   onMove: (issue: Issue, to: IssueStatus) => void;
   onMenu: (issue: Issue) => void;
+  /** Sort is "Manual" (D4); otherwise a drop in the own column is refused. */
+  manualSort?: boolean;
+  onReorderBlocked?: () => void;
 }) {
   const [drag, setDrag] = useState<DragState | null>(null);
   const scrollRef = useRef<ScrollView>(null);
@@ -174,9 +179,10 @@ export function useBoardDrag({
         // RNGH also calls onEnd for a cancelled gesture.
         if (!success || !alive.current) return;
         const distance = Math.hypot(e.absoluteX - start.current.x, e.absoluteY - start.current.y);
-        const outcome = dropOutcome(issue.status, hoverRef.current, distance);
+        const outcome = dropOutcome(issue.status, hoverRef.current, distance, manualSort);
         if (outcome.kind === "move") onMove(issue, outcome.to);
         else if (outcome.kind === "menu") onMenu(issue);
+        else if (outcome.kind === "reorder_blocked") onReorderBlocked?.();
       })
       .onFinalize((_e, success) => {
         alive.current = false;

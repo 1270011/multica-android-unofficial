@@ -32,6 +32,52 @@ export function setCategory(
   return { ...settings, disabledCategories: on ? rest : [...rest, category] };
 }
 
+/**
+ * Categories whose switch also turns the server group back on:
+ * switching "Mir zugewiesen" on while `assignments` is muted would
+ * otherwise stay silent, because the server creates no inbox entry at all.
+ */
+export const COUPLED_CATEGORIES: readonly NotifyCategory[] = ["assignments"];
+
+/**
+ * Category switch flipped: new device settings plus, when the coupling
+ * applies, the server preferences to PATCH (null = no server write).
+ */
+export function toggleCategory(
+  settings: NotifySettings,
+  category: NotifyCategory,
+  on: boolean,
+  serverPrefs: NotificationPreferences | undefined,
+): { settings: NotifySettings; serverPrefs: NotificationPreferences | null } {
+  const next = setCategory(settings, category, on);
+  const muted = mutedServerGroup(category, serverPrefs);
+  if (!on || !muted || !COUPLED_CATEGORIES.includes(category)) {
+    return { settings: next, serverPrefs: null };
+  }
+  const prefs: NotificationPreferences = { ...(serverPrefs ?? {}) };
+  // Missing key = "all"; the mutation turns this into {[muted]: "all"}.
+  delete prefs[muted];
+  return { settings: next, serverPrefs: prefs };
+}
+
+/** Apply a toggle: device settings always, server PATCH only when coupled. */
+export function applyCategoryToggle(
+  input: {
+    settings: NotifySettings;
+    category: NotifyCategory;
+    on: boolean;
+    serverPrefs: NotificationPreferences | undefined;
+  },
+  deps: {
+    update: (settings: NotifySettings) => void;
+    patchServer: (prefs: NotificationPreferences) => void;
+  },
+): void {
+  const result = toggleCategory(input.settings, input.category, input.on, input.serverPrefs);
+  deps.update(result.settings);
+  if (result.serverPrefs) deps.patchServer(result.serverPrefs);
+}
+
 export function setWorkspaceEnabled(
   settings: NotifySettings,
   slug: string,
@@ -126,6 +172,9 @@ export const NATIVE_STRING_KEYS: Record<string, string> = {
   reason_approval: "settings:push.reason_approval",
   reason_failed: "settings:push.reason_failed",
   reason_assigned: "settings:push.reason_assigned",
+  title_assigned: "settings:push.title_assigned",
+  line_assigned: "settings:push.line_assigned",
+  line_assigned_unknown: "settings:push.line_assigned_unknown",
   line_blocked: "settings:push.line_blocked",
   line_review: "settings:push.line_review",
   summary_title: "settings:push.summary_title",

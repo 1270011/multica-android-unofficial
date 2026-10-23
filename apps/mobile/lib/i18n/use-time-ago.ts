@@ -1,4 +1,5 @@
 import { useT } from "./config";
+import { dateTimeFormat } from "@/lib/date-format";
 
 export function useTimeAgo() {
   const { t } = useT("common");
@@ -19,7 +20,7 @@ export function useTimeAgo() {
       return t("time.weeks_ago_other", { count: Math.floor(minutes / (60 * 24 * 7)) });
     }
 
-    return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(
+    return dateTimeFormat(undefined, { month: "short", day: "numeric" }).format(
       new Date(dateStr),
     );
   };

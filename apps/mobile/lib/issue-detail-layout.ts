@@ -10,10 +10,20 @@ export const DEFAULT_DETAIL_PANE: DetailPane = "chat";
 
 /** Share of the width for the left pane; the chat gets the rest. */
 export const LEFT_PANE_RATIO = 0.42;
+/** The left pane wants this much on medium widths … */
+export const LEFT_PANE_PREFERRED_DP = 360;
+/** … but neither pane gets less than this. */
+export const MIN_PANE_DP = 280;
 
-/** Left pane width in dp, never narrower than a phone column. */
+/**
+ * Left pane width in dp. Wide windows split 42 / 58; on medium widths the
+ * left pane gets up to 360 dp but never more than half, so the chat keeps at
+ * least as much (600 dp → 300 / 300, 800 dp → 360 / 440, 1280 dp → 538 / 742).
+ */
 export function leftPaneWidth(width: number): number {
-  return Math.max(360, Math.round(width * LEFT_PANE_RATIO));
+  const preferred = Math.min(LEFT_PANE_PREFERRED_DP, Math.floor(width / 2));
+  const left = Math.max(preferred, Math.round(width * LEFT_PANE_RATIO));
+  return Math.max(MIN_PANE_DP, Math.min(left, width - MIN_PANE_DP));
 }
 
 /**

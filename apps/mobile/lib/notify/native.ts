@@ -1,6 +1,6 @@
 /**
  * Typed access to the native operator-notification module
- *. Optional lookup: on
+ *Optional lookup: on
  * iOS, in Expo Go or in unit tests the module is missing and every call is a
  * no-op, so callers never branch on the platform themselves.
  *
@@ -12,12 +12,13 @@ import { createForegroundTracker } from "./foreground";
 
 export type NotifyCategory = "blocked" | "mentions" | "approvals" | "failed_runs" | "assignments";
 
+/** Display order of the switches; "Mir zugewiesen" first. */
 export const NOTIFY_CATEGORIES: NotifyCategory[] = [
-  "blocked",
+  "assignments",
   "mentions",
+  "blocked",
   "approvals",
   "failed_runs",
-  "assignments",
 ];
 
 export interface NotifySettings {

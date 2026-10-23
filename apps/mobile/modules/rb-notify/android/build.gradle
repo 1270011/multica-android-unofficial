@@ -30,6 +30,9 @@ dependencies {
   // Same OkHttp as React Native (react-native/gradle/libs.versions.toml);
   // no logging interceptor anywhere.
   implementation "com.squareup.okhttp3:okhttp:4.9.2"
+  // OkHttpClientProvider: HttpClientGuard hands NetworkingModule its client
+  //Version comes from the app's React Native Gradle plugin.
+  implementation "com.facebook.react:react-android"
 
   testImplementation "junit:junit:4.13.2"
   // Real org.json for JVM unit tests (the android.jar stub throws).

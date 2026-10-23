@@ -1,6 +1,5 @@
 /**
- * Drag & drop on the issue board in landscape and on
- * tablets: pure geometry and payload, tested in
+ * Drag & drop on the issue board (landscape / tablet): pure geometry and payload, tested in
  * lib/board-dnd.test.ts. The gesture lives in components/issue/board.
  *
  * - Only in the "columns" layout (≥ 600 dp: landscape, tablet). Portrait
@@ -11,9 +10,11 @@
  *   `useBoardStatusChange` (data/mutations/board-status.ts, payload
  *   `statusMoveBody`: no `before_id`/`after_id`). A position is only for a
  *   manual sort order; the board sorts newest first and mobile has no
- *   manual sort, so a drop never reorders.
+ *   manual reorder yet, so a drop never reorders. With a sort other than "Manual" the payload stays
+ *   status-only by rule (`boardMoveNeighbours`), and dragging a card within
+ *   its column says "order only with Manual" (`reorder_blocked`).
  *   Without neighbour ids the server keeps the card's position, so Undo
- *   restores it exactly.
+ *   restores it exactly (as in C2a).
  */
 import type { IssueStatus } from "@multica/core/types";
 
@@ -83,21 +84,25 @@ export function clampScroll(x: number, contentWidth: number, viewportWidth: numb
 export type DropOutcome =
   | { kind: "move"; to: IssueStatus }
   | { kind: "menu" }
+  | { kind: "reorder_blocked" }
   | { kind: "none" };
 
 /**
  * Released over another column → move. Released where it started without
  * really moving → the status menu (the long press still works as in
- * portrait). Anything else (dragged around, back to its column or off the
- * board) → nothing.
+ * portrait). Dragged within its own column while a sort other than
+ * "Manual" is active → `reorder_blocked` (toast, D4). Anything else (back to
+ * its column, off the board) → nothing.
  */
 export function dropOutcome(
   from: IssueStatus,
   target: IssueStatus | null,
   distance: number,
+  manualSort = true,
 ): DropOutcome {
   if (target && target !== from) return { kind: "move", to: target };
   if (distance < DRAG_TAP_SLOP_DP) return { kind: "menu" };
+  if (target === from && !manualSort) return { kind: "reorder_blocked" };
   return { kind: "none" };
 }
 

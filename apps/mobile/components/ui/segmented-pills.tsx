@@ -13,6 +13,8 @@ export interface SegmentItem<V extends string> {
   value: V;
   label: string;
   badge?: number;
+  /** For Maestro when the label also appears elsewhere (e.g. header title). */
+  testID?: string;
 }
 
 interface Props<V extends string> {
@@ -49,6 +51,7 @@ export function SegmentedPills<V extends string>({
               className={cn("min-h-10 px-3 rounded-full", active && "bg-accent border-accent")}
               accessibilityRole="tab"
               accessibilityState={{ selected: active }}
+              testID={item.testID}
             >
               <View className="flex-row items-center gap-1.5">
                 <Text

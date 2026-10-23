@@ -89,6 +89,13 @@ import { ChatQueue } from "@/components/chat/chat-queue";
 import { useChatQueueActions } from "@/data/mutations/chat-sessions";
 import { queuedTasksOf, sendNowState } from "@/lib/chat-queue";
 import {
+  mergePendingChatSends,
+  newOptimisticChatId,
+  pendingChatSend,
+  settleChatSend,
+  type PendingChatSend,
+} from "@/lib/chat-send";
+import {
   needsArchivedLookup,
   resolveActiveSession,
 } from "@/lib/chat-session-menu";
@@ -103,6 +110,7 @@ import { RuntimeRequiredBanner } from "@/components/chat/runtime-required-banner
 import { useChatSelectStore } from "@/data/chat-select-store";
 import { isAgentRuntimeBound } from "@/lib/is-agent-runtime-bound";
 import { KeyboardAvoidingView } from "react-native-keyboard-controller";
+import { useRefreshOnFocus } from "@/lib/use-refresh-on-focus";
 
 export default function ChatTab() {
   const qc = useQueryClient();
@@ -166,10 +174,29 @@ export default function ChatTab() {
   const { data: messages = [], isLoading: messagesLoading } = useQuery(
     chatMessagesOptions(activeSessionId),
   );
+  useRefreshOnFocus(
+    activeSessionId
+      ? [
+          chatKeys.sessions(wsId),
+          chatKeys.messages(activeSessionId),
+          chatKeys.pendingTask(activeSessionId),
+        ]
+      : [chatKeys.sessions(wsId)],
+  );
   const { data: pendingTask } = useQuery(
     pendingChatTaskOptions(activeSessionId),
   );
-  const visibleMessages = hideQueuedChatMessages(messages, pendingTask);
+  // Sends in flight: the only source of optimistic bubbles, so a refetch or
+  // the chat:message echo can neither double nor drop them.
+  const [pendingSends, setPendingSends] = useState<PendingChatSend[]>([]);
+  const visibleMessages = useMemo(
+    () =>
+      hideQueuedChatMessages(
+        mergePendingChatSends(messages, pendingSends, activeSessionId),
+        pendingTask,
+      ),
+    [messages, pendingSends, activeSessionId, pendingTask],
+  );
   // Live execution trace for the in-flight task. `task:message` WS events
   // append rows to this same cache key via `appendTaskMessage`, so the
   // list/pill stay in sync without a polling fetch. `enabled` is gated by
@@ -364,7 +391,7 @@ export default function ChatTab() {
 
       const sentAt = new Date().toISOString();
       const optimistic: ChatMessage = {
-        id: `optimistic-${Date.now()}`,
+        id: newOptimisticChatId(),
         chat_session_id: sessionId,
         role: "user",
         content,
@@ -372,6 +399,12 @@ export default function ChatTab() {
         created_at: sentAt,
       };
       const optimisticTaskId = `optimistic-${optimistic.id}`;
+      const send = pendingChatSend(
+        optimistic,
+        qc.getQueryData<ChatMessage[]>(chatKeys.messages(sessionId)),
+      );
+      setPendingSends((list) => [...list, send]);
+      const settled = () => setPendingSends((list) => list.filter((s) => s !== send));
       qc.setQueryData<ChatMessage[]>(chatKeys.messages(sessionId), (old) =>
         old ? [...old, optimistic] : [optimistic],
       );
@@ -402,18 +435,11 @@ export default function ChatTab() {
         // Replace the local bubble before reconciling pending state. When the
         // server says this is a follow-up, its real message id lets the shared
         // queue filter hide it immediately instead of waiting for the refetch.
+        // A refetch (chat:message echo) may already hold the real row.
         qc.setQueryData<ChatMessage[]>(chatKeys.messages(sessionId), (old) =>
-          old?.map((message) =>
-            message.id === optimistic.id
-              ? {
-                  ...message,
-                  id: result.message_id,
-                  task_id: result.task_id,
-                  created_at: result.created_at,
-                }
-              : message,
-          ),
+          settleChatSend(old, optimistic.id, result),
         );
+        settled();
         seedAcceptedPendingTask(qc, {
           chat_session_id: sessionId,
           task_id: result.task_id,
@@ -432,6 +458,7 @@ export default function ChatTab() {
         qc.setQueryData<ChatMessage[]>(chatKeys.messages(sessionId), (old) =>
           old ? old.filter((m) => m.id !== optimistic.id) : old,
         );
+        settled();
         qc.setQueryData<ChatPendingTask>(
           chatKeys.pendingTask(sessionId),
           (old) => removePendingChatTask(old, optimisticTaskId),

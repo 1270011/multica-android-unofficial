@@ -18,7 +18,7 @@
  * At large font scales (≥ 1.5) bubbles take the full width and the avatar
  * moves away; name and time stay above the bubble.
  */
-import { useCallback, useMemo, useRef } from "react";
+import { memo, useCallback, useMemo, useRef } from "react";
 import { Pressable, View, useWindowDimensions } from "react-native";
 import Animated, {
   runOnJS,
@@ -28,7 +28,7 @@ import Animated, {
 import ReanimatedSwipeable, {
   type SwipeableMethods,
 } from "react-native-gesture-handler/ReanimatedSwipeable";
-import * as Haptics from "expo-haptics";
+import * as Haptics from "@/lib/haptics";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import type { Reaction, TimelineEntry } from "@multica/core/types";
 import { Ionicons } from "@/components/ui/ionicons";
@@ -51,7 +51,7 @@ import { useAuthStore } from "@/data/auth-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useActorLookup } from "@/data/use-actor-name";
 import { isOptimisticCommentId } from "@/lib/pending-comments";
-import type { ReplyQuote } from "@/lib/issue-chat";
+import { shallowEqualProps, type ReplyQuote } from "@/lib/issue-chat";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { THEME } from "@/lib/theme";
 import { cn } from "@/lib/utils";
@@ -75,7 +75,14 @@ interface Props {
   onPressQuote: (rootId: string) => void;
 }
 
-export function ChatBubble({
+/**
+ * Memoised: the list keeps row objects and
+ * callbacks stable across refetches (`shareChatItems`, ref-based scroll), so
+ * a bubble re-renders only when its own entry, its quote, its flags or its
+ * highlight changed. `entry` is compared by reference on purpose: an id +
+ * `updated_at` check would miss reactions, which do not bump `updated_at`.
+ */
+export const ChatBubble = memo(function ChatBubble({
   entry,
   issueId,
   issueIdentifier,
@@ -141,6 +148,7 @@ export function ChatBubble({
       parentId: failed.parentId,
       attachmentIds: failed.attachmentIds,
       sentAt: failed.sentAt,
+      knownIds: failed.knownIds,
     });
   }, [failed, qc, wsId, issueId, entry.id, createComment]);
 
@@ -304,7 +312,7 @@ export function ChatBubble({
       {content}
     </ReanimatedSwipeable>
   );
-}
+}, shallowEqualProps);
 
 function ReplyAction({ drag }: { drag: SharedValue<number> }) {
   const { colorScheme } = useColorScheme();

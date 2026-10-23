@@ -7,11 +7,15 @@
  *   0 active, ≥1 past     → 🕓 Runs · N                                ›
  *   never run             → null (zero space)
  *
+ * `reserveSpace` (chat footer): while the tasks load, an empty slot of the
+ * row's height stands in, so the row does not push the last bubble up when
+ * it appears (`lib/agent-activity.ts`).
+ *
  * This row is the "discovery" surface (visible only when timeline isn't
  * scrolled). The badge is the "ambient" surface (always visible during
  * active tasks). One route, two entry points.
  */
-import { useMemo } from "react";
+import { useRef } from "react";
 import { Pressable, View } from "react-native";
 import { router } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -27,37 +31,46 @@ import { useWorkspaceStore } from "@/data/workspace-store";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { THEME } from "@/lib/theme";
 import { useT } from "@/lib/i18n";
+import {
+  AGENT_ACTIVITY_ROW_HEIGHT,
+  agentActivityState,
+} from "@/lib/agent-activity";
 
 interface Props {
   issueId: string;
+  /** Hold the row's height while the tasks load (chat list footer). */
+  reserveSpace?: boolean;
 }
 
-export function AgentActivityRow({ issueId }: Props) {
+export function AgentActivityRow({ issueId, reserveSpace = false }: Props) {
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const wsSlug = useWorkspaceStore((s) => s.currentWorkspaceSlug);
   const { colorScheme } = useColorScheme();
   const mutedFg = THEME[colorScheme].mutedForeground;
 
-  const { data: activeTasks = [] } = useQuery(
+  const { data: activeTasks } = useQuery(
     issueActiveTasksOptions(wsId, issueId),
   );
-  const { data: allTasks = [] } = useQuery(issueTasksOptions(wsId, issueId));
+  const { data: allTasks } = useQuery(issueTasksOptions(wsId, issueId));
 
-  const activeCount = activeTasks.length;
-  // "Past" = tasks not currently active. The /task-runs endpoint returns the
-  // full list, so we filter rather than fetching a separate past-only query.
-  const pastCount = useMemo(
-    () =>
-      allTasks.filter(
-        (t) =>
-          t.status === "completed" ||
-          t.status === "failed" ||
-          t.status === "cancelled",
-      ).length,
-    [allTasks],
-  );
-
-  if (activeCount === 0 && pastCount === 0) {
+  const reservedRef = useRef(false);
+  const state = agentActivityState({
+    activeTasks,
+    allTasks,
+    reserveSpace,
+    reserved: reservedRef.current,
+  });
+  if (state.kind === "placeholder") {
+    reservedRef.current = true;
+    return (
+      <View
+        style={{ minHeight: AGENT_ACTIVITY_ROW_HEIGHT }}
+        importantForAccessibility="no-hide-descendants"
+        accessibilityElementsHidden
+      />
+    );
+  }
+  if (state.kind === "none") {
     return null;
   }
 
@@ -70,17 +83,18 @@ export function AgentActivityRow({ issueId }: Props) {
           params: { workspace: wsSlug, id: issueId },
         });
       }}
+      style={{ minHeight: AGENT_ACTIVITY_ROW_HEIGHT }}
       className="flex-row items-center gap-2 -mx-2 px-2 py-2 rounded-lg active:bg-secondary"
     >
-      {activeCount > 0 ? (
+      {state.kind === "active" ? (
         <ActiveContent
-          actors={activeTasks.map<StackActor>((t) => ({
+          actors={state.agentIds.map<StackActor>((id) => ({
             type: "agent",
-            id: t.agent_id,
+            id,
           }))}
         />
       ) : (
-        <IdleContent count={pastCount} mutedFg={mutedFg} />
+        <IdleContent count={state.count} mutedFg={mutedFg} />
       )}
       <Ionicons name="chevron-forward" size={16} color={mutedFg} />
     </Pressable>

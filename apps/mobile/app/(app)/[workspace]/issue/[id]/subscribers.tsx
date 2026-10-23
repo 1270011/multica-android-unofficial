@@ -15,6 +15,8 @@ import { useAuthStore } from "@/data/auth-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { subscriberRows } from "@/lib/issue-subscribers";
 import { useT } from "@/lib/i18n";
+import { useRefreshOnFocus } from "@/lib/use-refresh-on-focus";
+import { issueScreenQueryKeys } from "@/data/queries/issue-keys";
 
 export default function IssueSubscribersRoute() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -23,6 +25,9 @@ export default function IssueSubscribersRoute() {
   const { t } = useT("issues");
   const { getName } = useActorLookup();
   const { data = [], isLoading, error, refetch } = useQuery(issueSubscribersOptions(wsId, id));
+  // Pushed over the issue screen, which is parked then: register the same
+  // keys as focused so a reconnect refetches them here.
+  useRefreshOnFocus(issueScreenQueryKeys(wsId, id));
   const rows = subscriberRows(data, me, (type, uid) => getName(type, uid));
 
   return (

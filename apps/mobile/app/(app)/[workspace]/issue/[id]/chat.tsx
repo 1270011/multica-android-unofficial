@@ -22,8 +22,8 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { Linking, Pressable, View } from "react-native";
 import { Stack, router, useFocusEffect, useLocalSearchParams } from "expo-router";
 import { useMutationState, useQuery } from "@tanstack/react-query";
-import * as Clipboard from "expo-clipboard";
-import type { InboxItem, Issue, TimelineEntry } from "@multica/core/types";
+import * as Clipboard from "@/lib/clipboard";
+import type { InboxItem, Issue } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
@@ -53,8 +53,13 @@ import { useFailedCommentsStore } from "@/data/stores/failed-comments-store";
 import { getWebBaseUrl } from "@/data/server-config-store";
 import { useActorLookup } from "@/data/use-actor-name";
 import { showActionSheet } from "@/lib/action-sheet";
-import { mergeLocalComments } from "@/lib/pending-comments";
-import { buildChatItems, canMarkDone, isIssueId } from "@/lib/issue-chat";
+import {
+  collectLocalComments,
+  mergeLocalComments,
+  type LocalComment,
+} from "@/lib/pending-comments";
+import { canMarkDone, createChatItemsBuilder, isIssueId } from "@/lib/issue-chat";
+import { chatBody } from "@/lib/issue-chat-body";
 import { consumeInAppChatOpen } from "@/lib/chat-open-intent";
 import { showToast } from "@/lib/toast";
 import { rbNotify } from "@/lib/notify/native";
@@ -63,6 +68,9 @@ import { webIssueUrl } from "@/lib/web-links";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { THEME } from "@/lib/theme";
 import { useT } from "@/lib/i18n";
+import { useRefreshOnFocus } from "@/lib/use-refresh-on-focus";
+import { issueScreenQueryKeys } from "@/data/queries/issue-keys";
+import { perfMark } from "@/lib/perf-mark";
 
 export default function IssueChatScreen() {
   const params = useLocalSearchParams<{
@@ -113,6 +121,9 @@ export function IssueChat({
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const detail = useQuery(issueDetailOptions(wsId, id));
   const timeline = useQuery(issueTimelineOptions(wsId, id));
+  // Pushed over the issue screen, which is parked then: register the same
+  // keys as focused so a reconnect refetches them here.
+  useRefreshOnFocus(issueScreenQueryKeys(wsId, id));
   const { unread, active, loaded: inboxLoaded } = useIssueInbox(id);
   const markRead = useMarkIssueInboxRead(id);
   const markDone = useMarkIssueDone(id);
@@ -181,21 +192,25 @@ export function IssueChat({
   const pendingComments = useMutationState({
     filters: { mutationKey: createCommentMutationKey(id), status: "pending" },
     select: (m) =>
-      (m.state.context as { optimistic?: TimelineEntry | null } | undefined)?.optimistic ?? null,
+      (m.state.context as { local?: LocalComment | null } | undefined)?.local ?? null,
   });
   const failedComments = useFailedCommentsStore((s) => s.failed);
-  const entries = useMemo(() => {
-    const local: TimelineEntry[] = [];
-    for (const entry of pendingComments) if (entry) local.push(entry);
-    for (const failed of Object.values(failedComments)) {
-      if (failed.issueId === id) local.push(failed.entry);
-    }
-    return mergeLocalComments(timeline.data, local);
-  }, [timeline.data, pendingComments, failedComments, id]);
+  const entries = useMemo(
+    () =>
+      mergeLocalComments(
+        timeline.data,
+        collectLocalComments(pendingComments, Object.values(failedComments), id),
+      ),
+    [timeline.data, pendingComments, failedComments, id],
+  );
 
+  // Rows equal to the previous build keep their object, so a
+  // refetch only re-renders the bubbles whose data changed; the builder only
+  // recomputes rows whose entry or context changed.
+  const [buildItems] = useState(createChatItemsBuilder);
   const items = useMemo(
-    () => buildChatItems(entries, { userId, unreadInbox: unreadSnapshot ?? [], expandedGroups }),
-    [entries, userId, unreadSnapshot, expandedGroups],
+    () => buildItems(entries, { userId, unreadInbox: unreadSnapshot ?? [], expandedGroups }),
+    [buildItems, entries, userId, unreadSnapshot, expandedGroups],
   );
 
   const onExpandGroup = useCallback((groupId: string) => {
@@ -203,6 +218,13 @@ export function IssueChat({
   }, []);
 
   const issue = detail.data;
+  perfMark(
+    () => `chat:render detail=${detail.status}/${detail.fetchStatus} timeline=${timeline.status}/${timeline.fetchStatus} entries=${entries?.length ?? -1} items=${items.length} inbox=${inboxLoaded}`,
+  );
+  useEffect(() => {
+    perfMark("chat:mount");
+    return () => perfMark("chat:unmount");
+  }, []);
 
   const openDetails = useCallback(() => {
     // Came from the detail of this issue → go back instead of stacking it twice.
@@ -243,6 +265,16 @@ export function IssueChat({
 
   const notFound =
     detail.error instanceof ApiError && (detail.error.status === 404 || detail.error.status === 403);
+  const body = chatBody({
+    notFound,
+    detailLoading: detail.isLoading,
+    hasIssue: !!issue,
+    detailError: !!detail.error,
+    timelineLoading: timeline.isLoading,
+    timelineError: !!timeline.error,
+    hasEntries: !!entries,
+    itemCount: items.length,
+  });
 
   return (
     <View className="flex-1 bg-background">
@@ -266,11 +298,11 @@ export function IssueChat({
         }}
       />
       )}
-      {notFound ? (
+      {body === "gone" ? (
         <IssueGone />
-      ) : detail.isLoading ? (
+      ) : body === "loading" ? (
         <IssueChatLoading />
-      ) : detail.error || !issue ? (
+      ) : body === "error" || !issue ? (
         <View className="flex-1 items-center justify-center px-6 gap-3">
           <Text className="text-sm text-destructive text-center">
             {t("errors.load_failed", {
@@ -285,16 +317,16 @@ export function IssueChat({
         <View className="flex-1">
           {embedded ? null : <ChatSubHeader issue={issue} wsSlug={wsSlug} />}
           <ActionBar issue={issue} wsSlug={wsSlug} />
-          {timeline.isLoading && !entries ? (
+          {body === "timeline-loading" ? (
             <IssueChatLoading />
-          ) : timeline.error && !entries ? (
+          ) : body === "timeline-error" ? (
             <View className="flex-1 items-center justify-center px-6 gap-3">
               <Text className="text-sm text-destructive text-center">{t("chat.load_failed")}</Text>
               <Button variant="outline" onPress={() => timeline.refetch()}>
                 <Text>{t("common:actions.retry")}</Text>
               </Button>
             </View>
-          ) : items.length === 0 ? (
+          ) : body === "empty" ? (
             <View className="flex-1 items-center justify-center px-8">
               <Text className="text-sm text-muted-foreground text-center">{t("chat.empty")}</Text>
             </View>
@@ -307,7 +339,7 @@ export function IssueChat({
               targetNonce={h}
               onExpandGroup={onExpandGroup}
               onReachEnd={markReadIfAllowed}
-              footer={<AgentActivityRow issueId={id} />}
+              footer={<AgentActivityRow issueId={id} reserveSpace />}
             />
           )}
           <InlineCommentComposer issueId={id} />

@@ -43,7 +43,8 @@
     "empty": "暂无内容",
     "error": "出现错误",
     "offline_banner": "离线 – 恢复连接后将发送更改",
-    "offline_refresh": "当前离线，无法刷新。"
+    "offline_refresh": "当前离线，无法刷新。",
+    "offline_load": "无法加载 – 当前离线。"
   },
   "time": {
     "just_now": "刚刚",

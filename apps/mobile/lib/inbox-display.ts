@@ -8,13 +8,14 @@
  */
 import type { InboxItem } from "@multica/core/types";
 import { i18n } from "@/lib/i18n/singleton";
+import { dateTimeFormat } from "@/lib/date-format";
 import { opensInChat } from "@/lib/issue-chat";
 
 function formatResetAt(value: string | undefined): string {
   if (!value) return "";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
-  return new Intl.DateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
+  return dateTimeFormat(i18n.resolvedLanguage ?? i18n.language, {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(date);

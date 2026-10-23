@@ -20,8 +20,11 @@ import { useWorkspaceStore } from "./workspace-store";
 import { handOverSession } from "@/lib/notify/session";
 import { useInboxFilterStore } from "./stores/inbox-filter-store";
 import { useIssueListFilterStore } from "./stores/issue-list-filter-store";
+import { useMyIssuesViewStore } from "@/data/stores/my-issues-view-store";
+import { useActiveIssueViewStore } from "@/data/stores/active-issue-view-store";
 import { clearAllFilterStorage } from "@/lib/filter-storage";
 import { clearSessionData } from "./session-end";
+import { openTimelineCache, prefetchTimelineCacheKey } from "./timeline-cache";
 
 interface AuthState {
   user: User | null;
@@ -46,6 +49,8 @@ interface AuthState {
 async function forgetRememberedFilters() {
   useInboxFilterStore.getState().reset();
   useIssueListFilterStore.getState().reset();
+  useMyIssuesViewStore.getState().reset();
+  useActiveIssueViewStore.getState().reset();
   await clearAllFilterStorage();
 }
 
@@ -62,7 +67,9 @@ export const useAuthStore = create<AuthState>((set) => ({
     // workspace without flashing /select-workspace.
     await useWorkspaceStore.getState().restoreSlug();
 
-    const token = await getToken();
+    // The timeline cache key is read next to the token, so the two
+    // Keystore reads overlap instead of adding up.
+    const [token] = await Promise.all([getToken(), prefetchTimelineCacheKey()]);
     if (!token) {
       set({ isLoading: false });
       return;
@@ -84,6 +91,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       set({ user, isLoading: false });
       // Restored and confirmed: refresh the notification service's copy.
       handOverSession(token);
+      void openTimelineCache(user.id);
     } catch (err) {
       // Only clear token on a genuine 401. Network blips / 5xx keep the
       // token so the next launch (or a manual refresh) can retry.
@@ -121,6 +129,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     api.setToken(token);
     set({ user });
     handOverSession(token);
+    void openTimelineCache(user.id);
     return user;
   },
 
@@ -141,6 +150,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     api.setToken(trimmed);
     set({ user });
     handOverSession(trimmed);
+    void openTimelineCache(user.id);
     return user;
   },
 

@@ -170,7 +170,7 @@ export const ProjectSchema = z.object({
   priority: z.string(),
   lead_type: z.string().nullable(),
   lead_id: z.string().nullable(),
-  // .default(null) so a project from an older backend that omits these keys
+  // Default(null) so a project from an older backend that omits these keys
   // parses to null instead of degrading the batch to the empty fallback.
   start_date: z.string().nullable().default(null),
   due_date: z.string().nullable().default(null),
@@ -426,7 +426,20 @@ export const AgentTaskSchema: z.ZodType<AgentTask> = z.object({
   runtime_id: z.string().default(""),
   issue_id: z.string().default(""),
   status: z
-    .enum(["queued", "dispatched", "running", "completed", "failed", "cancelled"])
+    // `deferred` (retry backoff) and `waiting_local_directory` (daemon path
+    // lock) are real wire values; before R1 the enum folded both
+    // into "queued", so the runtime queue could not tell them apart and
+    // presence counted deferred tasks as waiting (web does not).
+    .enum([
+      "queued",
+      "dispatched",
+      "waiting_local_directory",
+      "deferred",
+      "running",
+      "completed",
+      "failed",
+      "cancelled",
+    ])
     .catch("queued"),
   priority: z.number().default(0),
   dispatched_at: z.string().nullable().default(null),
@@ -551,7 +564,7 @@ export const PinnedItemSchema: z.ZodType<PinnedItem> = z.object({
   id: z.string(),
   workspace_id: z.string().default(""),
   user_id: z.string().default(""),
-  item_type: z.enum(["issue", "project"]).catch("issue"),
+  item_type: z.enum(["issue", "project", "view"]).catch("issue"),
   item_id: z.string(),
   position: z.number().default(0),
   created_at: z.string().default(""),
@@ -775,6 +788,10 @@ export const RuntimeSchema: z.ZodType<RuntimeDevice> = z.object({
   workspace_id: z.string().default(""),
   daemon_id: z.string().nullable().default(null),
   name: z.string().default(""),
+  // Display override (MUL-4217) and custom-profile link; older backends omit
+  // both, a wrong type degrades to "not set" instead of failing the list.
+  custom_name: z.string().nullable().optional().catch(null),
+  profile_id: z.string().nullable().optional().catch(null),
   runtime_mode: z.string().catch("local") as unknown as z.ZodType<
     RuntimeDevice["runtime_mode"]
   >,

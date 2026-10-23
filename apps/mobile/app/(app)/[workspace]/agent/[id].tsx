@@ -11,6 +11,7 @@ import { Text } from "@/components/ui/text";
 import { ActorAvatar } from "@/components/ui/actor-avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RunRow } from "@/components/issue/run-row";
+import { AgentHangStatusLine } from "@/components/agents/agent-hang-notice";
 import {
   useAgentStatusText,
   useRuntimeText,
@@ -83,6 +84,8 @@ export default function AgentDetail() {
           <Text className={cn("text-sm", status.className)}>{status.text}</Text>
         </View>
       </View>
+      {/* "Warum hängt mein Agent?": only when something needs attention. */}
+      <AgentHangStatusLine agentId={agent.id} className="mx-4 mt-3" />
 
       <Section title={t("agent.overview")}>
         <Field label={t("agent.field_runtime")} value={runtimeText(agentRuntimeLabel(agent, runtimes))} />

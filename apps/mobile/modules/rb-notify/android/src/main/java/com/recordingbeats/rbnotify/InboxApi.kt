@@ -39,6 +39,22 @@ class InboxApi(context: Context) {
     }
   }
 
+  /** Key ("MUL-12") of an issue for the assignment headline; null on any error. */
+  fun issueKey(slug: String, issueId: String): String? {
+    val creds = store.load() ?: return null
+    val req = request(creds, slug, "/api/issues/$issueId").get().build()
+    // Runs on the socket thread: a short cap, the headline falls back to the title.
+    val call = client.newCall(req).apply { timeout().timeout(KEY_TIMEOUT_S, TimeUnit.SECONDS) }
+    return try {
+      call.execute().use { res ->
+        if (!res.isSuccessful) return null
+        org.json.JSONObject(res.body?.string() ?: "{}").optNullableString("identifier")?.takeIf { it.isNotBlank() }
+      }
+    } catch (_: Exception) {
+      null
+    }
+  }
+
   fun markRead(slug: String, itemIds: List<String>) {
     val creds = store.load() ?: return
     for (id in itemIds) {
@@ -65,6 +81,8 @@ class InboxApi(context: Context) {
 
   companion object {
     private val JSON = "application/json".toMediaType()
+
+    const val KEY_TIMEOUT_S = 5L
 
     val client: OkHttpClient by lazy {
       OkHttpClient.Builder()

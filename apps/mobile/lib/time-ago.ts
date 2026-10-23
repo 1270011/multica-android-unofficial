@@ -1,4 +1,5 @@
 import { i18n } from "@/lib/i18n/singleton";
+import { dateTimeFormat } from "@/lib/date-format";
 
 /**
  * Mobile time-ago formatter. Uses the app UI locale so relative timestamps
@@ -22,8 +23,5 @@ export function timeAgo(dateStr: string): string {
   if (weeks < 5) return t("common:time.weeks_ago_other", { count: weeks });
 
   const locale = i18n.resolvedLanguage ?? i18n.language;
-  return new Date(dateStr).toLocaleDateString(locale, {
-    month: "short",
-    day: "numeric",
-  });
+  return dateTimeFormat(locale, { month: "short", day: "numeric" }).format(new Date(dateStr));
 }

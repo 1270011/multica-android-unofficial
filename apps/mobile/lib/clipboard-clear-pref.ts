@@ -5,7 +5,7 @@
  */
 import { useEffect, useState } from "react";
 import * as SecureStore from "expo-secure-store";
-import * as Clipboard from "expo-clipboard";
+import * as Clipboard from "./clipboard";
 
 const STORAGE_KEY = "rb.clipboard_clear_after_paste";
 

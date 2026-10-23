@@ -17,13 +17,19 @@
  * requires every Tabs.Screen to have a backing route file — the press
  * is preventDefault'd so we never actually navigate to it.
  *
+ * From NAV_RAIL_MIN_DP (600 dp) the same tabs render as a
+ * navigation rail on the left (bottom-tabs `tabBarPosition: "left"` with
+ * the Material variant). The window width is read here, so rotation and
+ * split screen switch live; the More popover follows via `navMode`.
+ *
  * Active / inactive tint colors are derived from the current colour
  * scheme via THEME so dark mode picks contrasting values automatically.
  */
-import { useRef } from "react";
+import { memo, useRef } from "react";
 import { Tabs } from "expo-router";
 import { SymbolIcon } from "@/components/ui/symbol-icon";
-import { Text, View } from "react-native";
+import { Text, useWindowDimensions, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 import type { TriggerRef } from "@rn-primitives/dropdown-menu";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useColorScheme } from "@/lib/use-color-scheme";
@@ -34,6 +40,8 @@ import {
 } from "@/lib/unread-counts";
 import { MoreTabDropdownAnchor } from "@/components/nav/more-tab-dropdown";
 import { useT } from "@/lib/i18n";
+import { perfMark } from "@/lib/perf-mark";
+import { NAV_RAIL_WIDTH, navModeFor } from "@/lib/nav-layout";
 
 // Only override backgroundColor — @react-navigation/elements Badge internally
 // sets borderRadius = size/2, height = size, minWidth = size, so a single
@@ -44,10 +52,17 @@ const BADGE_STYLE = {
   backgroundColor: THEME.light.brand,
 };
 
-export default function TabsLayout() {
+// Memoized: a push onto the workspace Stack re-renders it, and the
+// tab bar plus its screens must not re-render with it.
+export default memo(function TabsLayout() {
+  perfMark("render:tabs");
   const { colorScheme } = useColorScheme();
   const theme = THEME[colorScheme];
   const { t } = useT("navigation");
+  const { width } = useWindowDimensions();
+  const insets = useSafeAreaInsets();
+  const navMode = navModeFor(width);
+  const rail = navMode === "rail";
 
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const inboxUnread = useInboxUnreadCount(wsId);
@@ -72,20 +87,28 @@ export default function TabsLayout() {
           headerShown: false,
           tabBarActiveTintColor: theme.foreground,
           tabBarInactiveTintColor: theme.mutedForeground,
-          tabBarStyle: { backgroundColor: theme.background },
+          tabBarPosition: rail ? "left" : "bottom",
+          tabBarVariant: rail ? "material" : "uikit",
+          tabBarLabelPosition: rail ? "below-icon" : undefined,
+          // The rail pads itself by the left inset, so add it to the width.
+          tabBarStyle: rail
+            ? { backgroundColor: theme.background, width: NAV_RAIL_WIDTH + insets.left }
+            : { backgroundColor: theme.background },
           // 200 % font: the bar has a fixed height, so the label scales
           // only up to TAB_LABEL_MAX_FONT_SCALE and stays on one line; the
           // accessibility label keeps the full text for TalkBack.
           // In landscape bottom-tabs puts the label beside the icon; it then
           // needs the gap and weight its default label would have.
+          // In the rail a long label ("Meine Issues") may wrap to two lines.
           tabBarLabel: ({ color, children, position }) => (
             <Text
-              numberOfLines={1}
+              numberOfLines={rail ? 2 : 1}
               maxFontSizeMultiplier={TAB_LABEL_MAX_FONT_SCALE}
               style={{
                 color,
                 fontSize: position === "beside-icon" ? 13 : 11,
                 fontWeight: "500",
+                ...(rail ? { textAlign: "center" as const } : null),
                 // bottom-tabs' own beside-icon label: gap to the icon, 12 dp end.
                 ...(position === "beside-icon" ? { marginStart: 8, marginEnd: 12 } : null),
               }}
@@ -153,10 +176,10 @@ export default function TabsLayout() {
         />
       </Tabs>
 
-      <MoreTabDropdownAnchor triggerRef={moreTriggerRef} />
+      <MoreTabDropdownAnchor triggerRef={moreTriggerRef} navMode={navMode} />
     </View>
   );
-}
+});
 
 const TAB_LABEL_MAX_FONT_SCALE = 1.5;
 

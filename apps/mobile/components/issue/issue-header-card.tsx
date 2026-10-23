@@ -16,11 +16,18 @@ import type { Issue } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
 import { AttributeRow } from "./attribute-row";
 import { AgentActivityRow } from "./agent-activity-row";
+import { IssueAgentHangBanner } from "@/components/agents/agent-hang-notice";
 import { ParentIssueChip } from "./parent-issue-chip";
 import { DuplicateOfChip } from "./duplicate-of-chip";
 import { IssuePropertiesSection } from "./issue-properties-section";
 
-export function IssueHeaderCard({ issue }: { issue: Issue }) {
+export function IssueHeaderCard({
+  issue,
+  onShowWakeups,
+}: {
+  issue: Issue;
+  onShowWakeups?: () => void;
+}) {
   return (
     <View
       className="px-4 pt-4 pb-3 gap-3"
@@ -37,7 +44,9 @@ export function IssueHeaderCard({ issue }: { issue: Issue }) {
        *  which is higher-IA than the static property chips below.
        *  Conditionally renders null when there are no tasks at all. */}
       <AgentActivityRow issueId={issue.id} />
-      <AttributeRow issue={issue} />
+      {/* An active task here waits on an offline runtime. */}
+      <IssueAgentHangBanner issueId={issue.id} />
+      <AttributeRow issue={issue} onShowWakeups={onShowWakeups} />
       {issue.parent_issue_id ? (
         <ParentIssueChip parentId={issue.parent_issue_id} />
       ) : null}

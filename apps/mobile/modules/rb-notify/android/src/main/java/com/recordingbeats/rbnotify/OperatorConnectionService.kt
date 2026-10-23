@@ -148,7 +148,7 @@ class OperatorConnectionService : Service(), InboxSocket.Listener {
   /** `GET /api/inbox` per enabled workspace (own `X-Workspace-Slug`). */
   private fun reconcileAll() {
     for (workspace in enabledWorkspaces()) {
-      if (stopRequested) return // logout during the previous request (N1)
+      if (stopRequested) return // logout during the previous request
       when (val res = api.listInbox(workspace.slug)) {
         is InboxApi.Result.Ok -> reconcile(workspace, res.value)
         is InboxApi.Result.Unauthorized -> {
@@ -209,7 +209,7 @@ class OperatorConnectionService : Service(), InboxSocket.Listener {
   }
 
   override fun onUnauthorized() {
-    // T2: stop, forget the session copy, tell the user once.
+    // Stop, forget the session copy, tell the user once.
     store.clear()
     socket?.stop()
     socket = null
@@ -258,7 +258,14 @@ class OperatorConnectionService : Service(), InboxSocket.Listener {
     )
     if (ids.add(entry.id)) saveSeen(workspace.slug, ids)
     if (action is InboxDecider.Action.Notify) {
-      notifier.notifyEntry(workspace, entry, action.channel, action.category)
+      // Assignment headline shows the issue key; the inbox item has none.
+      val shown = if (action.category == PingRule.ASSIGNMENTS && entry.issueId != null) {
+        entry.copy(issueKey = api.issueKey(workspace.slug, entry.issueId))
+      } else {
+        entry
+      }
+      if (stopRequested) return InboxDecider.Action.Ignore
+      notifier.notifyEntry(workspace, shown, action.channel, action.category)
     }
     return action
   }

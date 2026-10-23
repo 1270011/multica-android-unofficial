@@ -38,7 +38,7 @@ import ReanimatedSwipeable, {
   type SwipeableMethods,
 } from "react-native-gesture-handler/ReanimatedSwipeable";
 import { Ionicons } from "@/components/ui/ionicons";
-import * as Haptics from "expo-haptics";
+import * as Haptics from "@/lib/haptics";
 import type { InboxItem } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
 import { InboxRow } from "./inbox-row";

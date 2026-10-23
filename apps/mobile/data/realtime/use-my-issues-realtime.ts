@@ -9,13 +9,16 @@
  *                     a fresh fetch is the cheapest correct answer.
  * issue:updated     — patch in-place across every cached list entry.
  *                     A status change re-buckets the SectionList on the
- *                     consumer side; we don't have to invalidate.
+ *                     consumer side; we don't have to invalidate. An
+ *                     assignee change can move the issue into or out of
+ *                     a server-filtered scope, which a patch cannot do —
+ *                     then myAll(wsId) refetches.
  * issue:deleted     — strip from every cached list entry.
  * issue_labels:changed — patch labels via the shared updater
  *                     (also handles the detail cache; harmless if
  *                     the issue isn't in any cached list).
- * onReconnect       — invalidate myAll(wsId) since we may have missed
- *                     a create/delete while disconnected.
+ * onReconnect       — handled by `useIssuesRealtime`, which invalidates the
+ *                     whole `issues/<wsId>` prefix (myAll included).
  *
  * Inbox realtime (use-inbox-realtime.ts) handles its own keys and runs
  * in parallel; the two are independent.
@@ -23,6 +26,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { issueKeys } from "@/data/queries/issue-keys";
 import { useWSSubscriptions } from "@/lib/use-ws-subscriptions";
+import { myIssuesMembershipChanged } from "./live-refresh";
 import {
   patchIssueLabels,
   patchMyIssuesList,
@@ -42,7 +46,15 @@ export function useMyIssuesRealtime() {
         // in — we don't need to read the payload, just refetch.
         ws.on("issue:created", () => invalidateMyAll()),
         ws.on("issue:updated", (payload) => {
+          // Decide before patching: the fallback diffs against cached rows.
+          const moved = myIssuesMembershipChanged(
+            qc,
+            wsId,
+            payload.issue,
+            payload.assignee_changed,
+          );
           patchMyIssuesList(qc, wsId, payload.issue);
+          if (moved) invalidateMyAll();
         }),
         ws.on("issue:deleted", (payload) => {
           removeFromMyIssuesList(qc, wsId, payload.issue_id);
@@ -56,7 +68,6 @@ export function useMyIssuesRealtime() {
             payload.issue_revision,
           );
         }),
-        ws.onReconnect(invalidateMyAll),
       ];
     },
     [qc],

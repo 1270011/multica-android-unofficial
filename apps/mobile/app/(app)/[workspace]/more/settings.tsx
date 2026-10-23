@@ -35,6 +35,7 @@ import { cn } from "@/lib/utils";
 import { authImageSource } from "@/lib/image-source";
 import { useServerConfigStore } from "@/data/server-config-store";
 import { serverLabel } from "@/lib/server-config";
+import { READING_WIDTH_STYLE } from "@/components/ui/reading-width";
 
 const THEME_OPTIONS: ThemePreference[] = ["light", "dark", "system"];
 const LANGUAGE_OPTIONS: LocalePreference[] = ["system", "en", "de", "zh-Hans"];
@@ -110,6 +111,7 @@ export default function SettingsPage() {
     <ScrollView
       className="flex-1 bg-background"
       contentContainerClassName="px-4 py-4 gap-6"
+      contentContainerStyle={READING_WIDTH_STYLE}
     >
       <SectionGroup title={t("account.title")}>
         <NavRow

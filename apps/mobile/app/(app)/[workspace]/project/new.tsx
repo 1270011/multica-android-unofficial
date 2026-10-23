@@ -44,6 +44,7 @@ import { useNewProjectDraftStore } from "@/data/stores/new-project-draft-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useT } from "@/lib/i18n";
 import { HEADER_MAX_FONT_SCALE, MODAL_CLOSE_TITLE_GAP_DP } from "@/lib/header-scale";
+import { READING_WIDTH_STYLE } from "@/components/ui/reading-width";
 
 /**
  * Typed map of new-project picker route pathnames. Keeps `router.push` calls
@@ -193,6 +194,7 @@ export default function NewProject() {
         <ScrollView
           className="flex-1"
           contentContainerClassName="px-4 pt-4 pb-6 gap-4"
+          contentContainerStyle={READING_WIDTH_STYLE}
           keyboardShouldPersistTaps="handled"
         >
               <Field label={t("form.icon_emoji")}>

@@ -43,7 +43,8 @@
     "empty": "Nothing here yet",
     "error": "Something went wrong",
     "offline_banner": "Offline – changes are sent when the connection is back",
-    "offline_refresh": "You're offline. Couldn't refresh."
+    "offline_refresh": "You're offline. Couldn't refresh.",
+    "offline_load": "Couldn't load – you're offline."
   },
   "time": {
     "just_now": "Just now",

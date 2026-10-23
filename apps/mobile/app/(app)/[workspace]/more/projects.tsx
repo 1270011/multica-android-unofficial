@@ -30,6 +30,7 @@ import { projectListOptions } from "@/data/queries/projects";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useT } from "@/lib/i18n";
 import { guardedRefresh } from "@/lib/refresh-guard";
+import { READING_WIDTH_STYLE } from "@/components/ui/reading-width";
 
 export default function ProjectsPage() {
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
@@ -96,6 +97,7 @@ export default function ProjectsPage() {
             <RefreshControl refreshing={isRefetching} onRefresh={() => guardedRefresh(refetch)} />
           }
           contentContainerClassName="pb-6"
+          contentContainerStyle={READING_WIDTH_STYLE}
         />
       )}
     </SafeAreaView>

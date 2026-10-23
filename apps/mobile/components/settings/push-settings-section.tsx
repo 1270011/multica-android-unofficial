@@ -6,7 +6,7 @@
  *
  * Status (permission, connection, battery exemption) is polled from the
  * native side while the screen is focused, so a permission revoked in
- * Android shows up on the next visit without a nagging dialog (§8.8.8).
+ * Android shows up on the next visit without a nagging dialog.
  */
 import { useCallback, useState } from "react";
 import { Platform, Pressable, View } from "react-native";
@@ -35,13 +35,14 @@ import {
   DEFAULT_QUIET,
   dateFromHhmm,
   hhmm,
+  applyCategoryToggle,
   mutedServerGroup,
-  setCategory,
   setQuietHours,
   setWorkspaceEnabled,
 } from "@/lib/notify/push-logic";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { THEME } from "@/lib/theme";
+import { showToast } from "@/lib/toast";
 import { useT } from "@/lib/i18n";
 
 const STATUS_POLL_MS = 2000;
@@ -100,6 +101,19 @@ export function PushSettingsSection({
     updateServer.mutate(next);
   };
 
+  const onCategory = (category: NotifyCategory, on: boolean) =>
+    applyCategoryToggle(
+      { settings, category, on, serverPrefs },
+      {
+        update,
+        // Failure: the cache rolls back and the muted hint stays as fallback.
+        patchServer: (prefs) =>
+          updateServer.mutate(prefs, {
+            onSuccess: () => showToast(t("push.server_group_coupled")),
+          }),
+      },
+    );
+
   const pickTime = (which: "start" | "end") => {
     const current = which === "start" ? settings.quietStart : settings.quietEnd;
     DateTimePickerAndroid.open({
@@ -154,9 +168,12 @@ export function PushSettingsSection({
                 <View key={category}>
                   <Row
                     label={t(`push.category_${category}`)}
+                    description={
+                      category === "assignments" ? t("push.category_assignments_description") : undefined
+                    }
                     checked={!settings.disabledCategories.includes(category)}
                     disabled={!connectionOn}
-                    onChange={(on) => update(setCategory(settings, category as NotifyCategory, on))}
+                    onChange={(on) => onCategory(category, on)}
                   />
                   {muted ? (
                     <Hint
@@ -289,6 +306,7 @@ function Row({
         disabled={disabled}
         onCheckedChange={onChange}
         accessibilityLabel={label}
+        accessibilityHint={description}
       />
     </View>
   );

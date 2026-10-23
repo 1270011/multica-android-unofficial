@@ -8,10 +8,12 @@
   },
   "more_menu": {
     "pinned": "已固定",
-    "issues": "任务",
     "projects": "项目",
     "account_settings": "账号设置",
-    "agents": "智能体"
+    "agents": "智能体",
+    "ai_team": "AI 团队",
+    "autopilots": "自动化",
+    "runtimes": "运行时"
   },
   "routes": {
     "issues": "任务",
@@ -34,6 +36,28 @@
     "runs": "运行",
     "add_resource": "添加资源",
     "recent": "最近",
-    "issue_chat": "聊天"
+    "issue_chat": "聊天",
+    "autopilots": "自动化",
+    "runtimes": "运行时",
+    "autopilot": "自动化详情",
+    "autopilot_runs": "运行记录",
+    "autopilot_runs_of": "运行记录：{{title}}",
+    "wakeup_runs": "唤醒运行记录",
+    "wakeup_runs_of": "运行：{{agent}}"
+  },
+  "ai_team": {
+    "segment_label": "视图",
+    "segment_hint": "打开视图列表",
+    "tab_autopilots": "自动化",
+    "tab_wakeups": "唤醒",
+    "autopilots_title": "自动化",
+    "autopilots_placeholder": "自动化列表将在下一个应用版本中提供。在此之前请使用网页版。",
+    "wakeups_title": "唤醒",
+    "wakeups_placeholder": "工作区所有唤醒的概览将在下一个应用版本中提供。",
+    "runtimes_title": "运行时",
+    "runtimes_placeholder": "运行时列表将在下一个应用版本中提供。在此之前请使用网页版。",
+    "feature_missing": "此服务器不提供该功能。",
+    "detail_empty_title": "未选择",
+    "detail_empty_body": "请从列表中选择一项。"
   }
 }

@@ -16,8 +16,8 @@
  * native alternative" threshold in apps/mobile/CLAUDE.md.
  */
 import { useCallback, useState } from "react";
-import * as Clipboard from "expo-clipboard";
-import * as Haptics from "expo-haptics";
+import * as Clipboard from "@/lib/clipboard";
+import * as Haptics from "@/lib/haptics";
 import { showActionSheet } from "@/lib/action-sheet";
 import type { ChatMessage } from "@multica/core/types";
 import { useChatSelectStore } from "@/data/chat-select-store";

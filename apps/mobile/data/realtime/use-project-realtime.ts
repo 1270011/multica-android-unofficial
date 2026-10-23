@@ -23,22 +23,30 @@
  *
  * `project:created` is not relevant to the per-record hook (no id match).
  */
+import { useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type { Issue } from "@multica/core/types";
 import { issueKeys } from "@/data/queries/issue-keys";
-import { projectKeys } from "@/data/queries/projects";
+import { projectScreenQueryKeys } from "@/data/queries/projects";
 import { useWSSubscriptions } from "@/lib/use-ws-subscriptions";
 import {
   clearProjectDetail,
   patchProjectDetail,
   removeFromProjectsList,
 } from "./project-ws-updaters";
+import { invalidateAfterReconnect } from "./reconnect-refresh";
 
 export function useProjectRealtime(
   projectId: string | undefined,
   onDeleted?: () => void,
 ) {
   const qc = useQueryClient();
+  // The screen passes `onDeleted` inline (`() => router.back()`), so its
+  // identity changes on every render. Read it through a ref instead of
+  // listing it in the deps, which re-subscribed on every render
+  // (same pattern as in use-issue-realtime).
+  const onDeletedRef = useRef(onDeleted);
+  onDeletedRef.current = onDeleted;
 
   useWSSubscriptions(
     (ws, wsId) => {
@@ -50,12 +58,12 @@ export function useProjectRealtime(
         projectId,
       ] as const;
 
+      // Deferred while the project screen is parked in the back stack
+      // (see live-refresh.ts).
       const invalidateThisProject = () => {
-        qc.invalidateQueries({ queryKey: projectKeys.detail(wsId, projectId) });
-        qc.invalidateQueries({
-          queryKey: projectKeys.resources(wsId, projectId),
-        });
-        qc.invalidateQueries({ queryKey: issueListKey });
+        for (const queryKey of projectScreenQueryKeys(wsId, projectId)) {
+          invalidateAfterReconnect(qc, queryKey);
+        }
       };
 
       return [
@@ -68,7 +76,7 @@ export function useProjectRealtime(
           if (payload.project_id !== projectId) return;
           clearProjectDetail(qc, wsId, projectId);
           removeFromProjectsList(qc, wsId, projectId);
-          onDeleted?.();
+          onDeletedRef.current?.();
         }),
 
         // Issue events for issues IN this project — patch the byProject
@@ -109,6 +117,6 @@ export function useProjectRealtime(
         ws.onReconnect(invalidateThisProject),
       ];
     },
-    [projectId, qc, onDeleted],
+    [projectId, qc],
   );
 }

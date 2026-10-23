@@ -20,6 +20,8 @@ interface Props {
   onPress?: () => void;
   className?: string;
   testID?: string;
+  /** TalkBack label when it should say more than the visible label. */
+  accessibilityLabel?: string;
 }
 
 export function AttributeChip({
@@ -29,6 +31,7 @@ export function AttributeChip({
   onPress,
   className,
   testID,
+  accessibilityLabel,
 }: Props) {
   const containerClass = cn(
     "flex-row items-center gap-1.5 rounded-full border px-3 py-1.5 min-h-9",
@@ -61,7 +64,7 @@ export function AttributeChip({
         // 36 dp chip + 6 dp slop = 48 dp touch target (Android guideline).
         hitSlop={6}
         accessibilityRole="button"
-        accessibilityLabel={label}
+        accessibilityLabel={accessibilityLabel ?? label}
         testID={testID}
       >
         {inner}

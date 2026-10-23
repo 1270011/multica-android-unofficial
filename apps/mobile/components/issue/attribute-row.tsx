@@ -34,6 +34,7 @@ import { PriorityIcon } from "@/components/ui/priority-icon";
 import { ActorAvatar } from "@/components/ui/actor-avatar";
 import { ProjectIcon } from "@/components/ui/project-icon";
 import { AttributeChip } from "./attribute-chip";
+import { WakeupHeaderChip } from "./wakeup-header-chip";
 import { useActorLookup } from "@/data/use-actor-name";
 import { findProject, projectListOptions } from "@/data/queries/projects";
 import { useWorkspaceStore } from "@/data/workspace-store";
@@ -90,7 +91,14 @@ function formatDueDate(iso: string | null): string | null {
   );
 }
 
-export function AttributeRow({ issue }: { issue: Issue }) {
+export function AttributeRow({
+  issue,
+  onShowWakeups,
+}: {
+  issue: Issue;
+  /** Header wakeup chip tap: jump to the Wakeups section. */
+  onShowWakeups?: () => void;
+}) {
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const wsSlug = useWorkspaceStore((s) => s.currentWorkspaceSlug);
   const { getName } = useActorLookup();
@@ -153,6 +161,9 @@ export function AttributeRow({ issue }: { issue: Issue }) {
         variant={issue.priority === "none" ? "dimmed" : "filled"}
         onPress={() => openPicker("priority")}
       />
+
+      {/* Active wakeups — renders null without any. */}
+      <WakeupHeaderChip issueId={issue.id} onPress={onShowWakeups} />
 
       {/* Assignee */}
       {assigneeValue ? (

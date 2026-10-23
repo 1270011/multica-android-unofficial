@@ -23,8 +23,11 @@
  */
 import type { InboxItem, TimelineEntry } from "@multica/core/types";
 import { isDeletedComment } from "@multica/core/issues/comment-deletion";
+import { replaceEqualDeep } from "@tanstack/react-query";
+import { sanitizeTimeline } from "@/data/timeline-cache/core";
+import { isOptimisticCommentId } from "@/lib/pending-comments";
 
-/** Same author within this window → one bubble group. */
+/** Same author within this window → one bubble group (UX §8.2). */
 export const GROUP_WINDOW_MS = 5 * 60 * 1000;
 /** Runs of at least this many plain system rows are folded (UX §8.2: "mehr als drei"). */
 export const SYSTEM_GROUP_MIN = 4;
@@ -128,6 +131,14 @@ export function unreadAnchorId(
   entries: TimelineEntry[],
   unreadInbox: InboxItem[] | undefined,
 ): string | null {
+  return unreadAnchor(entries, unreadInbox, (e) => ms(e.created_at));
+}
+
+function unreadAnchor(
+  entries: TimelineEntry[],
+  unreadInbox: InboxItem[] | undefined,
+  time: (entry: TimelineEntry) => number,
+): string | null {
   const unread = (unreadInbox ?? []).filter((i) => !i.read && !i.archived);
   if (unread.length === 0) return null;
   const oldest = [...unread].sort((a, b) => ms(a.created_at) - ms(b.created_at))[0]!;
@@ -135,28 +146,136 @@ export function unreadAnchorId(
   const byAnchor = oldest.details?.comment_id;
   if (byAnchor && comments.some((c) => c.id === byAnchor)) return byAnchor;
   const since = ms(oldest.created_at) - UNREAD_SKEW_MS;
-  const first = comments.find((c) => ms(c.created_at) >= since);
+  const first = comments.find((c) => time(c) >= since);
   return first ? first.id : null;
 }
 
+/** What the chat derives from one entry alone; computed once per entry object. */
+interface EntryFacts {
+  time: number;
+  day: string;
+  /** Reply quote preview when this entry is a thread root; filled on first use. */
+  preview?: string;
+}
+
+/**
+ * Rows of the previous builds, keyed by the entry objects they were built
+ * from. Entries keep their object across refetches (TanStack structural
+ * sharing) and WS patches (only the changed entry is replaced), so a rebuild
+ * only computes the rows whose entry or neighbourhood changed and returns
+ * the previous object for every other row.
+ */
+interface ChatBuildCache {
+  dayKey: (iso: string) => string;
+  userId: string | null;
+  facts: WeakMap<TimelineEntry, EntryFacts>;
+  rows: WeakMap<TimelineEntry, ChatItem>;
+  groups: WeakMap<TimelineEntry, Extract<ChatItem, { kind: "system-group" }>>;
+  /** Entry → the equal older entry object a kept row still carries. */
+  kept: WeakMap<TimelineEntry, TimelineEntry>;
+  days: Map<string, ChatItem>;
+}
+
+export type ChatItemsBuilder = (
+  entries: TimelineEntry[] | undefined,
+  options: BuildChatOptions,
+) => ChatItem[];
+
+/**
+ * Incremental `buildChatItems` plus `shareChatItems`, the chat
+ * screen's per-change step. The result equals
+ * `shareChatItems(previousResult, buildChatItems(entries, options))`, but a
+ * row is only computed when its entry object or its context (neighbours,
+ * thread root, unread divider, expanded groups) changed. Day keys,
+ * timestamps and quote previews are computed once per entry object. A row
+ * that sharing keeps from the previous result (cache → server sync: new
+ * entry objects with equal data) is remembered for the new entry object, so
+ * later changes reuse it without comparing again. One builder per chat
+ * screen; it holds entries only weakly besides the last result.
+ */
+export function createChatItemsBuilder(): ChatItemsBuilder {
+  let cache: ChatBuildCache | null = null;
+  let prev: ChatItem[] | undefined;
+  return (entries, options) => {
+    const dayKey = options.dayKey ?? localDayKey;
+    const userId = options.userId;
+    if (!cache || cache.dayKey !== dayKey || cache.userId !== userId) {
+      cache = {
+        dayKey,
+        userId,
+        facts: new WeakMap(),
+        rows: new WeakMap(),
+        groups: new WeakMap(),
+        kept: new WeakMap(),
+        days: new Map(),
+      };
+    }
+    const built = build(entries, options, cache);
+    const next = shareChatItems(prev, built);
+    if (next !== built) {
+      for (let i = 0; i < built.length; i++) {
+        const b = built[i]!;
+        const kept = next[i]!;
+        if (kept === b) continue;
+        if ((b.kind === "message" || b.kind === "system") && kept.kind === b.kind) {
+          cache.rows.set(b.entry, kept);
+        } else if (b.kind === "system-group" && kept.kind === "system-group") {
+          cache.groups.set(b.entries[0]!, kept);
+          b.entries.forEach((e, j) => cache!.kept.set(e, kept.entries[j]!));
+        }
+      }
+    }
+    prev = next;
+    return next;
+  };
+}
+
+/** One full build without previous rows (tests, benchmarks). */
 export function buildChatItems(
   entries: TimelineEntry[] | undefined,
   options: BuildChatOptions,
 ): ChatItem[] {
+  return createChatItemsBuilder()(entries, options);
+}
+
+function build(
+  entries: TimelineEntry[] | undefined,
+  options: BuildChatOptions,
+  cache: ChatBuildCache,
+): ChatItem[] {
   if (!entries || entries.length === 0) return [];
-  const dayKey = options.dayKey ?? localDayKey;
   const expanded = options.expandedGroups ?? new Set<string>();
+  const { dayKey, userId } = cache;
+
+  const factsOf = (entry: TimelineEntry): EntryFacts => {
+    let f = cache.facts.get(entry);
+    if (!f) {
+      f = { time: ms(entry.created_at), day: dayKey(entry.created_at) };
+      cache.facts.set(entry, f);
+    }
+    return f;
+  };
+  const time = (entry: TimelineEntry) => factsOf(entry).time;
+
   // Stable sort: the server list is already ASC; local pending rows are
   // appended by mergeLocalComments and may carry a slightly older clock.
-  const sorted = entries
-    .map((entry, index) => ({ entry, index }))
-    .sort((a, b) => ms(a.entry.created_at) - ms(b.entry.created_at) || a.index - b.index)
-    .map((x) => x.entry);
+  // The usual case is an ordered list, which needs no sort at all.
+  let ordered = true;
+  for (let i = 1; i < entries.length && ordered; i++) {
+    if (time(entries[i]!) < time(entries[i - 1]!)) ordered = false;
+  }
+  const sorted = ordered
+    ? entries
+    : entries
+        .map((entry, index) => ({ entry, index, t: time(entry) }))
+        .sort((a, b) => a.t - b.t || a.index - b.index)
+        .map((x) => x.entry);
 
   const byId = new Map<string, TimelineEntry>();
   for (const e of sorted) if (e.type === "comment") byId.set(e.id, e);
 
   const rootOf = (entry: TimelineEntry): TimelineEntry | null => {
+    if (!entry.parent_id || !byId.has(entry.parent_id)) return null;
     let cur = entry;
     const seen = new Set<string>();
     while (cur.parent_id && byId.has(cur.parent_id) && !seen.has(cur.id)) {
@@ -166,11 +285,25 @@ export function buildChatItems(
     return cur.id === entry.id ? null : cur;
   };
 
-  const anchor = unreadAnchorId(sorted, options.unreadInbox);
+  const previewOf = (root: TimelineEntry): string => {
+    const f = factsOf(root);
+    f.preview ??= firstLine(root.content);
+    return f.preview;
+  };
+
+  const anchor = unreadAnchor(sorted, options.unreadInbox, time);
   const out: ChatItem[] = [];
   let lastDay = "";
   let lastMessage: TimelineEntry | null = null;
   let pendingSystem: TimelineEntry[] = [];
+
+  const systemRow = (entry: TimelineEntry, emphasis: boolean): ChatItem => {
+    const old = cache.rows.get(entry);
+    if (old?.kind === "system" && old.emphasis === emphasis) return old;
+    const row: ChatItem = { kind: "system", id: entry.id, entry, emphasis };
+    cache.rows.set(entry, row);
+    return row;
+  };
 
   const flushSystem = () => {
     if (pendingSystem.length === 0) return;
@@ -178,19 +311,36 @@ export function buildChatItems(
     pendingSystem = [];
     const groupId = `group:${run[0]!.id}`;
     if (run.length >= SYSTEM_GROUP_MIN && !expanded.has(groupId)) {
-      out.push({ kind: "system-group", id: groupId, entries: run });
+      const old = cache.groups.get(run[0]!);
+      if (
+        old &&
+        old.id === groupId &&
+        old.entries.length === run.length &&
+        old.entries.every((e, i) => e === run[i] || cache.kept.get(run[i]!) === e)
+      ) {
+        out.push(old);
+      } else {
+        const group = { kind: "system-group" as const, id: groupId, entries: run };
+        cache.groups.set(run[0]!, group);
+        out.push(group);
+      }
     } else {
-      for (const e of run) out.push({ kind: "system", id: e.id, entry: e, emphasis: false });
+      for (const e of run) out.push(systemRow(e, false));
     }
   };
 
   for (const entry of sorted) {
     if (entry.type === "comment" && isDeletedComment(entry)) continue;
 
-    const day = dayKey(entry.created_at);
+    const day = factsOf(entry).day;
     if (day && day !== lastDay) {
       flushSystem();
-      out.push({ kind: "day", id: `day:${day}`, day });
+      let dayRow = cache.days.get(day);
+      if (!dayRow) {
+        dayRow = { kind: "day", id: `day:${day}`, day };
+        cache.days.set(day, dayRow);
+      }
+      out.push(dayRow);
       lastDay = day;
       lastMessage = null;
     }
@@ -198,7 +348,7 @@ export function buildChatItems(
     if (entry.type !== "comment") {
       if (isActionStatusChange(entry)) {
         flushSystem();
-        out.push({ kind: "system", id: entry.id, entry, emphasis: true });
+        out.push(systemRow(entry, true));
       } else {
         pendingSystem.push(entry);
       }
@@ -208,7 +358,7 @@ export function buildChatItems(
 
     flushSystem();
     if (anchor === entry.id) {
-      out.push({ kind: "unread", id: "unread" });
+      out.push(UNREAD_ROW);
       lastMessage = null;
     }
 
@@ -216,45 +366,151 @@ export function buildChatItems(
     const groupStart =
       !lastMessage ||
       !sameAuthor(lastMessage, entry) ||
-      ms(entry.created_at) - ms(lastMessage.created_at) > GROUP_WINDOW_MS ||
+      time(entry) - time(lastMessage) > GROUP_WINDOW_MS ||
       // A reply always shows its quote with a header so it reads as one unit.
       !!root;
+    const own = !!userId && entry.actor_type === "member" && entry.actor_id === userId;
+    const resolved = !!(root ?? entry).resolved_at;
+    const rootDeleted = !!root && isDeletedComment(root);
+    const preview = root && !rootDeleted ? previewOf(root) : "";
 
-    out.push({
-      kind: "message",
-      id: entry.id,
-      entry,
-      own:
-        !!options.userId &&
-        entry.actor_type === "member" &&
-        entry.actor_id === options.userId,
-      groupStart,
-      replyTo: root
-        ? {
-            rootId: root.id,
-            actorType: root.actor_type,
-            actorId: root.actor_id,
-            actorName: root.actor_name,
-            preview: isDeletedComment(root) ? "" : firstLine(root.content),
-            deleted: isDeletedComment(root),
-          }
-        : null,
-      mentionsMe: mentionsUser(entry.content, options.userId),
-      resolved: !!(root ?? entry).resolved_at,
-    });
+    const old = cache.rows.get(entry);
+    if (
+      old?.kind === "message" &&
+      old.own === own &&
+      old.groupStart === groupStart &&
+      old.resolved === resolved &&
+      (root
+        ? !!old.replyTo &&
+          old.replyTo.rootId === root.id &&
+          old.replyTo.actorType === root.actor_type &&
+          old.replyTo.actorId === root.actor_id &&
+          old.replyTo.actorName === root.actor_name &&
+          old.replyTo.preview === preview &&
+          old.replyTo.deleted === rootDeleted
+        : !old.replyTo)
+    ) {
+      out.push(old);
+    } else {
+      const row: ChatItem = {
+        kind: "message",
+        id: entry.id,
+        entry,
+        own,
+        groupStart,
+        replyTo: root
+          ? {
+              rootId: root.id,
+              actorType: root.actor_type,
+              actorId: root.actor_id,
+              actorName: root.actor_name,
+              preview,
+              deleted: rootDeleted,
+            }
+          : null,
+        mentionsMe:
+          old?.kind === "message" && old.entry === entry
+            ? old.mentionsMe
+            : mentionsUser(entry.content, userId),
+        resolved,
+      };
+      cache.rows.set(entry, row);
+      out.push(row);
+    }
     lastMessage = entry;
   }
   flushSystem();
   return out;
 }
 
-/** Inbox types whose tap opens the chat; everything else opens the detail. */
+const UNREAD_ROW: ChatItem = { kind: "unread", id: "unread" };
+
+/**
+ * Structural sharing for chat rows: every rebuild
+ * after a refetch makes new item objects, which made every visible bubble
+ * re-render (Markdown tree included). This keeps the previous object for
+ * every row that equals its predecessor, and the previous array when nothing
+ * changed, so memoised rows only re-render when their own data changed.
+ *
+ * Rows are matched by id, not by position, so a row inserted in
+ * the middle (unread divider, an entry the sync brings) does not renew every
+ * row below it. And an entry from the on-device cache counts as
+ * equal to the server's copy when the cache would store the same thing
+ * (`sanitizeTimeline`: signed URLs and fields the chat does not show are
+ * dropped there). Otherwise the cache → server sync on a cold open renewed
+ * every row with an attachment or avatar: all bubbles re-rendered, images
+ * reloaded and FlashList re-measured — the flicker and the jump seen after
+ * the first content.
+ */
+export function shareChatItems(prev: ChatItem[] | undefined, next: ChatItem[]): ChatItem[] {
+  if (!prev || prev.length === 0) return next;
+  // Rows from createChatItemsBuilder are mostly the previous objects already
+  //The id map is only needed once a row differs.
+  let byId: Map<string, ChatItem> | undefined;
+  let same = prev.length === next.length;
+  const out = next.map((item, i) => {
+    if (item === prev[i]) return item;
+    byId ??= new Map(prev.map((p) => [p.id, p]));
+    const old = byId.get(item.id);
+    const kept = old && sameChatItem(old, item) ? old : item;
+    if (kept !== prev[i]) same = false;
+    return kept;
+  });
+  return same ? prev : out;
+}
+
+function deepEqual(a: unknown, b: unknown): boolean {
+  return a === b || replaceEqualDeep(a, b) === a;
+}
+
+/** Same entry for the chat: deep-equal, or equal as the cache stores it. */
+export function sameChatEntry(a: TimelineEntry, b: TimelineEntry): boolean {
+  if (deepEqual(a, b)) return true;
+  if (a.id !== b.id || isOptimisticCommentId(a.id)) return false;
+  const [sa] = sanitizeTimeline([a]);
+  const [sb] = sanitizeTimeline([b]);
+  return !!sa && !!sb && deepEqual(sa, sb);
+}
+
+function sameChatItem(a: ChatItem, b: ChatItem): boolean {
+  if (a === b) return true;
+  if (a.kind !== b.kind) return false;
+  const ra = a as unknown as Record<string, unknown>;
+  const rb = b as unknown as Record<string, unknown>;
+  const keys = Object.keys(ra);
+  if (keys.length !== Object.keys(rb).length) return false;
+  return keys.every((k) => {
+    if (!Object.prototype.hasOwnProperty.call(rb, k)) return false;
+    if (k === "entry") return sameChatEntry(ra.entry as TimelineEntry, rb.entry as TimelineEntry);
+    if (k === "entries") {
+      const ea = ra.entries as TimelineEntry[];
+      const eb = rb.entries as TimelineEntry[];
+      return ea.length === eb.length && ea.every((e, i) => sameChatEntry(e, eb[i]!));
+    }
+    return deepEqual(ra[k], rb[k]);
+  });
+}
+
+/**
+ * Prop comparison for memoised chat rows: same keys, every value `Object.is`
+ * (what `React.memo` does by default). Exported so the "only the changed
+ * bubble re-renders" test uses exactly the comparison the list uses.
+ */
+export function shallowEqualProps(a: object, b: object): boolean {
+  if (a === b) return true;
+  const ka = Object.keys(a) as (keyof typeof a)[];
+  const kb = Object.keys(b);
+  if (ka.length !== kb.length) return false;
+  return ka.every((k) => Object.prototype.hasOwnProperty.call(b, k) && Object.is(a[k], b[k]));
+}
+
+/** Inbox types whose tap opens the chat (UX §8.1); everything else opens the detail. */
 const CHAT_TYPES: ReadonlySet<string> = new Set([
   "new_comment",
   "mentioned",
   "reaction_added",
   "task_failed",
-  // Known to the client type, not emitted by server v0.6.1.
+  // Known to the client type, not emitted by server v0.6.1 (UX §8.3).
   "review_requested",
   "agent_blocked",
 ]);

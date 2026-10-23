@@ -32,8 +32,8 @@ import {
   ScrollView,
   View,
 } from "react-native";
-import * as Clipboard from "expo-clipboard";
-import * as Haptics from "expo-haptics";
+import * as Clipboard from "@/lib/clipboard";
+import * as Haptics from "@/lib/haptics";
 import Svg, { Path, Rect } from "react-native-svg";
 import { Text } from "@/components/ui/text";
 import { THEME } from "@/lib/theme";

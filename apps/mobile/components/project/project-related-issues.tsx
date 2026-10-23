@@ -33,6 +33,8 @@ import { groupIssuesByStatus } from "@/lib/group-issues-by-status";
 import { useIssueStatuses } from "@/lib/use-issue-statuses";
 import { useT } from "@/lib/i18n";
 import { useListTotal } from "@/data/queries/list-total";
+import { ListOffline } from "@/components/ui/list-offline";
+import { listState } from "@/lib/list-state";
 
 interface Props {
   projectId: string;
@@ -42,9 +44,8 @@ export function ProjectRelatedIssues({ projectId }: Props) {
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const wsSlug = useWorkspaceStore((s) => s.currentWorkspaceSlug);
   const { t } = useT("issues");
-  const { data, isLoading, error, refetch } = useQuery(
-    projectIssuesOptions(wsId, projectId),
-  );
+  const query = useQuery(projectIssuesOptions(wsId, projectId));
+  const { data, error, refetch } = query;
   const total = useListTotal(projectIssuesOptions(wsId, projectId).queryKey);
 
   const listFilters = withoutProjectFilter(useIssueListFilters("project", wsId));
@@ -74,9 +75,14 @@ export function ProjectRelatedIssues({ projectId }: Props) {
     if (wsSlug) router.push(`/${wsSlug}/issue/${id}`);
   };
 
-  if (isLoading) return <IssuesLoading />;
+  // Offline before the first page: not "no issues".
+  const state = listState(query);
+  if (state === "loading") return <IssuesLoading />;
+  if (state === "offline") {
+    return <ListOffline onRetry={() => refetch()} testID="project-issues-offline" />;
+  }
 
-  if (error) {
+  if (state === "error") {
     return (
       <View className="px-4 py-6 gap-3">
         <Text className="text-sm text-destructive">

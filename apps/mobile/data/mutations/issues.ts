@@ -10,8 +10,9 @@
  *   - Append a synthetic comment-typed TimelineEntry to the end of the list
  *     (newest position, since the array is ASC).
  *   - On error: roll back to the snapshot.
- *   - On settled: invalidate so the server's real comment row replaces the
- *     synthetic one (real id, real created_at).
+ *   - On success: swap the synthetic row for the server row (or drop it when
+ *     the `comment:created` echo is already there), then
+ *     invalidate for the authoritative list.
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import type {
@@ -63,6 +64,12 @@ import {
   replaceCommentTimelineEntry,
 } from "@/data/realtime/issue-ws-updaters";
 import { rerunErrorKey } from "@/lib/run-transcript";
+import {
+  knownCommentIds,
+  newOptimisticCommentId,
+  settleOptimisticComment,
+  type LocalComment,
+} from "@/lib/pending-comments";
 
 export type ToggleCommentReactionVars = {
   commentId: string;
@@ -93,6 +100,9 @@ export type CreateCommentVars = {
   /** Manual "Retry" of a failed send: an earlier POST from this time on may
    *  have reached the server, so look for it before posting. */
   sentAt?: string;
+  /** Manual "Retry": the server comments known at the first send, so an
+   *  echo that arrived since is recognised as this comment. */
+  knownIds?: ReadonlySet<string>;
 };
 
 // Attempt state per submission. TanStack hands the same variables object to
@@ -123,7 +133,7 @@ export function useCreateComment(issueId: string) {
     // across refetches — see lib/pending-comments.ts.
     mutationKey: createCommentMutationKey(issueId),
     // Offline-written comments go out by themselves once the network is back
-    //: transient failures retry with backoff, each retry paused
+    //Transient failures retry with backoff, each retry paused
     // while onlineManager is offline; "Retry" only after the last attempt or
     // a real 4xx. Later attempts check the timeline first — no double send.
     retry: shouldAutoResendComment,
@@ -146,9 +156,9 @@ export function useCreateComment(issueId: string) {
       const key = issueKeys.timeline(wsId, issueId);
       await qc.cancelQueries({ queryKey: key });
       const prev = qc.getQueryData<TimelineEntry[]>(key);
-      if (!userId) return { prev, key, optimisticId: null, optimistic: null };
+      if (!userId) return { prev, key, optimisticId: null, optimistic: null, local: null };
 
-      const optimisticId = `optimistic-${Date.now()}`;
+      const optimisticId = newOptimisticCommentId();
       const optimistic: TimelineEntry = {
         type: "comment",
         id: optimisticId,
@@ -167,8 +177,14 @@ export function useCreateComment(issueId: string) {
       qc.setQueryData<TimelineEntry[]>(key, (old) =>
         old ? [...old, optimistic] : [optimistic],
       );
+      // Read back by the screens (`useMutationState`) to show the row exactly
+      // once, also when the WS echo beats the POST answer.
+      const local: LocalComment = {
+        entry: optimistic,
+        knownIds: vars.knownIds ?? knownCommentIds(prev),
+      };
 
-      return { prev, key, optimisticId, optimistic };
+      return { prev, key, optimisticId, optimistic, local };
     },
     onError: (err, vars, ctx) => {
       // Deliberately do NOT roll back here — the optimistic entry stays in
@@ -188,17 +204,26 @@ export function useCreateComment(issueId: string) {
           parentId: vars.parentId,
           attachmentIds: vars.attachmentIds,
           sentAt: commentSendStates.get(vars)?.since ?? undefined,
+          knownIds: ctx.local?.knownIds,
           error: err instanceof Error ? err.message : "Send failed",
         });
       }
     },
     // Invalidate only on success — the failed-comment path needs the cache
     // to keep its optimistic entry so the inline retry UI has something to
-    // render against. The success refetch replaces the synthetic id with
-    // the server-issued one (same ASC bottom position).
-    onSuccess: (result) => {
+    // render against. The synthetic row is swapped for the server row right
+    // away (it runs before the mutation leaves "pending", so no frame shows
+    // neither or both); the refetch then brings the authoritative list.
+    onSuccess: (result, _vars, ctx) => {
       if (wsId && result.kind === "posted") {
         onIssueAuxiliaryRevision(qc, wsId, issueId, result.comment.issue_revision);
+      }
+      if (ctx?.optimisticId) {
+        const server =
+          result.kind === "posted" ? commentToTimelineEntry(result.comment) : result.entry;
+        qc.setQueryData<TimelineEntry[]>(issueKeys.timeline(wsId, issueId), (old) =>
+          settleOptimisticComment(old, ctx.optimisticId!, server),
+        );
       }
       qc.invalidateQueries({
         queryKey: issueKeys.timeline(wsId, issueId),

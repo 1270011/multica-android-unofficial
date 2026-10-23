@@ -6,7 +6,10 @@
  * parity with Inbox / My Issues / Chat).
  *
  * The wrapper View is absolute-positioned over the More tab's screen
- * rect (right 25%, bottom = safe-area, height = tab bar). It uses
+ * rect (right 25%, bottom = safe-area, height = tab bar); in rail mode
+ * as a 1 dp point at the rail's top right edge, so the popover
+ * opens beside the rail.
+ * The rect comes from `moreMenuPlacement` in lib/nav-layout.ts. It uses
  * `pointerEvents="box-none"` so taps pass through to the real tab
  * button underneath; we open the dropdown imperatively from the tab's
  * `listeners.tabPress` via the exposed `TriggerRef.open()`. The
@@ -57,19 +60,20 @@ import { useOpenInvitationCount } from "@/components/workspace/invitation-list";
 import { useAuthStore } from "@/data/auth-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useT } from "@/lib/i18n";
+import { aiTeamEntries, type AiTeamEntryKey } from "@/lib/ai-team";
+import { useAiTeamGates } from "@/components/ai-team/use-ai-team-gates";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { THEME } from "@/lib/theme";
 import { cn } from "@/lib/utils";
-
-// iOS bottom tab bar default height (above safe-area). React Navigation
-// doesn't expose this as a layout constant, but the value is stable
-// across Expo Router 55 / RN Screens 4 — see BottomTabBar.tsx in
-// @react-navigation/bottom-tabs (`styles.tab` has no explicit height;
-// the container settles at 49 from the inner padding + icon size).
-const TAB_BAR_HEIGHT = 49;
+import { moreMenuPlacement, type NavMode } from "@/lib/nav-layout";
 
 interface NavItem {
-  labelKey: "more_menu.pinned" | "more_menu.issues" | "more_menu.projects" | "more_menu.agents";
+  labelKey:
+    | "more_menu.pinned"
+    | "more_menu.projects"
+    | "more_menu.agents"
+    | "more_menu.autopilots"
+    | "more_menu.runtimes";
   /** Glyph name — SF Symbol on iOS, mapped Ionicon on Android (SymbolIcon). */
   icon: SymbolName;
   /** Path under /:slug/ — final href is `/${slug}${path}`. */
@@ -78,19 +82,30 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { labelKey: "more_menu.pinned", icon: "pin", path: "/more/pins" },
-  { labelKey: "more_menu.issues", icon: "list.bullet", path: "/more/issues" },
+  // No "Issues" entry since 2.0: the whole workspace is the tab
+  // "All" of My Issues; `more/issues` only redirects there.
   { labelKey: "more_menu.projects", icon: "square.stack", path: "/more/projects" },
-  // Read-only Agents and Squads (entry missing until smoke
-  // test H1-1).
-  { labelKey: "more_menu.agents", icon: "person.2", path: "/more/agents" },
 ];
+
+// "AI Team" group: Agents,
+// Autopilots (with the Wakeups segment) and Runtimes. Entries the server
+// does not serve (404) are left out by `aiTeamEntries`; Skills and Usage
+// join the group later.
+const AI_TEAM_ITEM: Record<AiTeamEntryKey, Omit<NavItem, "path">> = {
+  agents: { labelKey: "more_menu.agents", icon: "person.2" },
+  autopilots: { labelKey: "more_menu.autopilots", icon: "bolt" },
+  runtimes: { labelKey: "more_menu.runtimes", icon: "server.rack" },
+};
 
 export function MoreTabDropdownAnchor({
   triggerRef,
+  navMode,
 }: {
   triggerRef: React.RefObject<TriggerRef | null>;
+  navMode: NavMode;
 }) {
   const insets = useSafeAreaInsets();
+  const placement = moreMenuPlacement(navMode, insets);
   const slug = useWorkspaceStore((s) => s.currentWorkspaceSlug);
   const user = useAuthStore((s) => s.user);
   const pathname = usePathname();
@@ -98,6 +113,12 @@ export function MoreTabDropdownAnchor({
   const { t } = useT("navigation");
   const theme = THEME[colorScheme];
   const currentWorkspace = useCurrentWorkspace(slug);
+  const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
+  const gates = useAiTeamGates(wsId);
+  const aiTeamItems: NavItem[] = aiTeamEntries(gates).map((e) => ({
+    ...AI_TEAM_ITEM[e.key],
+    path: e.path,
+  }));
 
   const isActive = (path: string) => {
     if (!slug) return false;
@@ -105,17 +126,22 @@ export function MoreTabDropdownAnchor({
     return pathname === target || pathname.startsWith(target + "/");
   };
 
-  return (
-    <View
-      pointerEvents="box-none"
-      style={{
-        position: "absolute",
-        right: 0,
-        bottom: insets.bottom,
-        width: "25%",
-        height: TAB_BAR_HEIGHT,
-      }}
+  const renderItem = (item: NavItem) => (
+    <DropdownMenuItem
+      key={item.path}
+      onPress={() => slug && router.push(`/${slug}${item.path}`)}
+      accessibilityRole="menuitem"
+      accessibilityLabel={t(item.labelKey)}
+      accessibilityState={{ selected: isActive(item.path) }}
+      className={cn("h-9 gap-3", isActive(item.path) && "bg-secondary")}
     >
+      <SymbolIcon name={item.icon} size={18} color={theme.foreground} />
+      <Text className="text-sm text-foreground">{t(item.labelKey)}</Text>
+    </DropdownMenuItem>
+  );
+
+  return (
+    <View pointerEvents="box-none" style={placement.anchor}>
       <DropdownMenu>
         <DropdownMenuTrigger ref={triggerRef} asChild>
           {/* Invisible, non-tappable: the real tab button below catches
@@ -131,8 +157,8 @@ export function MoreTabDropdownAnchor({
         </DropdownMenuTrigger>
 
         <DropdownMenuContent
-          side="top"
-          align="end"
+          side={placement.side}
+          align={placement.align}
           sideOffset={6}
           className="w-72 p-2"
         >
@@ -155,22 +181,17 @@ export function MoreTabDropdownAnchor({
 
           <DropdownMenuSeparator />
 
-          {NAV_ITEMS.map((item) => (
-            <DropdownMenuItem
-              key={item.path}
-              onPress={() => slug && router.push(`/${slug}${item.path}`)}
-              accessibilityRole="menuitem"
-              accessibilityLabel={t(item.labelKey)}
-              accessibilityState={{ selected: isActive(item.path) }}
-              className={cn(
-                "h-9 gap-3",
-                isActive(item.path) && "bg-secondary",
-              )}
-            >
-              <SymbolIcon name={item.icon} size={18} color={theme.foreground} />
-              <Text className="text-sm text-foreground">{t(item.labelKey)}</Text>
-            </DropdownMenuItem>
-          ))}
+          {NAV_ITEMS.map(renderItem)}
+
+          <DropdownMenuSeparator />
+
+          <Text
+            className="px-2 pt-1 pb-0.5 text-xs font-medium text-muted-foreground"
+            accessibilityRole="header"
+          >
+            {t("more_menu.ai_team")}
+          </Text>
+          {aiTeamItems.map(renderItem)}
         </DropdownMenuContent>
       </DropdownMenu>
     </View>
@@ -262,8 +283,8 @@ function WorkspaceCard({
 }) {
   const { t } = useT("navigation");
   const { data } = useQuery(workspaceListOptions());
-  // Pending invitations also open the switcher, where they can be accepted
-  // — a single-workspace user is exactly who gets invited.
+  // Pending invitations also open the switcher, where they can be accepted —
+  // a single-workspace user is exactly who gets invited.
   const invitationCount = useOpenInvitationCount();
   const canSwitch = (data?.length ?? 0) > 1 || invitationCount > 0;
   const invitationText =

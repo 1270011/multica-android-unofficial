@@ -32,6 +32,7 @@ import { useCreateIssue } from "@/data/mutations/issues";
 import { useNewIssueDraftStore } from "@/data/stores/new-issue-draft-store";
 import { useMentionInput } from "@/lib/use-mention-input";
 import { useT } from "@/lib/i18n";
+import { READING_WIDTH_STYLE } from "@/components/ui/reading-width";
 
 export default function NewIssueModal() {
   const { t } = useT("issues");
@@ -117,6 +118,7 @@ export default function NewIssueModal() {
         <ScrollView
           className="flex-1"
           contentContainerClassName="px-4 pt-4 pb-6 gap-4"
+          contentContainerStyle={READING_WIDTH_STYLE}
           keyboardShouldPersistTaps="handled"
         >
           <TextInput

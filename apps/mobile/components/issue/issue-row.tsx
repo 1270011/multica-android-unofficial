@@ -29,6 +29,13 @@
  *     fallback, which is the real "enum drift downgrades, not crashes"
  *     behavior — earlier whitelist (member/agent only) silently dropped
  *     squad assignees instead.
+ *
+ * Multi-select: a caller
+ * that passes `onSelect` gets a long press and the TalkBack action "Select"
+ * that start the selection with this row. While `selected` is a boolean the
+ * row is in selection mode: a checkbox leads the row, TalkBack reads it as
+ * a checkbox and `onPress` is expected to toggle instead of opening. Press
+ * wiring: `lib/issue-row-selection.ts`.
  */
 import { Pressable, View } from "react-native";
 import type { Issue } from "@multica/core/types";
@@ -40,21 +47,60 @@ import { CustomStatusChip } from "@/components/issue/custom-status-chip";
 import { issueColumnCategory } from "@/lib/issue-status";
 import { useIssueStatuses } from "@/lib/use-issue-statuses";
 import { IssueIdentifier } from "@/components/issue/issue-identifier";
+import { Ionicons } from "@/components/ui/ionicons";
+import { useT } from "@/lib/i18n";
+import { issueRowSelectionProps } from "@/lib/issue-row-selection";
+import { useColorScheme } from "@/lib/use-color-scheme";
+import { THEME } from "@/lib/theme";
 
 interface Props {
   issue: Issue;
   onPress: () => void;
   /** Render the status icon inline at the start of the row. Default: false. */
   showStatus?: boolean;
+  /** Start the selection with this row (long press, TalkBack "Select"). */
+  onSelect?: () => void;
+  /** Selection mode: checked state of the row's checkbox. */
+  selected?: boolean;
 }
 
-export function IssueRow({ issue, onPress, showStatus = false }: Props) {
+export function IssueRow({
+  issue,
+  onPress,
+  showStatus = false,
+  onSelect,
+  selected,
+}: Props) {
   // One catalog read for both the icon's colour and the chip — see the
   // divergence note in `custom-status-chip.tsx`.
   const catalog = useIssueStatuses();
+  const { t } = useT("issues");
+  const { colorScheme } = useColorScheme();
+  const selecting = selected !== undefined;
   return (
-    <Pressable onPress={onPress} className="active:bg-secondary px-4 py-3">
+    <Pressable
+      onPress={onPress}
+      {...issueRowSelectionProps({
+        onPress,
+        onSelect,
+        selected,
+        selectLabel: t("selection.select"),
+      })}
+      className={`active:bg-secondary px-4 py-3${selected ? " bg-accent" : ""}`}
+      testID={`issue-row-${issue.identifier}`}
+    >
       <View className="flex-row items-center gap-3">
+        {selecting ? (
+          <Ionicons
+            name={selected ? "checkbox" : "square-outline"}
+            size={24}
+            color={
+              selected
+                ? THEME[colorScheme].primary
+                : THEME[colorScheme].mutedForeground
+            }
+          />
+        ) : null}
         {/* The glyph is per CATEGORY, so a custom status draws its category's
             icon rather than falling back to Todo's; the colour is what tells
             two statuses of one category apart. (MUL-6243) */}

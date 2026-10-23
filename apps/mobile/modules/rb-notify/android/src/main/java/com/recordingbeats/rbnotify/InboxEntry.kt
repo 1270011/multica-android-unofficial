@@ -18,6 +18,8 @@ data class InboxEntry(
   val detailsTo: String?,
   val commentId: String?,
   val actorId: String?,
+  /** Issue key ("MUL-12"); not part of the inbox item, the service looks it up for assignments. */
+  val issueKey: String? = null,
 ) {
   fun pingItem() = PingRule.Item(type, severity, detailsTo, read, archived)
 

@@ -70,6 +70,13 @@ describe("dropOutcome", () => {
     expect(dropOutcome("todo", "todo", 200)).toEqual({ kind: "none" });
     expect(dropOutcome("todo", null, 200)).toEqual({ kind: "none" });
   });
+  // Reordering within a column only with sort "Manual".
+  it("refuses a reorder in the own column with another sort, still moves between columns", () => {
+    expect(dropOutcome("todo", "todo", 200, false)).toEqual({ kind: "reorder_blocked" });
+    expect(dropOutcome("todo", "done", 200, false)).toEqual({ kind: "move", to: "done" });
+    expect(dropOutcome("todo", "todo", 0, false)).toEqual({ kind: "menu" });
+    expect(dropOutcome("todo", null, 200, false)).toEqual({ kind: "none" });
+  });
 });
 
 describe("panUpdateAction (alive check in onUpdate)", () => {

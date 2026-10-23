@@ -16,7 +16,7 @@ export function ToastHost() {
   const insets = useSafeAreaInsets();
   const { t } = useT("common");
   if (!message) return null;
-  const resolve = (m: ToastMessage): string => (typeof m === "string" ? m : String(t(m.key)));
+  const resolve = (m: ToastMessage): string => (typeof m === "string" ? m : String(t(m.key, m.params)));
   const text = resolve(message);
   return (
     <View

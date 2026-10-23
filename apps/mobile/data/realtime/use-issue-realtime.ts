@@ -10,10 +10,13 @@
  *   - activity:created → timeline
  *   - reaction:added / reaction:removed → comment reactions on timeline
  *   - issue_reaction:added / issue_reaction:removed → issue-level reactions on detail
- *   - task:queued / task:dispatch / task:progress / task:completed /
- *     task:failed / task:cancelled → invalidate timeline + detail (task
- *     state can flip an issue's status server-side without firing
- *     issue:updated, so we refetch the authoritative detail too)
+ *   - task:queued / task:dispatch → task queries (live "agent working" row)
+ *   - task:progress → task queries, bundled to one refetch per second
+ *   - task:completed / task:failed / task:cancelled → task queries now, plus
+ *     timeline + detail bundled to one refetch per second (task state can
+ *     flip an issue's status server-side without firing issue:updated, so we
+ *     refetch the authoritative detail too). Non-terminal events never touch
+ *     the timeline: on a big issue each refetch cost ~430 ms JS.
  *   - reconnect → invalidate detail + timeline (we might've missed events
  *     while disconnected; server has no replay buffer for this client)
  *
@@ -25,6 +28,7 @@
  *   - All handlers self-gate on `issue_id === issueId` so we only react
  *     to events for the currently-viewed issue.
  */
+import { useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import type {
   TaskCancelledPayload,
@@ -35,7 +39,9 @@ import type {
   TaskQueuedPayload,
 } from "@multica/core/types";
 import { issueKeys } from "@/data/queries/issue-keys";
+import { wakeupKeys } from "@/data/queries/wakeup-keys";
 import { useWSSubscriptions } from "@/lib/use-ws-subscriptions";
+import { coalesce } from "./coalesce";
 import {
   addCommentReaction,
   addIssueReaction,
@@ -55,6 +61,7 @@ import {
   removeFromMyIssuesList,
   removeIssueReaction,
 } from "./issue-ws-updaters";
+import { invalidateAfterReconnect } from "./reconnect-refresh";
 
 type TaskEventPayload =
   | TaskQueuedPayload
@@ -64,11 +71,20 @@ type TaskEventPayload =
   | TaskCancelledPayload
   | TaskMessagePayload;
 
+/** Throttle for wakeup refetches driven by task/issue events. */
+export const WAKEUP_REFRESH_MS = 5000;
+
 export function useIssueRealtime(
   issueId: string | undefined,
   onDeleted?: () => void,
 ) {
   const qc = useQueryClient();
+  // Callers pass `onDeleted` inline (`() => router.back()`), so its identity
+  // changes on every render. Kept out of the deps: as a dep it re-subscribed
+  // on every render, and each cleanup cancelled the pending bundled refetch
+  // after task:completed, so the timeline never reloaded.
+  const onDeletedRef = useRef(onDeleted);
+  onDeletedRef.current = onDeleted;
 
   useWSSubscriptions(
     (ws, wsId) => {
@@ -90,16 +106,59 @@ export function useIssueRealtime(
         qc.invalidateQueries({ queryKey: issueKeys.tasks(wsId, issueId) });
       };
 
-      // Shared cross-event handler for the 6 task:* subscriptions below.
-      // All task events DO carry `issue_id` server-side, but `task:progress`
-      // has no formal payload interface yet (WSEventPayloadMap entry is
-      // `unknown`), so we cast through the union of the typed ones. If a new
-      // task event lands without `issue_id`, this cast is the failure point —
-      // grep here.
-      const onTaskEvent = (p: unknown) => {
-        if ((p as TaskEventPayload).issue_id !== issueId) return;
-        invalidateThisIssue();
+      // Comments and activity of a run arrive through their own events and
+      // are patched in place; the terminal event only needs one
+      // authoritative refetch. A burst of them (several runs ending, or
+      // retries) shares that refetch.
+      const thisIssueRefresh = coalesce(invalidateThisIssue);
+      const taskQueriesRefresh = coalesce(invalidateTaskQueries);
+
+      // Wakeups have no WS events of their own: task and issue
+      // events refresh the whole `wakeupKeys.all` prefix (issue section,
+      // header chip, overview), at most every 5 s. An event inside the
+      // window schedules ONE trailing refresh, so the last event of a burst
+      // (task:completed right after task:queued) is not lost.
+      let lastWakeupRefresh = 0;
+      let wakeupTimer: ReturnType<typeof setTimeout> | null = null;
+      const refreshWakeups = (afterReconnect = false) => {
+        if (wakeupTimer) clearTimeout(wakeupTimer);
+        wakeupTimer = null;
+        lastWakeupRefresh = Date.now();
+        // After a reconnect this issue's own rules stay deferred while its
+        // screen is parked in the back stack.
+        if (afterReconnect) invalidateAfterReconnect(qc, wakeupKeys.all(wsId));
+        else qc.invalidateQueries({ queryKey: wakeupKeys.all(wsId) });
+      };
+      const invalidateWakeups = () => {
+        const wait = lastWakeupRefresh + WAKEUP_REFRESH_MS - Date.now();
+        if (wait <= 0) refreshWakeups();
+        else wakeupTimer ??= setTimeout(() => refreshWakeups(), wait);
+      };
+
+      // queued / dispatch / completed / failed / cancelled carry `issue_id`
+      // (server taskEvent: task_id, agent_id, issue_id, status). `task:progress`
+      // does not (TaskProgressPayload: task_id, summary, step, total), so it
+      // never matches here. If a new task event lands without
+      // `issue_id`, this cast is the failure point — grep here.
+      const isThisIssue = (p: unknown) =>
+        (p as TaskEventPayload).issue_id === issueId;
+
+      // queued / dispatch change the live status — refresh it right away.
+      const onTaskStateEvent = (p: unknown) => {
+        if (!isThisIssue(p)) return;
         invalidateTaskQueries();
+        invalidateWakeups();
+      };
+      // progress streams while the agent works; status stays "running".
+      const onTaskProgress = (p: unknown) => {
+        if (!isThisIssue(p)) return;
+        taskQueriesRefresh.schedule();
+      };
+      const onTaskFinished = (p: unknown) => {
+        if (!isThisIssue(p)) return;
+        invalidateTaskQueries();
+        thisIssueRefresh.schedule();
+        invalidateWakeups();
       };
 
       return [
@@ -109,12 +168,14 @@ export function useIssueRealtime(
           patchIssueDetail(qc, wsId, payload.issue);
           patchMyIssuesList(qc, wsId, payload.issue);
           patchIssuesList(qc, wsId, payload.issue);
+          // A status change can satisfy or end a rule server-side.
+          invalidateWakeups();
         }),
         ws.on("issue:deleted", (payload) => {
           if (payload.issue_id !== issueId) return;
           clearIssueDetail(qc, wsId, issueId);
           removeFromMyIssuesList(qc, wsId, issueId);
-          onDeleted?.();
+          onDeletedRef.current?.();
         }),
         ws.on("issue_labels:changed", (payload) => {
           if (payload.issue_id !== issueId) return;
@@ -229,19 +290,25 @@ export function useIssueRealtime(
         }),
 
         // ----- Agent task progress -----
-        ws.on("task:queued", onTaskEvent),
-        ws.on("task:dispatch", onTaskEvent),
-        ws.on("task:progress", onTaskEvent),
-        ws.on("task:completed", onTaskEvent),
-        ws.on("task:failed", onTaskEvent),
-        ws.on("task:cancelled", onTaskEvent),
+        ws.on("task:queued", onTaskStateEvent),
+        ws.on("task:dispatch", onTaskStateEvent),
+        ws.on("task:progress", onTaskProgress),
+        ws.on("task:completed", onTaskFinished),
+        ws.on("task:failed", onTaskFinished),
+        ws.on("task:cancelled", onTaskFinished),
+        thisIssueRefresh.cancel,
+        taskQueriesRefresh.cancel,
 
         // ----- Reconnect -----
         ws.onReconnect(() => {
           invalidateIssueAfterReconnect(qc, wsId, issueId);
+          refreshWakeups(true);
         }),
+        () => {
+          if (wakeupTimer) clearTimeout(wakeupTimer);
+        },
       ];
     },
-    [issueId, qc, onDeleted],
+    [issueId, qc],
   );
 }

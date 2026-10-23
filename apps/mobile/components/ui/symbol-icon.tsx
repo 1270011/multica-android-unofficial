@@ -30,7 +30,13 @@ export type SymbolName =
   | "square.stack"
   | "person.2"
   | "chevron.right"
-  | "checkmark";
+  | "chevron.down"
+  | "checkmark"
+  | "bolt"
+  | "server.rack"
+  | "magnifyingglass"
+  | "xmark.circle.fill"
+  | "exclamationmark.triangle.fill";
 
 const SF_TO_IONICON: Record<SymbolName, IoniconName> = {
   tray: "file-tray-outline",
@@ -45,7 +51,13 @@ const SF_TO_IONICON: Record<SymbolName, IoniconName> = {
   "square.stack": "layers-outline",
   "person.2": "people-outline",
   "chevron.right": "chevron-forward",
+  "chevron.down": "chevron-down",
   checkmark: "checkmark",
+  bolt: "flash-outline",
+  "server.rack": "server-outline",
+  magnifyingglass: "search-outline",
+  "xmark.circle.fill": "close-circle",
+  "exclamationmark.triangle.fill": "warning",
 };
 
 interface Props {

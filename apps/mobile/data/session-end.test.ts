@@ -15,6 +15,13 @@ vi.mock("./query-client", async () => {
 });
 const route = vi.hoisted(() => ({ forget: vi.fn() }));
 vi.mock("@/lib/route-restore", () => ({ forgetRememberedRoute: route.forget }));
+// Timeline cache internals have their own tests (timeline-cache/*.test.ts).
+const timelineCache = vi.hoisted(() => ({ clear: vi.fn() }));
+vi.mock("./timeline-cache", () => ({
+  clearTimelineCache: timelineCache.clear,
+  prefetchTimelineCacheKey: vi.fn(async () => null),
+  openTimelineCache: vi.fn(async () => {}),
+}));
 
 const { getMe, getToken, ApiError } = vi.hoisted(() => {
   class ApiError extends Error {
@@ -42,11 +49,18 @@ vi.mock("./stores/inbox-filter-store", () => ({
 vi.mock("./stores/issue-list-filter-store", () => ({
   useIssueListFilterStore: { getState: () => ({ reset: vi.fn() }) },
 }));
+vi.mock("./stores/my-issues-view-store", () => ({
+  useMyIssuesViewStore: { getState: () => ({ reset: vi.fn() }) },
+}));
+vi.mock("./stores/active-issue-view-store", () => ({
+  useActiveIssueViewStore: { getState: () => ({ reset: vi.fn() }) },
+}));
 
 import { useAuthStore } from "./auth-store";
 import { useFailedCommentsStore } from "./stores/failed-comments-store";
 import { useLastViewedStore } from "./stores/last-viewed-store";
 import { useViewedIssuesStore } from "./viewed-issues-store";
+import { getMarkdownSegments, markdownSegmentCacheStats } from "@/lib/markdown/segment-cache";
 
 /** What the old account leaves behind while signed in. */
 function seedOldAccount() {
@@ -61,7 +75,9 @@ function seedOldAccount() {
   });
   useLastViewedStore.getState().markViewed("i-1");
   useViewedIssuesStore.getState().push("ws-old", "i-1");
+  getMarkdownSegments("Kommentar des alten Kontos");
   route.forget.mockClear();
+  timelineCache.clear.mockClear();
 }
 
 function expectNothingLeft() {
@@ -72,6 +88,9 @@ function expectNothingLeft() {
   expect(useLastViewedStore.getState().lastViewed).toEqual({});
   expect(useViewedIssuesStore.getState().byWorkspace).toEqual({});
   expect(route.forget).toHaveBeenCalledTimes(1);
+  expect(markdownSegmentCacheStats().entries).toBe(0);
+  // The encrypted on-device timeline cache and its key.
+  expect(timelineCache.clear).toHaveBeenCalledTimes(1);
 }
 
 beforeEach(() => {
@@ -82,7 +101,7 @@ describe("session end clears the old account's data", () => {
   // Settings → Sign out, the workspace selection, a 401 while the app runs
   // (_layout onUnauthorized) and the server setup (other server, "Forget
   // server") all end the session through logout().
-  it("logout() clears caches, failed comments, viewed markers and the saved route", async () => {
+  it("logout() clears caches, failed comments, viewed markers, the saved route and the Markdown cache", async () => {
     await useAuthStore.getState().logout();
     expectNothingLeft();
   });
@@ -100,6 +119,8 @@ describe("session end clears the old account's data", () => {
     await useAuthStore.getState().initialize();
     expect(qc.client!.getQueryCache().getAll()).toHaveLength(1);
     expect(route.forget).not.toHaveBeenCalled();
+    expect(markdownSegmentCacheStats().entries).toBe(1);
+    expect(timelineCache.clear).not.toHaveBeenCalled();
   });
 });
 

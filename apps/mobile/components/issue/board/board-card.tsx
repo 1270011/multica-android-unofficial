@@ -7,8 +7,14 @@
  * Drag & drop: with `dragGesture` (columns layout only) the long
  * press lifts the card instead of opening the menu directly; the board
  * opens the menu when the lifted card is released without moving.
+ *
+ * Selection mode: while `selected` is a boolean a checkbox
+ * leads the card, TalkBack reads it as a checkbox, `onPress` is expected to
+ * toggle, and the long press and column moves are off (the board passes no
+ * drag gesture then).
  */
 import { Pressable, View } from "react-native";
+import { Ionicons } from "@/components/ui/ionicons";
 import { GestureDetector, type GestureType } from "react-native-gesture-handler";
 import type { Issue } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
@@ -21,6 +27,8 @@ import { useIssueStatuses } from "@/lib/use-issue-statuses";
 import { useT } from "@/lib/i18n";
 import { useActorLookup } from "@/data/use-actor-name";
 import { cn } from "@/lib/utils";
+import { useColorScheme } from "@/lib/use-color-scheme";
+import { THEME } from "@/lib/theme";
 
 export function BoardCard({
   issue,
@@ -32,6 +40,7 @@ export function BoardCard({
   largeFont,
   dragGesture,
   dragging = false,
+  selected,
 }: {
   issue: Issue;
   onPress: () => void;
@@ -46,10 +55,14 @@ export function BoardCard({
   dragGesture?: GestureType;
   /** This card is lifted; the board shows a floating copy. */
   dragging?: boolean;
+  /** Selection mode: checked state of the card's checkbox. */
+  selected?: boolean;
 }) {
   const { t } = useT("issues");
   const catalog = useIssueStatuses();
   const { getName } = useActorLookup();
+  const { colorScheme } = useColorScheme();
+  const selecting = selected !== undefined;
   const overdue = isOverdue(issue.due_date);
   const due = issue.due_date?.slice(0, 10);
   const dueText = due ? (overdue ? t("board.overdue", { date: due }) : t("board.due", { date: due })) : null;
@@ -60,21 +73,27 @@ export function BoardCard({
       onPress={onPress}
       // With a drag gesture the board handles the long press (lift, or the
       // menu on release); TalkBack's "longpress" action below stays.
-      onLongPress={dragGesture ? undefined : onLongPress}
+      onLongPress={dragGesture || selecting ? undefined : onLongPress}
       delayLongPress={400}
       // TalkBack: no swipe gestures on cards (they would fight the pager),
       // so the column moves are custom actions.
-      accessibilityActions={[
-        { name: "longpress", label: t("board.change_status") },
-        ...(canMoveNext ? [{ name: "next_column", label: t("board.move_next") }] : []),
-        ...(canMovePrev ? [{ name: "prev_column", label: t("board.move_prev") }] : []),
-      ]}
+      accessibilityActions={
+        selecting
+          ? undefined
+          : [
+              { name: "longpress", label: t("board.change_status") },
+              ...(canMoveNext ? [{ name: "next_column", label: t("board.move_next") }] : []),
+              ...(canMovePrev ? [{ name: "prev_column", label: t("board.move_prev") }] : []),
+            ]
+      }
       onAccessibilityAction={(e) => {
+        if (selecting) return;
         if (e.nativeEvent.actionName === "longpress") onLongPress();
         else if (e.nativeEvent.actionName === "next_column") onMove(1);
         else if (e.nativeEvent.actionName === "prev_column") onMove(-1);
       }}
-      accessibilityRole="button"
+      accessibilityRole={selecting ? "checkbox" : "button"}
+      accessibilityState={selecting ? { checked: selected } : undefined}
       // Spec: identifier, title, status, priority, assignee (+ due date).
       accessibilityLabel={[
         issue.identifier,
@@ -90,9 +109,17 @@ export function BoardCard({
       className={cn(
         "min-h-[72px] gap-1.5 rounded-lg border border-border bg-card px-3 py-2.5 active:bg-secondary",
         dragging && "opacity-40",
+        selected && "border-primary bg-accent",
       )}
     >
       <View className="flex-row flex-wrap items-center gap-2">
+        {selecting ? (
+          <Ionicons
+            name={selected ? "checkbox" : "square-outline"}
+            size={24}
+            color={selected ? THEME[colorScheme].primary : THEME[colorScheme].mutedForeground}
+          />
+        ) : null}
         <PriorityIcon priority={issue.priority} size={14} />
         <Text className="text-xs text-muted-foreground">{issue.identifier}</Text>
         <CustomStatusChip status={issue.status} catalog={catalog} />

@@ -15,6 +15,7 @@ describe("issue detail panes", () => {
   it("left pane takes ~42 %, at least 360 dp", () => {
     expect(leftPaneWidth(1280)).toBe(538);
     expect(leftPaneWidth(840)).toBe(360);
+    expect(leftPaneWidth(600)).toBe(300);
   });
 });
 

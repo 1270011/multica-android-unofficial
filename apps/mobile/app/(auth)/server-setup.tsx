@@ -35,8 +35,8 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@/components/ui/ionicons";
-import * as Haptics from "expo-haptics";
-import * as Clipboard from "expo-clipboard";
+import * as Haptics from "@/lib/haptics";
+import * as Clipboard from "@/lib/clipboard";
 import { usePreventScreenCapture } from "expo-screen-capture";
 import { Text } from "@/components/ui/text";
 import { PasteField, type PasteFieldStatus } from "@/components/ui/paste-field";

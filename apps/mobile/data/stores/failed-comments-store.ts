@@ -36,6 +36,9 @@ export interface FailedCommentPayload {
   /** Time of the first POST that may have reached the server; "Retry"
    *  passes it on so the resend checks for it first. */
   sentAt?: string;
+  /** Server comments known at the first send; "Retry" passes them on so
+   *  the echo of an earlier attempt is not shown twice. */
+  knownIds?: ReadonlySet<string>;
   /** Human-readable error message from the failed mutation — surfaced
    *  inline so the user knows why the send didn't go through. */
   error: string;

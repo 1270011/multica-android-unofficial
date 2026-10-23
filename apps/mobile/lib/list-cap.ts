@@ -6,7 +6,7 @@
 /** Server cap of one `GET /api/issues` request (page size). */
 export const LIST_ISSUES_LIMIT = 100;
 
-/** Pages the flat lists load with `offset`. */
+/** Pages the flat lists load with `offset` (data/queries/list-pages.ts). */
 export const LIST_ISSUES_MAX_PAGES = 10;
 
 /**

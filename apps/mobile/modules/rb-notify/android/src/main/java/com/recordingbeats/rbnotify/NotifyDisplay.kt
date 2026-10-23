@@ -6,8 +6,22 @@ package com.recordingbeats.rbnotify
  */
 object NotifyDisplay {
   /**
+   * Headline of an assignment:
+   * "Dir zugewiesen: MUL-12 Title", without key "Dir zugewiesen: Title".
+   * [template] carries `{title}`; the key goes in front of the title.
+   */
+  fun assignedTitle(template: String, key: String?, title: String): String {
+    val full = if (key.isNullOrBlank()) title else "${key.trim()} $title"
+    return template.replace("{title}", full).trim()
+  }
+
+  /** Line of an assignment: "<Name> hat dir das Issue zugewiesen." or the unknown-name text. */
+  fun assignedLine(withName: String, unknown: String, name: String?): String =
+    if (name.isNullOrBlank()) unknown else withName.replace("{name}", name.trim())
+
+  /**
    * Workspace name to show with an issue notification: only when more than
-   * one workspace is switched on (§8.4), else null.
+   * one workspace is switched on, else null.
    */
   fun workspaceLabel(workspaces: List<Workspace>, slug: String): String? {
     val enabled = workspaces.filter { it.enabled }
@@ -22,6 +36,29 @@ object NotifyDisplay {
    */
   fun conversationTitle(issueTitle: String, workspaceLabel: String?): String =
     if (workspaceLabel.isNullOrEmpty()) issueTitle else "$issueTitle · $workspaceLabel"
+
+  /**
+   * Title Android shows for an issue notification: with MessagingStyle the
+   * conversation title replaces the content title. An assignment
+   * shows its headline ("Dir zugewiesen: MUL-12 Title"), every other
+   * category keeps the issue title.
+   */
+  fun visibleTitle(category: String?, headline: String, issueTitle: String, workspaceLabel: String?): String =
+    conversationTitle(if (category == PingRule.ASSIGNMENTS) headline else issueTitle, workspaceLabel)
+
+  /**
+   * Lines an issue notification shows:
+   * an assignment shows only its own event, not earlier assignments (or
+   * comments) of the same issue as a history; every other category keeps
+   * the MessagingStyle history. The state keeps all lines, so "Mark as
+   * read" still covers every entry. [currentItemId] is the entry just
+   * notified; when it is not among the lines the newest line stands.
+   */
+  fun visibleLines(category: String?, lines: List<NotifyLine>, currentItemId: String?): List<NotifyLine> {
+    if (category != PingRule.ASSIGNMENTS) return lines
+    val current = lines.lastOrNull { it.itemId == currentItemId } ?: lines.lastOrNull()
+    return listOfNotNull(current)
+  }
 
   /** "Connected · n workspaces" counts only switched-on workspaces. */
   fun connectedCount(socketConnected: Boolean, workspaces: List<Workspace>): Int =
@@ -39,7 +76,7 @@ object NotifyDisplay {
 
   /**
    * The summary counts only issue notifications that are still on screen
-   *: after a tap on the summary or
+   *After a tap on the summary or
    * swiping single notifications away, the next ping must not count them.
    *
    * Returns the tracked issue ids to forget: not among the shown

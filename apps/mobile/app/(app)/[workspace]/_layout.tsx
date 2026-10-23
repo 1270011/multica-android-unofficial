@@ -26,6 +26,7 @@ import { useT } from "@/lib/i18n";
 import { useNotifyBridge } from "@/lib/notify/use-notify-bridge";
 import { showToast } from "@/lib/toast";
 import { modalPresentation } from "@/lib/modal-presentation";
+import { perfMark } from "@/lib/perf-mark";
 
 /**
  * Shared Stack.Screen options for every iOS formSheet-presented sheet route.
@@ -99,7 +100,7 @@ function RealtimeSubscriptions() {
   // the deliberately-skipped high-frequency events.
   useWorkspacePresencePrefetch();
   usePresenceRealtime();
-  // strings, workspaces, actor names and foreground (re)start
+  // Strings, workspaces, actor names and foreground (re)start
   // for the native notification service.
   useNotifyBridge();
   return null;
@@ -134,6 +135,7 @@ function UnknownWorkspace({ slug }: { slug: string | undefined }) {
  * membership, deep links to wrong slugs, etc.).
  */
 export default function WorkspaceLayout() {
+  perfMark("render:ws");
   const { workspace: slug } = useLocalSearchParams<{ workspace: string }>();
   const { t } = useT("navigation");
   const { data: workspaces, isLoading } = useQuery(workspaceListOptions());
@@ -252,7 +254,7 @@ export default function WorkspaceLayout() {
             `fitToContents` zero-size / padding bugs on iOS 26 + Expo 55),
             iOS native grabber, and contentStyle.height=100% as a safety
             net against the same zero-size class of bugs. */}
-        {/* status change from a board card. */}
+        {/* Status change from a board card. */}
         <Stack.Screen
           name="issue/[id]/picker/board-status"
           options={SHEET_OPTIONS}
@@ -300,12 +302,12 @@ export default function WorkspaceLayout() {
           name="issue/[id]/picker/due-date"
           options={SHEET_OPTIONS}
         />
-        {/* editor for one custom property value. */}
+        {/* Editor for one custom property value. */}
         <Stack.Screen
           name="issue/[id]/picker/property"
           options={SHEET_OPTIONS}
         />
-        {/* start date, stage, parent, duplicate. */}
+        {/* Start date, stage, parent, duplicate. */}
         <Stack.Screen
           name="issue/[id]/picker/start-date"
           options={SHEET_OPTIONS}
@@ -323,7 +325,25 @@ export default function WorkspaceLayout() {
           options={SHEET_OPTIONS}
         />
         <Stack.Screen name="issue/[id]/runs" options={SHEET_OPTIONS} />
-        {/* who is subscribed (read-only). */}
+        {/* Wakeup instruction edit and new time. */}
+        <Stack.Screen name="issue/[id]/wakeup-instruction" options={SHEET_OPTIONS} />
+        <Stack.Screen name="issue/[id]/wakeup-reschedule" options={SHEET_OPTIONS} />
+        {/* System wakeup "Unteraufgaben fertig". */}
+        <Stack.Screen name="issue/[id]/system-wakeup" options={SHEET_OPTIONS} />
+        {/* "+ Wakeup", two steps, nearly full height. */}
+        <Stack.Screen
+          name="issue/[id]/wakeup-create"
+          options={{ ...SHEET_OPTIONS, sheetAllowedDetents: [0.95] }}
+        />
+        {/* Runs of one wakeup; the screen sets the title. */}
+        <Stack.Screen
+          name="issue/[id]/wakeups/[wakeupId]"
+          options={{
+            title: t("navigation:routes.wakeup_runs"),
+            headerBackTitle: t("back"),
+          }}
+        />
+        {/* Who is subscribed (read-only). */}
         <Stack.Screen name="issue/[id]/subscribers" options={SHEET_OPTIONS} />
         {/* Full emoji picker for a comment reaction. Pushed from the "+"
             button inside the comment long-press tapback row — see
@@ -387,9 +407,26 @@ export default function WorkspaceLayout() {
           name="new-project-picker/priority"
           options={SHEET_OPTIONS}
         />
+        {/* Batch pickers of the issue-list selection. */}
+        <Stack.Screen name="batch-picker/status" options={SHEET_OPTIONS} />
+        <Stack.Screen name="batch-picker/priority" options={SHEET_OPTIONS} />
+        <Stack.Screen
+          name="batch-picker/assignee"
+          options={{
+            ...SHEET_OPTIONS,
+            headerShown: true,
+            title: t("navigation:routes.assignee"),
+          }}
+        />
         {/* Shared filter sheet for My Issues and the workspace Issues page —
             chooses the right view-store via `?scope=my|all` URL param. */}
         <Stack.Screen name="issues-filter" options={SHEET_OPTIONS} />
+        {/* Saved views of My Issues. */}
+        <Stack.Screen name="issue-views" options={SHEET_OPTIONS} />
+        {/* Save the current filters as a view. */}
+        <Stack.Screen name="issue-view-create" options={SHEET_OPTIONS} />
+        {/* Rename, share or delete a view. */}
+        <Stack.Screen name="issue-view-edit" options={SHEET_OPTIONS} />
         {/* Inbox filter sheet (status, priority, from). */}
         <Stack.Screen name="inbox-filter" options={SHEET_OPTIONS} />
         {/* Chat session-switch sheet. */}
@@ -399,13 +436,8 @@ export default function WorkspaceLayout() {
         {/* Workspace switcher — reached from the More popover's collapsed
             WorkspaceCard. Two-step (pick → iOS Alert confirm → switch). */}
         <Stack.Screen name="switch-workspace" options={SHEET_OPTIONS} />
-        <Stack.Screen
-          name="more/issues"
-            options={{
-              title: t("navigation:routes.issues"),
-              headerBackTitle: t("back"),
-            }}
-        />
+        {/* Redirect to My Issues → All, no own header. */}
+        <Stack.Screen name="more/issues" options={{ headerShown: false }} />
         <Stack.Screen
           name="more/projects"
             options={{
@@ -417,6 +449,45 @@ export default function WorkspaceLayout() {
           name="more/agents"
             options={{
               title: t("navigation:routes.agents"),
+              headerBackTitle: t("back"),
+            }}
+        />
+        {/* "AI Team" pages from the More menu. */}
+        <Stack.Screen
+          name="autopilots/index"
+            options={{
+              title: t("navigation:routes.autopilots"),
+              headerBackTitle: t("back"),
+            }}
+        />
+        {/* Phone detail; the screen sets the title. */}
+        <Stack.Screen
+          name="autopilots/[id]"
+            options={{
+              title: t("navigation:routes.autopilot"),
+              headerBackTitle: t("back"),
+            }}
+        />
+        {/* Runs list (the screen sets the title) and run sheet. */}
+        <Stack.Screen
+          name="autopilots/[id]/runs"
+            options={{
+              title: t("navigation:routes.autopilot_runs"),
+              headerBackTitle: t("back"),
+            }}
+        />
+        <Stack.Screen name="autopilots/[id]/runs/[runId]" options={SHEET_OPTIONS} />
+        <Stack.Screen
+          name="runtimes/index"
+            options={{
+              title: t("navigation:routes.runtimes"),
+              headerBackTitle: t("back"),
+            }}
+        />
+        <Stack.Screen
+          name="runtimes/[id]"
+            options={{
+              title: t("navigation:routes.runtimes"),
               headerBackTitle: t("back"),
             }}
         />

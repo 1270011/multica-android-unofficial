@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
 import { Alert, FlatList, View } from "react-native";
 import { showActionSheet } from "@/lib/action-sheet";
 import { useQuery } from "@tanstack/react-query";
@@ -14,7 +14,11 @@ import { HeaderActions } from "@/components/ui/app-header-actions";
 import { SegmentedPills } from "@/components/ui/segmented-pills";
 import { SwipeableInboxRow } from "@/components/inbox/swipeable-inbox-row";
 import { PushPermissionCard } from "@/components/inbox/push-permission-card";
-import { inboxArchivedOptions, inboxListOptions } from "@/data/queries/inbox";
+import {
+  inboxArchivedOptions,
+  inboxKeys,
+  inboxListOptions,
+} from "@/data/queries/inbox";
 import {
   useArchiveAllInbox,
   useArchiveAllReadInbox,
@@ -50,6 +54,9 @@ import {
   inboxFilterCount,
   inboxSupportsPriority,
 } from "@/lib/inbox-filters";
+import { useRefreshOnFocus } from "@/lib/use-refresh-on-focus";
+import { perfMark } from "@/lib/perf-mark";
+import { READING_WIDTH_STYLE, ReadingWidth } from "@/components/ui/reading-width";
 
 const VIEWS: InboxView[] = ["all", "unread", "archived"];
 
@@ -67,8 +74,13 @@ const VIEWS: InboxView[] = ["all", "unread", "archived"];
  * views (All, Unread), client-side because `GET /api/inbox` has no filter
  * params — same as web. They are remembered per workspace
  * (`useInboxFilterStore`). The unread badge stays the unfiltered count.
+ *
+ * Memoized: pushing an issue chat re-renders the layout chain
+ * above (expo-router passes no changing props), and the tab must not
+ * re-render with it.
  */
-export default function Inbox() {
+export default memo(function Inbox() {
+  perfMark("render:inbox");
   const { t } = useT("inbox");
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const wsSlug = useWorkspaceStore((s) => s.currentWorkspaceSlug);
@@ -85,6 +97,7 @@ export default function Inbox() {
 
   const live = useQuery(inboxListOptions(wsId));
   const archived = useQuery(inboxArchivedOptions(wsId, showArchived));
+  useRefreshOnFocus([inboxKeys.all(wsId)]);
   const source = showArchived ? archived : live;
 
   // Dedup + drop archived to match web/desktop. See CLAUDE.md
@@ -256,18 +269,20 @@ export default function Inbox() {
           </>
         }
       />
-      <SegmentedPills
-        items={segments}
-        value={view}
-        onChange={setView}
-        trailing={
-          showArchived ? null : (
-            <InboxFilterButton count={activeFilterCount} onPress={openFilter} />
-          )
-        }
-      />
-      {/* One-time push opt-in. */}
-      {!showArchived ? <PushPermissionCard /> : null}
+      <ReadingWidth>
+        <SegmentedPills
+          items={segments}
+          value={view}
+          onChange={setView}
+          trailing={
+            showArchived ? null : (
+              <InboxFilterButton count={activeFilterCount} onPress={openFilter} />
+            )
+          }
+        />
+        {/* One-time push opt-in. */}
+        {!showArchived ? <PushPermissionCard /> : null}
+      </ReadingWidth>
       {source.isLoading ? (
         <InboxLoading />
       ) : source.error ? (
@@ -296,6 +311,7 @@ export default function Inbox() {
             <View className="h-px bg-border ml-16" />
           )}
           contentContainerClassName="pb-6"
+          contentContainerStyle={READING_WIDTH_STYLE}
           renderItem={({ item }) => (
             <SwipeableInboxRow
               item={item}
@@ -313,7 +329,7 @@ export default function Inbox() {
       )}
     </View>
   );
-}
+});
 
 // Loading state — 6 row-shaped Skeletons matching InboxRow's layout
 // (avatar circle + two text lines). Perceived perf wins over a centered

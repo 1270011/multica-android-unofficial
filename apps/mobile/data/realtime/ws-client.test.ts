@@ -258,3 +258,55 @@ describe("WSClient foreground recovery", () => {
     expect(MockWebSocket.instances).toHaveLength(1);
   });
 });
+
+describe("WSClient connectedSince", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_000_000);
+    vi.stubGlobal("WebSocket", MockWebSocket);
+    MockWebSocket.instances = [];
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("is null before auth_ack and the ack time afterwards", () => {
+    const client = new WSClient({
+      url: "wss://example.test/ws",
+      token: "token",
+      workspaceSlug: "workspace",
+    });
+    client.connect();
+    const socket = MockWebSocket.instances[0];
+    socket.open();
+    expect(client.connectedSince()).toBeNull();
+    socket.receive({ type: "auth_ack" });
+    expect(client.connectedSince()).toBe(1_000_000);
+    client.disconnect();
+  });
+
+  it("resets on close, pause and resume so a gap is visible", () => {
+    vi.spyOn(Math, "random").mockReturnValue(0);
+    const { client, socket } = connectAuthenticatedClient();
+    expect(client.connectedSince()).not.toBeNull();
+
+    socket.close();
+    expect(client.connectedSince()).toBeNull();
+
+    vi.advanceTimersByTime(1);
+    const second = MockWebSocket.instances[1];
+    vi.setSystemTime(2_000_000);
+    second.open();
+    second.receive({ type: "auth_ack" });
+    expect(client.connectedSince()).toBe(2_000_000);
+
+    client.pause();
+    expect(client.connectedSince()).toBeNull();
+    client.resume();
+    expect(client.connectedSince()).toBeNull();
+    client.disconnect();
+  });
+});

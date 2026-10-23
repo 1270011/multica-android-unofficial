@@ -43,7 +43,8 @@ export type AssigneeValue = {
 } | null;
 
 interface Props {
-  value: AssigneeValue;
+  /** undefined: no check mark (batch selection with mixed assignees). */
+  value: AssigneeValue | undefined;
   query: string;
   onChange: (next: AssigneeValue) => void;
 }
@@ -54,9 +55,9 @@ type Row =
   | { kind: "agent"; agent: Agent }
   | { kind: "squad"; squad: Squad };
 
-function isRowSelected(value: AssigneeValue, row: Row): boolean {
+function isRowSelected(value: AssigneeValue | undefined, row: Row): boolean {
   if (row.kind === "unassigned") return value === null;
-  if (value === null) return false;
+  if (!value) return false;
   if (row.kind === "member")
     return value.type === "member" && value.id === row.member.user_id;
   if (row.kind === "agent")

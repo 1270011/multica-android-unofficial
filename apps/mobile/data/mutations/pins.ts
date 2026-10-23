@@ -14,6 +14,7 @@ import { api } from "@/data/api";
 import { pinKeys } from "@/data/queries/pins";
 import { useAuthStore } from "@/data/auth-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
+import { isAlreadyPinned } from "@/lib/view-pins";
 
 export function useCreatePin() {
   const qc = useQueryClient();
@@ -45,7 +46,10 @@ export function useCreatePin() {
       );
       return { prev, key };
     },
-    onError: (_err, _vars, ctx) => {
+    onError: (err, _vars, ctx) => {
+      // 409 = already pinned (another device, a double tap): the pin exists,
+      // so keep the optimistic row; onSettled fetches the real one.
+      if (isAlreadyPinned(err)) return;
       if (ctx?.key && ctx.prev !== undefined) {
         qc.setQueryData(ctx.key, ctx.prev);
       }

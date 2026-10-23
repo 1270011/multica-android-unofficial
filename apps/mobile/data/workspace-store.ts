@@ -17,6 +17,7 @@
 import { create } from "zustand";
 import { clearAllDrafts } from "./stores/drafts";
 import * as SecureStore from "expo-secure-store";
+import { clearMarkdownSegmentCache } from "@/lib/markdown/segment-cache";
 
 const SLUG_KEY = "multica_current_workspace_slug";
 
@@ -37,8 +38,12 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
   currentWorkspaceSlug: null,
 
   setCurrentWorkspace: async (id, slug) => {
-    // Drafts belong to the workspace they were typed in.
-    if (get().currentWorkspaceId !== id) clearAllDrafts();
+    // Drafts belong to the workspace they were typed in; the
+    // Markdown split cache holds its comment texts.
+    if (get().currentWorkspaceId !== id) {
+      clearAllDrafts();
+      clearMarkdownSegmentCache();
+    }
     set({ currentWorkspaceId: id, currentWorkspaceSlug: slug });
     await SecureStore.setItemAsync(SLUG_KEY, slug);
   },
@@ -51,6 +56,7 @@ export const useWorkspaceStore = create<WorkspaceState>((set, get) => ({
 
   clear: async () => {
     clearAllDrafts();
+    clearMarkdownSegmentCache();
     set({ currentWorkspaceId: null, currentWorkspaceSlug: null });
     await SecureStore.deleteItemAsync(SLUG_KEY);
   },

@@ -60,3 +60,22 @@ describe("inbox filter store", () => {
     expect(inboxFilterStorageKey("a/b c")).toMatch(/^[A-Za-z0-9._-]+$/);
   });
 });
+
+describe("inbox filter store logout race", () => {
+  beforeEach(() => {
+    storage.clear();
+    useInboxFilterStore.getState().reset();
+  });
+
+  it("drops a hydrate that finishes after reset", async () => {
+    useInboxFilterStore.getState().toggle("ws-a", "priorities", "high");
+    await flush();
+    useInboxFilterStore.setState({ filtersByWorkspace: {}, hydrated: {} });
+
+    const pending = useInboxFilterStore.getState().hydrate("ws-a");
+    useInboxFilterStore.getState().reset();
+    await pending;
+    expect(useInboxFilterStore.getState().filtersByWorkspace["ws-a"]).toBeUndefined();
+    expect(useInboxFilterStore.getState().hydrated["ws-a"]).toBeUndefined();
+  });
+});

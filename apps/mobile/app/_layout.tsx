@@ -2,7 +2,7 @@ import "../global.css";
 
 import { useEffect, useRef } from "react";
 import { AppState, View, type AppStateStatus } from "react-native";
-import { Stack, router, usePathname, type Href } from "expo-router";
+import { Stack, router, useGlobalSearchParams, usePathname, type Href } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -13,6 +13,8 @@ import { PortalHost } from "@rn-primitives/portal";
 import { api } from "@/data/api";
 import { maybeRenewSession } from "@/data/session-renewal";
 import { queryClient } from "@/data/query-client";
+// Registers the encrypted timeline cache and its persister.
+import "@/data/timeline-cache/native";
 import { useAuthStore } from "@/data/auth-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useServerConfigStore } from "@/data/server-config-store";
@@ -21,11 +23,12 @@ import { ActionSheetHost } from "@/components/ui/action-sheet-host";
 import { ConnectivityBanner } from "@/components/ui/connectivity-banner";
 import { ToastHost } from "@/components/ui/toast-host";
 import { startNetworkMonitor } from "@/lib/network-status";
-import { consumeRestoredRoute, openRestoredRoute, rememberRoute } from "@/lib/route-restore";
+import { consumeRestoredRoute, openRestoredRoute, rememberRoute, restorablePath } from "@/lib/route-restore";
 import { LightboxProvider, prewarmHighlighter } from "@/lib/markdown";
 import { NAV_THEME } from "@/lib/theme";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { MobileI18nProvider } from "@/lib/i18n";
+import { perfMark } from "@/lib/perf-mark";
 
 // Kick off Shiki highlighter init at module load — fires once per process,
 // finishes before the user navigates to any screen with a code block. If
@@ -89,13 +92,16 @@ function AuthInitializer({ children }: { children: React.ReactNode }) {
 }
 
 export default function RootLayout() {
+  perfMark("render:root");
   const { colorScheme, isDarkColorScheme } = useColorScheme();
   // NetInfo → offline banner / refresh guard.
   useEffect(() => startNetworkMonitor(), []);
   // Keep the current route on disk so an Activity recreation (font-size
   // change) can come back to it — see lib/route-restore.ts.
   const pathname = usePathname();
-  useEffect(() => rememberRoute(pathname), [pathname]);
+  // Segment queries such as `?tab=wakeups` come back too.
+  const { tab } = useGlobalSearchParams<{ tab?: string }>();
+  useEffect(() => rememberRoute(restorablePath(pathname, { tab })), [pathname, tab]);
   // Bridgeless RN keeps the JS context alive across the recreation and only
   // restarts the surface: the React tree remounts on the initial route but
   // app/index.tsx is not revisited, so the marker is consumed here when the

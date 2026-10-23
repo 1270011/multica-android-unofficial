@@ -43,7 +43,8 @@
     "empty": "Noch nichts hier",
     "error": "Etwas ist schiefgelaufen",
     "offline_banner": "Offline – Änderungen werden gesendet, sobald wieder Verbindung besteht",
-    "offline_refresh": "Du bist offline. Aktualisieren nicht möglich."
+    "offline_refresh": "Du bist offline. Aktualisieren nicht möglich.",
+    "offline_load": "Konnte nicht laden – du bist offline."
   },
   "time": {
     "just_now": "Gerade eben",

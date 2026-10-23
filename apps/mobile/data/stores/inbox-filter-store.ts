@@ -30,6 +30,8 @@ interface InboxFilterState {
   filtersByWorkspace: Record<string, InboxFilters>;
   /** Workspaces whose stored value was loaded (or deliberately skipped). */
   hydrated: Record<string, true>;
+  /** Bumped by `reset`: a read still running from before is dropped. */
+  generation: number;
   hydrate: (wsId: string) => Promise<void>;
   toggle: (wsId: string, dimension: InboxFilterDimension, value: string) => void;
   clear: (wsId: string) => void;
@@ -45,9 +47,12 @@ function persist(wsId: string, filters: InboxFilters) {
 export const useInboxFilterStore = create<InboxFilterState>()((set, get) => ({
   filtersByWorkspace: {},
   hydrated: {},
-  reset: () => set({ filtersByWorkspace: {}, hydrated: {} }),
+  generation: 0,
+  reset: () =>
+    set((state) => ({ filtersByWorkspace: {}, hydrated: {}, generation: state.generation + 1 })),
   hydrate: async (wsId) => {
     if (get().hydrated[wsId]) return;
+    const generation = get().generation;
     let stored = EMPTY_INBOX_FILTERS;
     try {
       stored = parseStoredInboxFilters(
@@ -57,7 +62,9 @@ export const useInboxFilterStore = create<InboxFilterState>()((set, get) => ({
       // Unreadable storage: start without filters.
     }
     set((state) => {
-      if (state.hydrated[wsId]) return state;
+      // A toggle before the read finished wins; a logout (reset) in between
+      // drops the read.
+      if (state.hydrated[wsId] || state.generation !== generation) return state;
       const hydrated = { ...state.hydrated, [wsId]: true as const };
       if (isEmptyInboxFilters(stored)) return { hydrated };
       return {

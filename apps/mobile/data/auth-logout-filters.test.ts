@@ -39,19 +39,23 @@ vi.mock("./session-end", () => ({ clearSessionData: vi.fn() }));
 import { useAuthStore } from "./auth-store";
 import { useInboxFilterStore } from "./stores/inbox-filter-store";
 import { useIssueListFilterStore } from "./stores/issue-list-filter-store";
+import { useMyIssuesViewStore } from "./stores/my-issues-view-store";
 
 // The next user on the device must not inherit filters.
 describe("logout forgets remembered filters", () => {
   it("clears memory and SecureStore of inbox and list filters", async () => {
     useInboxFilterStore.getState().toggle("ws-a", "actors", "system");
     useIssueListFilterStore.getState().toggle("my", "ws-b", "labels", "bug");
+    useMyIssuesViewStore.getState().setScope("ws-b", "all");
     await new Promise((r) => setTimeout(r, 0));
     expect([...storage.keys()].some((k) => k.startsWith("rb.inbox_filters."))).toBe(true);
+    expect([...storage.keys()].some((k) => k.startsWith("rb.my_issues_scope."))).toBe(true);
 
     await useAuthStore.getState().logout();
 
     expect(useInboxFilterStore.getState().filtersByWorkspace).toEqual({});
     expect(useIssueListFilterStore.getState().filters).toEqual({});
+    expect(useMyIssuesViewStore.getState().scopes).toEqual({});
     expect([...storage.keys()]).toEqual([]);
 
     // A new session re-reads storage and finds nothing.

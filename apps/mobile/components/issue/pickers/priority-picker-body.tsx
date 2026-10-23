@@ -22,7 +22,8 @@ const PRIORITY_OPTIONS: IssuePriority[] = [
 ];
 
 interface Props {
-  value: IssuePriority;
+  /** null: no check mark (batch selection with mixed values). */
+  value: IssuePriority | null;
   onChange: (next: IssuePriority) => void;
 }
 

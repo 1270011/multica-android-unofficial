@@ -49,7 +49,7 @@ import { KeyboardStickyView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@/components/ui/ionicons";
 import { router, type Href } from "expo-router";
-import * as Haptics from "expo-haptics";
+import * as Haptics from "@/lib/haptics";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
 import { api, MAX_FILE_SIZE } from "@/data/api";
@@ -134,7 +134,7 @@ interface Props {
   renderStop?: () => ReactNode;
   /** While `isSending`, still allow sending: the message joins the run's
    *  queue (server `supports_queue`). Send and Stop then sit side by side
-   *. */
+   **/
   allowSubmitWhileRunning?: boolean;
 
   /** Hard-disable. Used when chat has no usable agent. The pill shows

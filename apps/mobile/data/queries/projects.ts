@@ -28,6 +28,14 @@ export const projectKeys = {
     [...projectKeys.all(wsId), "detail", id, "resources"] as const,
 };
 
+/** Per-record queries of the project screen (detail + resources share the
+ *  detail prefix, plus its issue list): its focus refresh and its reconnect
+ *  handler cover the same set. */
+export const projectScreenQueryKeys = (wsId: string | null, id: string) => [
+  projectKeys.detail(wsId, id),
+  [...issueKeys.list(wsId), "byProject", id] as const,
+];
+
 export const projectListOptions = (wsId: string | null) =>
   queryOptions({
     queryKey: projectKeys.list(wsId),

@@ -4,15 +4,19 @@
  * which list's filters to read/write is selected by the `scope` URL param:
  *
  *   - /[workspace]/issues-filter?scope=my       →  My Issues
+ *     (`&section=sort` opens with the sort expanded, D4)
  *   - /[workspace]/issues-filter?scope=all      →  workspace Issues
  *   - /[workspace]/issues-filter?scope=project  →  project page (no project
  *     section, the page is already one project)
  *
- * Sections: status, priority, project (+ "No project"), label, due date
- *. Filters are kept per list and workspace across restarts
+ * Sections: sort (My Issues only, "Clear" keeps it), assignee
+ * and creator (My Issues only, hidden in Assigned resp. Created;
+ * actor-filter-section.tsx), status, priority, project
+ * (+ "No project"), label, due date. Filters are kept per list and workspace across restarts
  * (`useIssueListFilterStore`). Self-contained: reads/writes the store
  * directly, no callback passing.
  */
+import { useState } from "react";
 import { Pressable, ScrollView, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
@@ -24,11 +28,25 @@ import { Ionicons } from "@/components/ui/ionicons";
 import { labelListOptions } from "@/data/queries/labels";
 import { projectListOptions } from "@/data/queries/projects";
 import { useWorkspaceStore } from "@/data/workspace-store";
+import { useMyIssuesScope } from "@/data/stores/my-issues-view-store";
+import {
+  showsAssigneeFilter,
+  showsCreatorFilter,
+} from "@/data/queries/my-issues";
+import { useAuthStore } from "@/data/auth-store";
+import { FilterRow, SectionLabel } from "@/components/issue/filter-rows";
+import {
+  ActorFilterPicker,
+  ActorFilterSection,
+} from "@/components/issue/actor-filter-section";
+import type { FilterSection } from "@/lib/actor-filter-options";
+import { SortSection } from "@/components/issue/sort-section";
 import {
   type IssueFilterList,
   isIssueFilterList,
   useIssueListFilters,
   useIssueListFilterStore,
+  useIssueListSort,
 } from "@/data/stores/issue-list-filter-store";
 import {
   DUE_FILTERS,
@@ -40,7 +58,6 @@ import { useIssueStatuses } from "@/lib/use-issue-statuses";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { THEME } from "@/lib/theme";
 import { useT } from "@/lib/i18n";
-import { cn } from "@/lib/utils";
 import type { IssuePriority } from "@multica/core/types";
 
 // Mirrors PRIORITY_ORDER in packages/core/issues/config/priority.ts.
@@ -59,13 +76,18 @@ const DUE_ICON = {
 } as const;
 
 export default function IssuesFilterRoute() {
-  const { scope } = useLocalSearchParams<{ scope?: string }>();
+  const { scope, section } = useLocalSearchParams<{ scope?: string; section?: string }>();
   const { t } = useT("issues");
   const { colorScheme } = useColorScheme();
   const list: IssueFilterList = isIssueFilterList(scope) ? scope : "my";
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const filters = useIssueListFilters(list, wsId);
+  const sort = useIssueListSort(list, wsId);
   const showProjects = list !== "project";
+  const [myScope] = useMyIssuesScope(list === "my" ? wsId : null);
+  const userId = useAuthStore((s) => s.user?.id ?? null);
+  // "Show all (n)" of a section replaces the sheet content (D3b).
+  const [picker, setPicker] = useState<FilterSection | null>(null);
 
   // Same option list the status picker offers, so every status a user can set
   // is also a status they can filter by. (MUL-6243)
@@ -83,6 +105,19 @@ export default function IssuesFilterRoute() {
     store.toggle(list, wsId, dimension, value);
   const hasActive = issueListFilterCount(filters) > 0;
   const muted = THEME[colorScheme].mutedForeground;
+
+  if (picker && list === "my") {
+    return (
+      <ActorFilterPicker
+        section={picker}
+        list={list}
+        wsId={wsId}
+        userId={userId}
+        filters={filters}
+        onBack={() => setPicker(null)}
+      />
+    );
+  }
 
   return (
     <View className="flex-1">
@@ -104,13 +139,43 @@ export default function IssuesFilterRoute() {
         ) : null}
       </View>
       {list === "project" ? (
-        // One remembered filter for every project page of the workspace;
-        // say so instead of surprising on the next project.
+        // One remembered filter for every project page of the workspace
+        //Say so instead of surprising on the next project.
         <Text className="px-4 pb-2 text-xs text-muted-foreground">
           {t("filters.project_scope_hint")}
         </Text>
       ) : null}
-      <ScrollView className="flex-1" showsVerticalScrollIndicator={false}>
+      {/* nestedScrollEnabled: on Android a swipe scrolls the content
+          instead of dragging the formSheet. */}
+      <ScrollView className="flex-1" showsVerticalScrollIndicator={false} nestedScrollEnabled>
+        {list === "my" ? (
+          <>
+            <SortSection
+              sort={sort}
+              onChange={(next) => store.setSort(list, wsId, next)}
+              initiallyExpanded={section === "sort"}
+            />
+            <ActorFilterSection
+              section="assignee"
+              list={list}
+              wsId={wsId}
+              userId={userId}
+              filters={filters}
+              visible={showsAssigneeFilter(list, myScope)}
+              onShowAll={() => setPicker("assignee")}
+            />
+            <ActorFilterSection
+              section="creator"
+              list={list}
+              wsId={wsId}
+              userId={userId}
+              filters={filters}
+              visible={showsCreatorFilter(list, myScope)}
+              onShowAll={() => setPicker("creator")}
+            />
+          </>
+        ) : null}
+
         <SectionLabel>{t("filters.status")}</SectionLabel>
         {statusChoices.map((option) => (
           <FilterRow
@@ -194,51 +259,4 @@ export default function IssuesFilterRoute() {
       </ScrollView>
     </View>
   );
-}
-
-function FilterRow({
-  checked,
-  label,
-  icon,
-  onPress,
-}: {
-  checked: boolean;
-  label: string;
-  icon: React.ReactNode;
-  onPress: () => void;
-}) {
-  return (
-    <Pressable
-      onPress={onPress}
-      accessibilityRole="checkbox"
-      accessibilityState={{ checked }}
-      accessibilityLabel={label}
-      className={cn(
-        "flex-row items-center gap-3 px-4 py-2.5 min-h-12 active:bg-secondary",
-        checked && "bg-secondary/60",
-      )}
-    >
-      {icon}
-      <Text className="flex-1 text-sm text-foreground">{label}</Text>
-      <CheckMark checked={checked} />
-    </Pressable>
-  );
-}
-
-function SectionLabel({ children }: { children: string }) {
-  return (
-    <View className="px-4 pt-3 pb-1.5">
-      <Text
-        accessibilityRole="header"
-        className="text-xs uppercase tracking-wider text-muted-foreground font-medium"
-      >
-        {children}
-      </Text>
-    </View>
-  );
-}
-
-function CheckMark({ checked }: { checked: boolean }) {
-  if (!checked) return null;
-  return <Text className="text-sm text-primary font-semibold">✓</Text>;
 }

@@ -20,6 +20,7 @@ import { notificationPreferenceOptions } from "@/data/queries/notification-prefe
 import { useUpdateNotificationPreferences } from "@/data/mutations/notification-preferences";
 import { useT } from "@/lib/i18n";
 import { PushSettingsSection } from "@/components/settings/push-settings-section";
+import { READING_WIDTH_STYLE } from "@/components/ui/reading-width";
 
 const INBOX_GROUPS: {
   key: Exclude<NotificationGroupKey, "system_notifications">;
@@ -102,6 +103,7 @@ export default function NotificationsSettingsScreen() {
     <ScrollView
       className="flex-1 bg-background"
       contentContainerClassName="px-4 py-4 gap-6"
+      contentContainerStyle={READING_WIDTH_STYLE}
     >
       {/* device push settings above the server groups. */}
       <PushSettingsSection serverPrefs={preferences} />
@@ -124,9 +126,12 @@ export default function NotificationsSettingsScreen() {
                     </Text>
                   ) : null}
                 </View>
+                {/* TalkBack names the group ("Assignments, on"). */}
                 <Switch
                   checked={enabled}
                   onCheckedChange={(checked) => onToggle(group.key, checked)}
+                  accessibilityLabel={t(group.labelKey)}
+                  accessibilityHint={group.descriptionKey ? t(group.descriptionKey) : undefined}
                 />
               </View>
               {!isLast ? <Separator /> : null}
@@ -152,6 +157,8 @@ export default function NotificationsSettingsScreen() {
             onCheckedChange={(checked) =>
               onToggle("system_notifications", checked)
             }
+            accessibilityLabel={t("groups.system_notifications")}
+            accessibilityHint={t("groups.system_description")}
           />
         </View>
       </Section>

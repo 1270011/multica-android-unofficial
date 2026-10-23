@@ -63,4 +63,43 @@ describe("useChatSessionsRealtime", () => {
     });
     expect(invalidateQueries).not.toHaveBeenCalled();
   });
+
+  it("refreshes the list and marks the session's messages stale on chat:message", () => {
+    useChatSessionsRealtime();
+    const handlers = new Map<string, EventHandler>();
+    const reconnect: Array<() => void> = [];
+    const ws: MockWS = {
+      on: vi.fn((event: string, handler: EventHandler) => {
+        handlers.set(event, handler);
+        return () => {};
+      }),
+      onReconnect: vi.fn((cb: () => void) => {
+        reconnect.push(cb);
+        return () => {};
+      }),
+    };
+    subscriptionSetups[0](ws, "workspace-1");
+
+    handlers.get("chat:message")?.({ chat_session_id: "s1", role: "user" });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: chatKeys.sessions("workspace-1"),
+    });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: chatKeys.messages("s1"),
+      refetchType: "none",
+    });
+
+    invalidateQueries.mockClear();
+    handlers.get("chat:done")?.({ chat_session_id: "s2", task_id: "t" });
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: chatKeys.messages("s2"),
+      refetchType: "none",
+    });
+
+    invalidateQueries.mockClear();
+    reconnect.forEach((cb) => cb());
+    expect(invalidateQueries).toHaveBeenCalledWith({
+      queryKey: ["chat", "messages"],
+    });
+  });
 });

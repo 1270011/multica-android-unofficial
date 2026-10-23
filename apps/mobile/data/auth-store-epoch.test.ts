@@ -40,6 +40,12 @@ vi.mock("./stores/inbox-filter-store", () => ({
 vi.mock("./stores/issue-list-filter-store", () => ({
   useIssueListFilterStore: { getState: () => ({ reset: vi.fn() }) },
 }));
+vi.mock("./stores/my-issues-view-store", () => ({
+  useMyIssuesViewStore: { getState: () => ({ reset: vi.fn() }) },
+}));
+vi.mock("./stores/active-issue-view-store", () => ({
+  useActiveIssueViewStore: { getState: () => ({ reset: vi.fn() }) },
+}));
 vi.mock("@/lib/filter-storage", () => ({ clearAllFilterStorage: vi.fn(async () => {}) }));
 
 import { handOverSession } from "@/lib/notify/session";

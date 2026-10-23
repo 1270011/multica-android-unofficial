@@ -105,8 +105,8 @@ import type {
   RefreshSessionResponse,
 } from "@multica/core/api/schemas";
 // Issue subscription toggle in the issue chat menu.
-import { SubscribersListSchema } from "@multica/core/api/schemas";
-import type { IssueSubscriber } from "@multica/core/types";
+import { RuntimeHourlyActivityListSchema, SubscribersListSchema } from "@multica/core/api/schemas";
+import type { IssueSubscriber, RuntimeHourlyActivity } from "@multica/core/types";
 import {
   ActiveTasksResponseSchema,
   AgentListSchema,
@@ -170,10 +170,54 @@ import {
   InvitationListSchema,
   EMPTY_INVITATION_LIST,
 } from "./schemas";
+import type { IssueWakeupInput, SystemWakeup } from "@multica/core/types";
+import {
+  DEFAULT_WORKSPACE_WAKEUP_FILTERS,
+  EMPTY_ISSUE_WAKEUP_LIST,
+  EMPTY_ISSUE_WAKEUP_SUMMARY_LIST,
+  EMPTY_PAUSED_WAKEUP_LIST,
+  EMPTY_SYSTEM_WAKEUP_LIST,
+  EMPTY_WAKEUP_RUN_LIST,
+  EMPTY_WORKSPACE_WAKEUP_PAGE,
+  IssueWakeupListSchema,
+  IssueWakeupResultSchema,
+  IssueWakeupSummaryListSchema,
+  PausedWakeupListSchema,
+  SystemWakeupListSchema,
+  WakeupRunListSchema,
+  WorkspaceWakeupPageSchema,
+} from "./wakeup-schemas";
+import type {
+  MobileIssueWakeup,
+  MobileIssueWakeupSummaryRow,
+  MobilePausedWakeup,
+  MobileSystemWakeup,
+  MobileWorkspaceWakeupPage,
+  WakeupRun,
+  WorkspaceWakeupFilters,
+} from "./wakeup-schemas";
 import type { ZodType } from "zod";
 import { getCurrentSlug } from "./workspace-store";
-import { parseWithFallback } from "@/lib/parse-response";
+import { parseArrayInChunks, parseWithFallback } from "@/lib/parse-response";
 import { createRequestId } from "@/lib/request-id";
+import {
+  AUTOPILOT_RUNS_PAGE_SIZE,
+  AutopilotDetailSchema,
+  AutopilotListSchema,
+  AutopilotResultSchema,
+  AutopilotRunListSchema,
+  AutopilotRunResultSchema,
+  EMPTY_AUTOPILOT_LIST,
+  EMPTY_AUTOPILOT_RUN_LIST,
+} from "./autopilot-schemas";
+import type {
+  AutopilotSettableStatus,
+  MobileAutopilot,
+  MobileAutopilotDetail,
+  MobileAutopilotList,
+  MobileAutopilotRun,
+  MobileAutopilotRunList,
+} from "./autopilot-schemas";
 import { buildCommentUpdateBody } from "./revision";
 
 import { getCfAccessHeaders, getServerBaseUrl } from "./server-config-store";
@@ -184,7 +228,7 @@ import { logger } from "@/lib/logger";
 /**
  * Base URL comes from the user's server setup (data/server-config-store.ts),
  * not from a build-time env var: the same APK talks to
- * a public origin through Cloudflare Access or to the
+ * `https://multica.example.com` through Cloudflare Access or to the
  * server's LAN address over VPN, whichever the user picked.
  *
  * Callers never reach here unconfigured — app/index.tsx routes to the setup
@@ -226,6 +270,20 @@ const MAX_FILE_SIZE = 100 * 1024 * 1024;
  *  pull-to-refresh spinner never going away). 30s is generous for any
  *  reasonable Multica payload size on cellular. */
 const FETCH_TIMEOUT_MS = 30_000;
+
+/** One list entry of a `GET /api/issues` parameter. */
+/** `ListIssuesParams` keys the server knows under another name. */
+const LIST_PARAM_NAMES: Record<string, string> = {
+  sort_by: "sort",
+  sort_direction: "direction",
+};
+
+function listParamValue(v: unknown): string {
+  if (v && typeof v === "object" && "type" in v && "id" in v) {
+    return `${String((v as { type: unknown }).type)}:${String((v as { id: unknown }).id)}`;
+  }
+  return String(v);
+}
 
 export class ApiError extends Error {
   readonly status: number;
@@ -760,8 +818,8 @@ class ApiClient {
   }
 
   /** `workspaceSlug` reads another workspace than the current one (the
-   *  notification service needs the agent names of every workspace);
-   *  default is the current workspace. */
+   *  notification service needs the agent names of every
+   *  workspace); default is the current workspace. */
   async listAgents(opts?: { signal?: AbortSignal; workspaceSlug?: string }): Promise<Agent[]> {
     const raw = await this.fetch<unknown>("/api/agents", {
       signal: opts?.signal,
@@ -770,6 +828,15 @@ class ApiClient {
     return parseWithFallback(raw, AgentListSchema, EMPTY_AGENT_LIST, {
       endpoint: "listAgents",
     });
+  }
+
+  // Feature probe for the "AI Team" menu: resolves when the
+  // server serves the list, throws the ApiError otherwise (404/501 = the
+  // server lacks the feature, see lib/ai-team.ts featureState). The body is
+  // not parsed; the screens of A2 use their own validated list call.
+  async probeAutopilots(opts?: { signal?: AbortSignal }): Promise<true> {
+    await this.fetch<unknown>("/api/autopilots?limit=1", { signal: opts?.signal });
+    return true;
   }
 
   // Workspace runtimes — feeds the presence dot's availability dimension
@@ -781,6 +848,25 @@ class ApiClient {
     });
     return parseWithFallback(raw, RuntimeListSchema, EMPTY_RUNTIME_LIST, {
       endpoint: "listRuntimes",
+    });
+  }
+
+  // Hour-of-day task activity of one runtime: `[{hour,
+  // count}]`, bucketed by the server in `tz` (viewer's IANA zone, like web).
+  // A malformed body degrades to "no activity" instead of an error.
+  async getRuntimeActivity(
+    runtimeId: string,
+    opts?: { tz?: string; signal?: AbortSignal },
+  ): Promise<RuntimeHourlyActivity[]> {
+    const search = new URLSearchParams();
+    if (opts?.tz) search.set("tz", opts.tz);
+    const qs = search.toString();
+    const raw = await this.fetch<unknown>(
+      `/api/runtimes/${encodeURIComponent(runtimeId)}/activity${qs ? `?${qs}` : ""}`,
+      { signal: opts?.signal },
+    );
+    return parseWithFallback<RuntimeHourlyActivity[]>(raw, RuntimeHourlyActivityListSchema, [], {
+      endpoint: "getRuntimeActivity",
     });
   }
 
@@ -809,7 +895,7 @@ class ApiClient {
     });
   }
 
-  // Read-only agent/squad detail. `null` = drifted body; the
+  // Read-only agent/squad detail (UX §6 H). `null` = drifted body; the
   // screen shows its not-found state instead of a half-empty record.
   async getAgent(id: string, opts?: { signal?: AbortSignal }): Promise<Agent | null> {
     return this.fetchValidated<Agent | null>(
@@ -822,7 +908,7 @@ class ApiClient {
 
   /** Latest runs of one agent, newest first (GET /api/agents/:id/tasks,
    *  plain array; paging via the `X-Agent-Tasks-Next-Cursor` header is not
-   * needed for the read-only detail). */
+   *  needed for the read-only detail). */
   async listAgentTasks(
     id: string,
     opts?: { signal?: AbortSignal; limit?: number },
@@ -875,14 +961,19 @@ class ApiClient {
     opts?: { signal?: AbortSignal },
   ): Promise<ListIssuesResponse> {
     const search = new URLSearchParams();
-    for (const [k, v] of Object.entries(params)) {
+    for (const [key, v] of Object.entries(params)) {
       if (v == null) continue;
+      // The server reads the sort as `sort`/`direction` (handler ListIssues),
+      // like web's client.ts; `sort_by` would be ignored.
+      const k = LIST_PARAM_NAMES[key] ?? key;
       if (Array.isArray(v)) {
         // Backend parses comma-separated lists (server/internal/handler/issue.go
         // uses strings.Split on a single query value). Match web's serialization
         // in packages/core/api/client.ts:407 — repeated keys would silently
         // collapse to the first value only.
-        if (v.length > 0) search.set(k, v.map(String).join(","));
+        // Actor refs (`assignee_filters`, `creator_filters`) go as `type:id`
+        // like web; String() would send "[object Object]" → 400.
+        if (v.length > 0) search.set(k, v.map(listParamValue).join(","));
       } else {
         search.set(k, String(v));
       }
@@ -971,11 +1062,16 @@ class ApiClient {
     issueId: string,
     opts?: { signal?: AbortSignal },
   ): Promise<TimelineEntry[]> {
-    return this.fetchValidated(
-      `/api/issues/${issueId}/timeline`,
-      TimelineEntriesSchema,
+    // Entry by entry in short blocks instead of one array parse:
+    // a long timeline no longer freezes the JS thread while it validates.
+    const raw = await this.fetch<unknown>(`/api/issues/${issueId}/timeline`, {
+      signal: opts?.signal,
+    });
+    return parseArrayInChunks<TimelineEntry>(
+      raw,
+      TimelineEntriesSchema.element,
       EMPTY_TIMELINE_ENTRIES,
-      { ...opts, endpoint: "GET /api/issues/:id/timeline" },
+      { endpoint: "GET /api/issues/:id/timeline", signal: opts?.signal },
     );
   }
 
@@ -1760,6 +1856,176 @@ class ApiClient {
     );
   }
 
+  // --- Issue wakeups ---
+  //
+  // Ported from packages/core/api/client.ts (v0.6.1); routes in
+  // server/cmd/server/router.go. Schemas live in data/wakeup-schemas.ts and
+  // degrade unknown `kind` / `paused_reason` values instead of failing.
+  // Reads fall back to empty values; the writes that answer with the stored
+  // rule (create, enable, disable) return `null` for an unusable body, the
+  // 204 writes (instruction, trigger, delete) have no body to parse.
+  // `checkin` is an agent action and has no client method.
+
+  private wakeupPath(issueId: string, wakeupId?: string): string {
+    const base = `/api/issues/${encodeURIComponent(issueId)}/wakeups`;
+    return wakeupId ? `${base}/${encodeURIComponent(wakeupId)}` : base;
+  }
+
+  async listIssueWakeups(
+    issueId: string,
+    opts?: { signal?: AbortSignal },
+  ): Promise<MobileIssueWakeup[]> {
+    return this.fetchValidated(
+      this.wakeupPath(issueId),
+      IssueWakeupListSchema,
+      EMPTY_ISSUE_WAKEUP_LIST,
+      { signal: opts?.signal, endpoint: "GET /api/issues/:id/wakeups" },
+    );
+  }
+
+  async createIssueWakeup(
+    issueId: string,
+    input: IssueWakeupInput,
+  ): Promise<MobileIssueWakeup | null> {
+    return this.fetchValidatedWith<MobileIssueWakeup | null>(
+      this.wakeupPath(issueId),
+      IssueWakeupResultSchema,
+      null,
+      { method: "POST", body: JSON.stringify(input) },
+      { endpoint: "POST /api/issues/:id/wakeups" },
+    );
+  }
+
+  async disableIssueWakeup(
+    issueId: string,
+    wakeupId: string,
+  ): Promise<MobileIssueWakeup | null> {
+    return this.fetchValidatedWith<MobileIssueWakeup | null>(
+      `${this.wakeupPath(issueId, wakeupId)}/disable`,
+      IssueWakeupResultSchema,
+      null,
+      { method: "POST" },
+      { endpoint: "POST /api/issues/:id/wakeups/:wid/disable" },
+    );
+  }
+
+  /** `at` sets a new time when the old one has passed; `rearm` restarts a
+   *  relative wait. `revision` guards against a concurrent edit (409). */
+  async enableIssueWakeup(
+    issueId: string,
+    wakeupId: string,
+    input: { revision: number; at?: string; rearm?: boolean },
+  ): Promise<MobileIssueWakeup | null> {
+    return this.fetchValidatedWith<MobileIssueWakeup | null>(
+      `${this.wakeupPath(issueId, wakeupId)}/enable`,
+      IssueWakeupResultSchema,
+      null,
+      { method: "POST", body: JSON.stringify(input) },
+      { endpoint: "POST /api/issues/:id/wakeups/:wid/enable" },
+    );
+  }
+
+  /** 409 when the rule changed meanwhile → caller reloads. */
+  async editIssueWakeupInstruction(
+    issueId: string,
+    wakeupId: string,
+    input: { instruction: string; expected_instruction: string; revision: number },
+  ): Promise<void> {
+    await this.fetch<void>(`${this.wakeupPath(issueId, wakeupId)}/instruction`, {
+      method: "PATCH",
+      body: JSON.stringify(input),
+    });
+  }
+
+  async triggerIssueWakeup(issueId: string, wakeupId: string): Promise<void> {
+    await this.fetch<void>(`${this.wakeupPath(issueId, wakeupId)}/trigger`, {
+      method: "POST",
+    });
+  }
+
+  async deleteIssueWakeup(issueId: string, wakeupId: string): Promise<void> {
+    await this.fetch<void>(this.wakeupPath(issueId, wakeupId), { method: "DELETE" });
+  }
+
+  async listIssueWakeupRuns(
+    issueId: string,
+    wakeupId: string,
+    opts?: { signal?: AbortSignal },
+  ): Promise<WakeupRun[]> {
+    return this.fetchValidated(
+      `${this.wakeupPath(issueId, wakeupId)}/runs`,
+      WakeupRunListSchema,
+      EMPTY_WAKEUP_RUN_LIST,
+      { signal: opts?.signal, endpoint: "GET /api/issues/:id/wakeups/:wid/runs" },
+    );
+  }
+
+  /** One row per active rule, for the issue header chip and list counters. */
+  async listIssueWakeupSummaries(
+    opts?: { signal?: AbortSignal },
+  ): Promise<MobileIssueWakeupSummaryRow[]> {
+    return this.fetchValidated(
+      "/api/issue-wakeup-summaries",
+      IssueWakeupSummaryListSchema,
+      EMPTY_ISSUE_WAKEUP_SUMMARY_LIST,
+      { signal: opts?.signal, endpoint: "GET /api/issue-wakeup-summaries" },
+    );
+  }
+
+  /** Workspace overview (Autopilots → Wakeups). Missing filters use the
+   *  defaults of the web page (scope "active", 50 per page). */
+  async listWorkspaceWakeups(
+    filters: Partial<WorkspaceWakeupFilters> = {},
+    opts?: { signal?: AbortSignal },
+  ): Promise<MobileWorkspaceWakeupPage> {
+    const merged = { ...DEFAULT_WORKSPACE_WAKEUP_FILTERS, ...filters };
+    const params = new URLSearchParams(
+      Object.entries(merged).map(([key, value]) => [key, String(value)]),
+    );
+    return this.fetchValidated(
+      `/api/issue-wakeups?${params}`,
+      WorkspaceWakeupPageSchema,
+      EMPTY_WORKSPACE_WAKEUP_PAGE,
+      { signal: opts?.signal, endpoint: "GET /api/issue-wakeups" },
+    );
+  }
+
+  async listPausedWakeups(opts?: { signal?: AbortSignal }): Promise<MobilePausedWakeup[]> {
+    return this.fetchValidated(
+      "/api/issue-wakeup-paused",
+      PausedWakeupListSchema,
+      EMPTY_PAUSED_WAKEUP_LIST,
+      { signal: opts?.signal, endpoint: "GET /api/issue-wakeup-paused" },
+    );
+  }
+
+  async listIssueSystemWakeups(
+    issueId: string,
+    opts?: { signal?: AbortSignal },
+  ): Promise<MobileSystemWakeup[]> {
+    return this.fetchValidated(
+      `/api/issues/${encodeURIComponent(issueId)}/system-wakeups`,
+      SystemWakeupListSchema,
+      EMPTY_SYSTEM_WAKEUP_LIST,
+      { signal: opts?.signal, endpoint: "GET /api/issues/:id/system-wakeups" },
+    );
+  }
+
+  /** Answers with the issue's full system rule list. */
+  async updateIssueSystemWakeup(
+    issueId: string,
+    rule: SystemWakeup["rule"],
+    input: { enabled?: boolean; instruction?: string },
+  ): Promise<MobileSystemWakeup[]> {
+    return this.fetchValidatedWith(
+      `/api/issues/${encodeURIComponent(issueId)}/system-wakeups/${encodeURIComponent(rule)}`,
+      SystemWakeupListSchema,
+      EMPTY_SYSTEM_WAKEUP_LIST,
+      { method: "PUT", body: JSON.stringify(input) },
+      { endpoint: "PUT /api/issues/:id/system-wakeups/:rule" },
+    );
+  }
+
   // --- Pins ---
   //
   // Pin metadata only — title / status / icon for each row come from
@@ -1767,8 +2033,11 @@ class ApiClient {
   // Endpoints mirror packages/core/api/client.ts:1551-1572.
 
   async listPins(opts?: { signal?: AbortSignal }): Promise<PinnedItem[]> {
+    // include=view opts in to view pins; without it the server
+    // withholds them, as from old builds that took any non-issue pin for a
+    // project pin.
     return this.fetchValidated(
-      "/api/pins",
+      "/api/pins?include=view",
       PinListSchema,
       EMPTY_PIN_LIST,
       { ...opts, endpoint: "listPins" },
@@ -1809,6 +2078,122 @@ class ApiClient {
       method: "PUT",
       body: JSON.stringify(data),
     });
+  }
+
+  // --- Autopilots ---
+  //
+  // Ported from packages/core/api/client.ts (v0.6.1); routes in
+  // server/cmd/server/router.go. Schemas live in data/autopilot-schemas.ts
+  // and degrade unknown status / trigger kinds to "unknown" instead of
+  // failing. Reads fall back to empty values or `null` (detail, run); the
+  // writes that answer with a body (trigger, PATCH) return `null` for an
+  // unusable one. Create/edit, triggers, deliveries and collaborators are
+  // wave 2 and have no client method yet.
+
+  private autopilotPath(id?: string): string {
+    return id ? `/api/autopilots/${encodeURIComponent(id)}` : "/api/autopilots";
+  }
+
+  /** `status` filters on the server (`?status=active|paused|archived`). */
+  async listAutopilots(
+    params: { status?: string } = {},
+    opts?: { signal?: AbortSignal },
+  ): Promise<MobileAutopilotList> {
+    const search = new URLSearchParams();
+    if (params.status) search.set("status", params.status);
+    const query = search.toString();
+    return this.fetchValidated(
+      query ? `${this.autopilotPath()}?${query}` : this.autopilotPath(),
+      AutopilotListSchema,
+      EMPTY_AUTOPILOT_LIST,
+      { signal: opts?.signal, endpoint: "GET /api/autopilots" },
+    );
+  }
+
+  /** `null` when the body has no usable autopilot (→ not-found state). */
+  async getAutopilot(
+    id: string,
+    opts?: { signal?: AbortSignal },
+  ): Promise<MobileAutopilotDetail | null> {
+    return this.fetchValidated<MobileAutopilotDetail | null>(
+      this.autopilotPath(id),
+      AutopilotDetailSchema,
+      null,
+      { signal: opts?.signal, endpoint: "GET /api/autopilots/:id" },
+    );
+  }
+
+  /**
+   * "Run now". The answer is a run whose `status` the caller MUST branch on:
+   * `skipped` (runtime offline) and `failed` are no success.
+   * A quota rejection is a 429 ApiError. `null` = unusable body (neutral
+   * toast, never success). Pass the same `idempotencyKey` to retry safely.
+   */
+  async triggerAutopilot(
+    id: string,
+    opts?: { idempotencyKey?: string },
+  ): Promise<MobileAutopilotRun | null> {
+    return this.fetchValidatedWith<MobileAutopilotRun | null>(
+      `${this.autopilotPath(id)}/trigger`,
+      AutopilotRunResultSchema,
+      null,
+      {
+        method: "POST",
+        headers: { "Idempotency-Key": opts?.idempotencyKey ?? `mobile-${createRequestId()}` },
+      },
+      { endpoint: "POST /api/autopilots/:id/trigger" },
+    );
+  }
+
+  /** Pause or resume. Answers with the stored autopilot; `null` = unusable body. */
+  async setAutopilotStatus(
+    id: string,
+    status: AutopilotSettableStatus,
+  ): Promise<MobileAutopilot | null> {
+    return this.fetchValidatedWith<MobileAutopilot | null>(
+      this.autopilotPath(id),
+      AutopilotResultSchema,
+      null,
+      { method: "PATCH", body: JSON.stringify({ status }) },
+      { endpoint: "PATCH /api/autopilots/:id" },
+    );
+  }
+
+  /** 204; earlier runs and created issues stay on the server. */
+  async deleteAutopilot(id: string): Promise<void> {
+    await this.fetch<void>(this.autopilotPath(id), { method: "DELETE" });
+  }
+
+  /** Newest first. The server caps `limit` at 100 and reports the page length as `total`. */
+  async listAutopilotRuns(
+    id: string,
+    params: { limit?: number; offset?: number } = {},
+    opts?: { signal?: AbortSignal },
+  ): Promise<MobileAutopilotRunList> {
+    const search = new URLSearchParams({
+      limit: String(params.limit ?? AUTOPILOT_RUNS_PAGE_SIZE),
+      offset: String(params.offset ?? 0),
+    });
+    return this.fetchValidated(
+      `${this.autopilotPath(id)}/runs?${search}`,
+      AutopilotRunListSchema,
+      EMPTY_AUTOPILOT_RUN_LIST,
+      { signal: opts?.signal, endpoint: "GET /api/autopilots/:id/runs" },
+    );
+  }
+
+  /** Full run incl. `trigger_payload` / `result`; `null` = unusable body. */
+  async getAutopilotRun(
+    id: string,
+    runId: string,
+    opts?: { signal?: AbortSignal },
+  ): Promise<MobileAutopilotRun | null> {
+    return this.fetchValidated<MobileAutopilotRun | null>(
+      `${this.autopilotPath(id)}/runs/${encodeURIComponent(runId)}`,
+      AutopilotRunResultSchema,
+      null,
+      { signal: opts?.signal, endpoint: "GET /api/autopilots/:id/runs/:runId" },
+    );
   }
 
   // --- File Upload ---

@@ -10,11 +10,12 @@
  * - a status filter overrides hiding and shows exactly the filtered columns.
  * Deliberate divergence: an issue on an archived (or unknown) status keeps
  * its own column, web drops it; mobile never hides a loaded issue.
- * Cards inside a column: newest first (web's default board sort).
+ * Cards inside a column: newest first with "Manual" (mobile has no manual
+ * reorder yet), otherwise the server order of the chosen sort.
  *
  * `GET /api/issues` returns at most 100 issues per request (server cap,
  * handler issue.go) plus the real `total`; the lists load up to 10 pages
- * and `isTruncated` tells the board its
+ * (data/queries/list-pages.ts) and `isTruncated` tells the board its
  * counts are incomplete (data/queries/list-total.ts).
  *
  * Layout: portrait phones page one column per screen; at a font scale of
@@ -26,6 +27,7 @@ import type { Issue, IssueStatus, IssueStatusEntry } from "@multica/core/types";
 import { COMPACT_MAX_DP } from "./breakpoints";
 import { groupIssuesByStatus } from "./group-issues-by-status";
 import { issueColumnCategory } from "./issue-status";
+import { isManualSort, type IssueListSort, MANUAL_SORT } from "./issue-list-sort";
 
 export interface BoardColumn {
   status: IssueStatus;
@@ -37,6 +39,8 @@ export interface BoardColumnOptions {
   statusFilters?: readonly IssueStatus[];
   /** Hidden without a filter; web's default is just `cancelled`. */
   hiddenStatuses?: readonly IssueStatus[];
+  /** List sort (D4): anything but "Manual" keeps the server order. */
+  sort?: IssueListSort;
 }
 
 export const DEFAULT_HIDDEN_STATUSES: readonly IssueStatus[] = ["cancelled"];
@@ -46,7 +50,8 @@ export { LIST_ISSUES_LIMIT, isTruncated } from "./list-cap";
 /**
  * Which notices the board shows above its columns. With an active filter
  * the filter chips already say "filters apply to the first n issues",
- * so the board drops its own "narrow it down with filters" (one notice).
+ * so the board drops its own "narrow it down with filters" (one notice,
+ * review #22).
  */
 export function boardNotices({
   truncated,
@@ -84,8 +89,13 @@ const newestFirst = (a: Issue, b: Issue) => Date.parse(b.created_at) - Date.pars
 export function boardColumns(
   issues: Issue[],
   entries: IssueStatusEntry[] = [],
-  { statusFilters = [], hiddenStatuses = DEFAULT_HIDDEN_STATUSES }: BoardColumnOptions = {},
+  {
+    statusFilters = [],
+    hiddenStatuses = DEFAULT_HIDDEN_STATUSES,
+    sort = MANUAL_SORT,
+  }: BoardColumnOptions = {},
 ): BoardColumn[] {
+  const manual = isManualSort(sort);
   const byStatus = new Map<IssueStatus, Issue[]>();
   for (const section of groupIssuesByStatus(issues, entries)) byStatus.set(section.status, section.data);
 
@@ -107,7 +117,10 @@ export function boardColumns(
     statusFilters.length > 0 ? statusFilters.includes(status) : !hiddenStatuses.includes(status);
   return ordered
     .filter(visible)
-    .map((status) => ({ status, issues: [...(byStatus.get(status) ?? [])].sort(newestFirst) }));
+    .map((status) => {
+      const cards = byStatus.get(status) ?? [];
+      return { status, issues: manual ? [...cards].sort(newestFirst) : cards };
+    });
 }
 
 export type BoardMode = "pager" | "selector" | "columns";

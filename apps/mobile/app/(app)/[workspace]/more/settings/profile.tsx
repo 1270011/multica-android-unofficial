@@ -30,6 +30,7 @@ import { api } from "@/data/api";
 import type { FileAsset } from "@/data/api";
 import { authImageSource } from "@/lib/image-source";
 import { useT } from "@/lib/i18n";
+import { READING_WIDTH_STYLE } from "@/components/ui/reading-width";
 
 const MAX_AVATAR_BYTES = 5 * 1024 * 1024; // 5 MB — matches what's reasonable on cellular.
 
@@ -188,6 +189,7 @@ export default function ProfileSettingsScreen() {
     <ScrollView
       className="flex-1 bg-background"
       contentContainerClassName="px-4 py-6 gap-6"
+      contentContainerStyle={READING_WIDTH_STYLE}
       keyboardShouldPersistTaps="handled"
     >
       <View className="items-center gap-3">

@@ -10,13 +10,13 @@
  * Stack.Screen with title "Issue". We override that here once the data
  * lands so the navigation bar shows `MUL-123` (Linear-style).
  */
-import { useCallback, useEffect, useMemo, useReducer } from "react";
+import { useCallback, useEffect, useMemo, useReducer, useState } from "react";
 import { ActivityIndicator, Alert, Linking, View } from "react-native";
 import { showActionSheet } from "@/lib/action-sheet";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useMutationState, useQuery, useQueryClient } from "@tanstack/react-query";
-import * as Clipboard from "expo-clipboard";
-import type { Issue, TimelineEntry } from "@multica/core/types";
+import * as Clipboard from "@/lib/clipboard";
+import type { Issue } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { IconButton } from "@/components/ui/icon-button";
@@ -40,6 +40,7 @@ import {
 import { canMarkDone } from "@/lib/issue-chat";
 import { markInAppChatOpen } from "@/lib/chat-open-intent";
 import { pinListOptions } from "@/data/queries/pins";
+import { wakeupKeys } from "@/data/queries/wakeups";
 import { useCreatePin, useDeletePin } from "@/data/mutations/pins";
 import { useAuthStore } from "@/data/auth-store";
 import { useIssueRealtime } from "@/data/realtime/use-issue-realtime";
@@ -51,29 +52,37 @@ import {
   leftPaneWidth,
   selectDetailPane,
 } from "@/lib/issue-detail-layout";
-import { useBreakpoint } from "@/lib/breakpoints";
+import { twoPaneFor, useBreakpoint } from "@/lib/breakpoints";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useViewedIssuesStore } from "@/data/viewed-issues-store";
 import { useCommentSelectStore } from "@/data/comment-select-store";
 import { useReplyTargetStore } from "@/data/stores/reply-target-store";
 import { useEditTargetStore } from "@/data/stores/edit-target-store";
 import { useFailedCommentsStore } from "@/data/stores/failed-comments-store";
-import { mergeLocalComments } from "@/lib/pending-comments";
+import {
+  collectLocalComments,
+  mergeLocalComments,
+  type LocalComment,
+} from "@/lib/pending-comments";
 import { guardedRefresh } from "@/lib/refresh-guard";
 import { useT } from "@/lib/i18n";
 import { webIssueUrl } from "@/lib/web-links";
 import { getWebBaseUrl } from "@/data/server-config-store";
+import { useRefreshOnFocus } from "@/lib/use-refresh-on-focus";
+import { issueScreenQueryKeys } from "@/data/queries/issue-keys";
 
 export default function IssueDetail() {
   // `highlight` + `h` come from inbox deep-link (apps/mobile/app/(app)/
   // [workspace]/(tabs)/inbox.tsx). `highlight` is the target comment id;
   // `h` is a per-tap nonce so re-tapping the same row re-fires the
   // scroll-and-flash effect.
-  const { id, workspace: wsSlug, highlight, h, from } = useLocalSearchParams<{
+  const { id, workspace: wsSlug, highlight, h, from, section } = useLocalSearchParams<{
     id: string;
     workspace: string;
     highlight?: string;
     h?: string;
+    /** "wakeups" lands on the Wakeups section (workspace overview, W8). */
+    section?: string;
     /** "chat" when the chat replaced itself with this detail. */
     from?: string;
   }>();
@@ -82,6 +91,9 @@ export default function IssueDetail() {
 
   const detail = useQuery(issueDetailOptions(wsId, id));
   const timeline = useQuery(issueTimelineOptions(wsId, id));
+  // All per-issue queries: in the back stack they are parked, so a
+  // reconnect refetches them here on focus instead of at once.
+  useRefreshOnFocus(issueScreenQueryKeys(wsId, id));
 
   // Subscribe to per-issue WS events: status/priority/assignee/label
   // changes, comments, activity, reactions, agent task progress.
@@ -118,6 +130,7 @@ export default function IssueDetail() {
         await Promise.all([
           detail.refetch(),
           qc.invalidateQueries({ queryKey: issueKeys.timeline(wsId, id) }),
+          qc.invalidateQueries({ queryKey: wakeupKeys.all(wsId) }),
         ]);
       }),
     [detail, qc, wsId, id],
@@ -129,18 +142,17 @@ export default function IssueDetail() {
   const pendingComments = useMutationState({
     filters: { mutationKey: createCommentMutationKey(id), status: "pending" },
     select: (m) =>
-      (m.state.context as { optimistic?: TimelineEntry | null } | undefined)
-        ?.optimistic ?? null,
+      (m.state.context as { local?: LocalComment | null } | undefined)?.local ?? null,
   });
   const failedComments = useFailedCommentsStore((s) => s.failed);
-  const entries = useMemo(() => {
-    const local: TimelineEntry[] = [];
-    for (const entry of pendingComments) if (entry) local.push(entry);
-    for (const failed of Object.values(failedComments)) {
-      if (failed.issueId === id) local.push(failed.entry);
-    }
-    return mergeLocalComments(timeline.data, local);
-  }, [timeline.data, pendingComments, failedComments, id]);
+  const entries = useMemo(
+    () =>
+      mergeLocalComments(
+        timeline.data,
+        collectLocalComments(pendingComments, Object.values(failedComments), id),
+      ),
+    [timeline.data, pendingComments, failedComments, id],
+  );
 
   const issue = detail.data;
   const deleteIssue = useDeleteIssue();
@@ -154,12 +166,15 @@ export default function IssueDetail() {
   const deletePin = useDeletePin();
   const { t } = useT("issues");
   // Tablet: two panes, chat on the right by default.
-  const { twoPane, width } = useBreakpoint();
+  // Panes follow the width this screen really gets (window minus a rail
+  // beside it); until the first layout, the window width.
+  const { width, height } = useBreakpoint();
+  const [contentWidth, setContentWidth] = useState<number | null>(null);
+  const twoPane = twoPaneFor(contentWidth ?? width, width, height);
   // Pane + T5 read permission of the embedded chat (lib/issue-detail-layout.ts).
   const [paneState, selectPane] = useReducer(selectDetailPane, INITIAL_DETAIL_PANE_STATE);
 
-  // Chat button + "Done" (header order
-  // "Chat, ⋮"): the button carries the issue's unread inbox count, "Done"
+  // Chat button + "Done" (header order "Chat, ⋮"): the button carries the issue's unread inbox count, "Done"
   // sits in ⋮ while the issue has inbox entries.
   const { unread: unreadInbox, active: activeInbox } = useIssueInbox(id);
   const markDone = useMarkIssueDone(id);
@@ -199,11 +214,11 @@ export default function IssueDetail() {
     if (isPinned) actions[1] = "unpin";
     if (canMarkDone(issue.status, activeInbox.length)) actions.push("done");
     actions.push("edit");
-    // relations, as in web's issue actions menu.
+    // Relations, as in web's issue actions menu.
     actions.push(issue.parent_issue_id ? "change_parent" : "set_parent");
     if (issue.parent_issue_id) actions.push("remove_parent");
     if (!issue.duplicate_of) actions.push("mark_duplicate");
-    // subscription, as in the chat's ⋮ menu.
+    // Subscription, as in the chat's ⋮ menu.
     if (subscribed !== undefined) actions.push(subscribed ? "unsubscribe" : "subscribe");
     actions.push("subscribers");
     if (issueLink) actions.push("copy_link");
@@ -293,7 +308,10 @@ export default function IssueDetail() {
   ]);
 
   return (
-    <View className="flex-1 bg-background">
+    <View
+      className="flex-1 bg-background"
+      onLayout={(e) => setContentWidth(e.nativeEvent.layout.width)}
+    >
       <Stack.Screen
         options={{
           title: issue?.identifier ?? t("navigation:routes.issue"),
@@ -337,7 +355,11 @@ export default function IssueDetail() {
         </View>
       ) : twoPane && wsSlug ? (
         <View className="flex-1 flex-row" testID="issue-two-pane">
-          <IssueSummaryPane issue={issue} width={leftPaneWidth(width)} />
+          <IssueSummaryPane
+            issue={issue}
+            width={leftPaneWidth(contentWidth ?? width)}
+            focusWakeups={section === "wakeups"}
+          />
           <View className="flex-1">
             <SegmentedPills
               items={[
@@ -387,6 +409,7 @@ export default function IssueDetail() {
             highlightCommentId={highlight}
             highlightNonce={h}
             onOpenChat={openChat}
+            focusWakeups={section === "wakeups" && !highlight}
           />
           <InlineCommentComposer issueId={id} />
         </View>

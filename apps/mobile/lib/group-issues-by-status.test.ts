@@ -105,4 +105,18 @@ describe("status grouping order", () => {
       "backlog", "todo", "unknown", "in_progress", "in_review", "blocked",
     ]);
   });
+
+  // The server sorts; groups must not re-sort their rows.
+  it("keeps the server order inside every group", () => {
+    const issues = [
+      issue("c", "todo"),
+      issue("x", "done"),
+      issue("a", "todo"),
+      issue("z", "done"),
+      issue("b", "todo"),
+    ];
+    const sections = groupIssuesByStatus(issues);
+    expect(sections.find((s) => s.status === "todo")?.data.map((i) => i.id)).toEqual(["c", "a", "b"]);
+    expect(sections.find((s) => s.status === "done")?.data.map((i) => i.id)).toEqual(["x", "z"]);
+  });
 });

@@ -43,4 +43,20 @@ describe("with-rb-notify backup rules", () => {
     // Cloud backup AND device transfer.
     expect(extraction.match(/rb_notify\.xml/g)).toHaveLength(2);
   });
+
+  // The encrypted timeline cache lives in noBackupFilesDir. The
+  // rules may only ever include shared prefs; a file/root/database domain
+  // would start copying app files into backups.
+  it("includes no file, root, database or external domain", async () => {
+    const fs = await import("node:fs");
+    const path = await import("node:path");
+    const dir = path.resolve(__dirname, "../modules/rb-notify/android/src/main/res/xml");
+    for (const file of ["rb_notify_backup_rules.xml", "rb_notify_data_extraction_rules.xml"]) {
+      const xml = fs.readFileSync(path.join(dir, file), "utf8");
+      const included = [...xml.matchAll(/<include\s+domain="([^"]+)"/g)].map((m) => m[1]);
+      expect(included.length).toBeGreaterThan(0);
+      expect(new Set(included)).toEqual(new Set(["sharedpref"]));
+      expect(xml).not.toMatch(/no_backup|timeline-cache/);
+    }
+  });
 });

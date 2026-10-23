@@ -32,7 +32,7 @@ import { markIssueDoneInOrder } from "@/lib/issue-done";
 
 export const issueSubscriberKeys = {
   list: (wsId: string | null, issueId: string) =>
-    [...issueKeys.all(wsId), "subscribers", issueId] as const,
+    issueKeys.subscribers(wsId, issueId),
 };
 
 export const issueSubscribersOptions = (wsId: string | null, issueId: string) =>

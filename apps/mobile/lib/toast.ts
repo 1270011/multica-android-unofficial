@@ -10,8 +10,11 @@ import { create } from "zustand";
 
 /** Either literal text or an i18n key (`"ns:path.to.key"`) that the host
  *  resolves at render time — so the data layer can raise toasts without
- *  pulling the i18n runtime (and React Native) into its import graph. */
-export type ToastMessage = string | { key: string };
+ *  pulling the i18n runtime (and React Native) into its import graph.
+ *  `params` fill interpolations such as `{{count}}`. */
+export type ToastMessage =
+  | string
+  | { key: string; params?: Record<string, string | number> };
 
 /** Optional button in the toast, e.g. "Undo". */
 export interface ToastAction {

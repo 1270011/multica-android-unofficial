@@ -14,6 +14,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { chatKeys } from "@/data/queries/chat";
 import { useWSSubscriptions } from "@/lib/use-ws-subscriptions";
 import { applySessionUpdated, dropSessionFromList } from "./chat-ws-updaters";
+import { markChatMessagesStale } from "./live-refresh";
 
 export function useChatSessionsRealtime() {
   const qc = useQueryClient();
@@ -26,7 +27,19 @@ export function useChatSessionsRealtime() {
       return [
         // chat:done flips `has_unread` server-side; refetch so the dot shows
         // even when the user isn't in the chat screen.
-        ws.on("chat:done", invalidateSessions),
+        ws.on("chat:done", (payload) => {
+          invalidateSessions();
+          // The open session is patched by useChatSessionRealtime; a closed
+          // one must not reopen on its cached (Infinity-stale) messages.
+          markChatMessagesStale(qc, payload.chat_session_id);
+        }),
+        // A message sent from another device (or the web) moves the session
+        // up and changes its preview, and a closed session's message cache
+        // is now behind.
+        ws.on("chat:message", (payload) => {
+          invalidateSessions();
+          markChatMessagesStale(qc, payload.chat_session_id);
+        }),
         // Cancellation may delete a queued prompt or append "Stopped.", both
         // of which change the session preview.
         ws.on("task:cancelled", invalidateSessions),
@@ -55,6 +68,10 @@ export function useChatSessionsRealtime() {
         // archive/restore from another device.
         ws.onReconnect(() => {
           invalidateSessions();
+          // Every session's messages may have missed events; only the open
+          // one refetches now, the rest on their next open.
+          qc.invalidateQueries({ queryKey: ["chat", "messages"] });
+          qc.invalidateQueries({ queryKey: ["chat", "pending-task"] });
           qc.invalidateQueries({ queryKey: chatKeys.archivedSessions(wsId) });
         }),
       ];

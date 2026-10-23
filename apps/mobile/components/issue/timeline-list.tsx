@@ -24,7 +24,7 @@
  *   the rows above get measured and async resizes land (Shiki highlight,
  *   image natural-size, WS `comment:updated`). No JS-side scroll dance.
  *
- * Before this change the deep-link used `startRenderingFromBottom`, i.e.
+ *   Earlier the deep-link used `startRenderingFromBottom`, i.e.
  *   it always landed at the END of the thread and the user had to scroll
  *   up to the target and to title/status/description — on long threads
  * that was a long way. An older hand-rolled `landed` state
@@ -94,6 +94,7 @@ import { IssueHeaderCard } from "./issue-header-card";
 import { IssueDescription } from "./issue-description";
 import { IssueReactionRow } from "./issue-reaction-row";
 import { SubIssuesSection } from "./sub-issues-section";
+import { WakeupsSection } from "./wakeups-section";
 import { ActivityRow } from "./activity-row";
 import { CommentCard } from "./comment-card";
 import { useLastViewedStore } from "@/data/stores/last-viewed-store";
@@ -131,6 +132,9 @@ interface Props {
   onOpenChat?: () => void;
   /** Two-pane tablet detail: the head lives in the left pane. */
   hideIssueHead?: boolean;
+  /** Land on the "Wakeups" section (`?section=wakeups`, from the
+   *  workspace wakeup overview, W8). */
+  focusWakeups?: boolean;
 }
 
 /** How long the flash stays "claimed" before we let a new highlight take
@@ -160,6 +164,7 @@ export function TimelineList({
   highlightNonce,
   onOpenChat,
   hideIssueHead = false,
+  focusWakeups = false,
 }: Props) {
   // Top-level selection subscription gates the outer "tap-outside-to-dismiss"
   // Pressable below. When null, the Pressable stays disabled and every tap
@@ -206,6 +211,15 @@ export function TimelineList({
   }, [issue.description, issueAttachments, data]);
 
   const listRef = useRef<FlashListRef<TimelineRow>>(null);
+  // Header wakeup chip → "Wakeups" section. The section is a
+  // direct child of the list header, so its layout y is its list offset.
+  const wakeupsY = useRef(0);
+  const scrollToWakeups = useCallback(() => {
+    listRef.current?.scrollToOffset({ offset: wakeupsY.current, animated: true });
+  }, []);
+  // `focusWakeups`: follow the section while the header above it
+  // still grows (description, sub-issues load late), until the user drags.
+  const wakeupsLandingDone = useRef(!focusWakeups);
   // Gates single-shot per (commentId, nonce) tuple. Re-tap from inbox
   // bumps the nonce → ref no longer matches → effect re-fires.
   const lastStampRef = useRef<string | null>(null);
@@ -374,10 +388,23 @@ export function TimelineList({
     <View>
       {hideIssueHead ? null : (
         <>
-          <IssueHeaderCard issue={issue} />
+          <IssueHeaderCard issue={issue} onShowWakeups={scrollToWakeups} />
           <IssueDescription issueId={issue.id} description={issue.description} />
           <IssueReactionRow issue={issue} />
           <SubIssuesSection issueId={issue.id} />
+          <WakeupsSection
+            issueId={issue.id}
+            status={issue.status}
+            defaultOpen={!highlightCommentId}
+            expand={focusWakeups}
+            onLayout={(e) => {
+              wakeupsY.current = e.nativeEvent.layout.y;
+              if (!wakeupsLandingDone.current) {
+                const offset = wakeupsY.current;
+                requestAnimationFrame(() => listRef.current?.scrollToOffset({ offset, animated: false }));
+              }
+            }}
+          />
         </>
       )}
       <View className="px-4 pt-4 pb-2 border-t border-border flex-row items-center justify-between">
@@ -504,9 +531,10 @@ export function TimelineList({
         // matches iMessage's behavior where scrolling implicitly commits /
         // dismisses the selection caret. Hooks both drag-start and the
         // momentum kick after a flick so a fast scroll can't escape.
-        onScrollBeginDrag={() =>
-          useCommentSelectStore.getState().clear()
-        }
+        onScrollBeginDrag={() => {
+          wakeupsLandingDone.current = true;
+          useCommentSelectStore.getState().clear();
+        }}
         onMomentumScrollBegin={() =>
           useCommentSelectStore.getState().clear()
         }

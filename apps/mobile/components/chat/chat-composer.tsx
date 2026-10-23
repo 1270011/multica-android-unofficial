@@ -29,7 +29,7 @@
 import { useCallback } from "react";
 import { Pressable, View } from "react-native";
 import Animated, { FadeIn, FadeOut } from "react-native-reanimated";
-import * as Haptics from "expo-haptics";
+import * as Haptics from "@/lib/haptics";
 import { MessageComposer } from "@/components/composer/message-composer";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useColorScheme } from "@/lib/use-color-scheme";
@@ -54,7 +54,7 @@ interface Props {
   allowStop?: boolean;
   /** The server accepts follow-ups while a run is busy (`supports_queue`):
    *  typing and Send stay available and a sent message joins the queue
-   *. */
+   **/
   allowQueue?: boolean;
   /** Hard-disable typing + send. Used when there's no usable agent in the
    *  workspace or the session is archived (legacy). */

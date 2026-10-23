@@ -1,22 +1,36 @@
 /**
- * "My Issues" tab. Three scopes — assigned / created / agents — mirroring
- * web's `packages/views/my-issues/components/my-issues-page.tsx:48-65`. The
- * `agents` scope label is "Agents and Squads" because the backend predicate
- * (`involves_user_id`, MUL-2397) surfaces both the user's owned agents and
- * squads they're involved in (member / leader / has an owned agent inside).
+ * "My Issues" tab. Three tabs — assigned / created / all. "All" is the whole workspace; the
+ * former "Agents" tab is the filter "My agents and squads" (`involvesMe`,
+ * backend predicate `involves_user_id`, MUL-2397), applied in Created and
+ * All.
  *
  * Issues are grouped by concrete status key; empty sections are omitted.
  * Category controls lifecycle behavior and ordering, not section identity.
  *
  * Filters (status, priority, project, label, due date) live in
  * `useIssueListFilterStore` per list and workspace and survive a restart
- *; the scope tab stays in `useMyIssuesViewStore`.
+ *The tab is remembered per workspace in
+ * `useMyIssuesViewStore`. The sort goes to the server; the
+ * status groups keep the server order. `?tab=<scope>` opens a tab directly; the old
+ * route `more/issues` redirects here with `tab=all`.
+ *
+ * Selection mode: long press or the TalkBack action
+ * "Select" on a row starts it; taps then toggle rows. It ends on back, ✕,
+ * tab change, switching between list and board and leaving the screen. A
+ * filter or list change keeps only the issues that are still visible.
+ * The header menu ⋮ → "Select" starts it empty in list and board (D5b, the
+ * only way in on the board, whose long press is the status menu / drag);
+ * on the board taps then toggle cards and dragging is off.
+ *
+ * Low windows (< 480 dp, small phone in landscape): tabs, view
+ * bar, filter chips and sort row scroll with the list, see
+ * lib/issue-list-layout.ts.
  */
-import { useMemo } from "react";
-import { SectionList, View } from "react-native";
-import { useQuery } from "@tanstack/react-query";
+import { useEffect, useMemo, useState } from "react";
+import { BackHandler, SectionList, View, useWindowDimensions } from "react-native";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useIsFocused } from "@react-navigation/native";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { Ionicons } from "@/components/ui/ionicons";
 import type {
   IssueStatus,
@@ -24,39 +38,71 @@ import type {
 import { Text } from "@/components/ui/text";
 import { Button } from "@/components/ui/button";
 import { Header } from "@/components/ui/header";
+import { IconButton } from "@/components/ui/icon-button";
+import { showActionSheet } from "@/lib/action-sheet";
 import { HeaderActions } from "@/components/ui/app-header-actions";
 import { StatusIcon } from "@/components/ui/status-icon";
 import { IssueRow } from "@/components/issue/issue-row";
 import { IssueBoard } from "@/components/issue/board/issue-board";
 import { ViewModeToggle } from "@/components/issue/view-mode-toggle";
+import { IssueViewBar } from "@/components/issue/issue-view-bar";
+import { showViewConflictDialog } from "@/components/issue/view-conflict-dialog";
+import {
+  useCanManageView,
+  useDropGoneActiveView,
+  useIssueViewActions,
+} from "@/data/use-issue-view-actions";
+import { issueViewKeys } from "@/data/queries/issue-views";
+import {
+  canSaveIntoView,
+  isViewModified,
+  viewUpdateErrorKind,
+} from "@/lib/issue-view-edit";
+import {
+  useActiveIssueView,
+  useActiveIssueViewStore,
+} from "@/data/stores/active-issue-view-store";
 import { useIssueViewMode } from "@/data/stores/issue-view-mode-store";
 import { IssuesLoading } from "@/components/issue/issues-loading";
 import {
-  buildMyIssuesFilter,
+  lockFiltersForScope,
   myIssueListOptions,
+  toListParams,
 } from "@/data/queries/my-issues";
-import type { MyIssuesScope } from "@/data/queries/issue-keys";
+import { isMyIssuesScope, MY_ISSUES_SCOPES } from "@/data/queries/issue-keys";
 import { useAuthStore } from "@/data/auth-store";
+import { ApiError } from "@/data/api";
+import { sectionsForBadRequest } from "@/lib/actor-filter-options";
+import { showToast } from "@/lib/toast";
+import { runWhileOnline, useIsOnline } from "@/lib/network-status";
 import { useWorkspaceStore } from "@/data/workspace-store";
-import { useMyIssuesViewStore } from "@/data/stores/my-issues-view-store";
+import { useMyIssuesScope } from "@/data/stores/my-issues-view-store";
 import { useT } from "@/lib/i18n";
 import { useIssueStatuses } from "@/lib/use-issue-statuses";
 import { groupIssuesByStatus } from "@/lib/group-issues-by-status";
 import { filterIssueList, issueListFilterCount } from "@/lib/issue-list-filters";
-import { useIssueListFilters } from "@/data/stores/issue-list-filter-store";
+import { listControlsScroll, showResetFilters } from "@/lib/issue-list-layout";
+import {
+  useIssueListFilters,
+  useIssueListFilterStore,
+  useIssueListSort,
+} from "@/data/stores/issue-list-filter-store";
+import { SortedByRow } from "@/components/issue/sort-section";
+import { isSortBadRequest, MANUAL_SORT } from "@/lib/issue-list-sort";
 import { ActiveFilterChips } from "@/components/issue/active-filter-chips";
+import { IssueSelectionHeader } from "@/components/issue/issue-selection-header";
+import { IssueSelectionActions } from "@/components/issue/issue-selection-actions";
+import {
+  allSelected,
+  useIssueSelectionStore,
+} from "@/data/stores/issue-selection-store";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { THEME } from "@/lib/theme";
 import { guardedRefresh } from "@/lib/refresh-guard";
 import { useListTotal } from "@/data/queries/list-total";
-
-// Mobile pill row has tight width on SE3 (375pt). Three pills + Filter icon
-// must fit in 343pt usable space, so the agents scope renders "Agents" — the
-// full "Agents and Squads" label (~135pt) blows past safe limits and breaks
-// under Dynamic Type. Semantics unchanged: same backend predicate
-// (`involves_user_id`, MUL-2397) covers owned agents + related squads; the
-// empty state copy still says "agents or squads".
-const SCOPES: MyIssuesScope[] = ["assigned", "created", "agents"];
+import { issueKeys } from "@/data/queries/issue-keys";
+import { useRefreshOnFocus } from "@/lib/use-refresh-on-focus";
+import { READING_WIDTH_STYLE } from "@/components/ui/reading-width";
 
 export default function MyIssues() {
   const isFocused = useIsFocused();
@@ -65,27 +111,65 @@ export default function MyIssues() {
   const wsSlug = useWorkspaceStore((s) => s.currentWorkspaceSlug);
   const { t } = useT("issues");
 
-  const scope = useMyIssuesViewStore((s) => s.scope);
-  const setScope = useMyIssuesViewStore((s) => s.setScope);
-  const listFilters = useIssueListFilters("my", wsId);
+  const [scope, setScope] = useMyIssuesScope(wsId);
+  const { tab } = useLocalSearchParams<{ tab?: string }>();
+  useEffect(() => {
+    if (!wsId || !isMyIssuesScope(tab)) return;
+    setScope(tab);
+    // Applied once; later tab changes are the user's.
+    router.setParams({ tab: undefined });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- setScope is rebuilt every render
+  }, [tab, wsId]);
+  const storedFilters = useIssueListFilters("my", wsId);
+  // Server-side sort; part of the query key like the filters.
+  const sort = useIssueListSort("my", wsId);
+  // Assigned is fixed to me as assignee, Created as creator (D3a).
+  const listFilters = useMemo(
+    () => lockFiltersForScope(storedFilters, scope),
+    [scope, storedFilters],
+  );
 
-  const openFilter = () => {
+  const openFilter = (section?: "sort") => {
     if (!wsSlug) return;
     router.push({
       pathname: "/[workspace]/issues-filter",
-      params: { workspace: wsSlug, scope: "my" },
+      params: { workspace: wsSlug, scope: "my", ...(section ? { section } : {}) },
     });
   };
 
+  // Assignee and creator filters go to the server (total, paging); the
+  // object is part of the query key, so live refresh via myAll reaches it.
   const filter = useMemo(
-    () => (userId ? buildMyIssuesFilter(scope, userId) : { assignee_id: "" }),
-    [scope, userId],
+    () =>
+      userId ? toListParams(scope, userId, listFilters, sort) : { assignee_id: "" },
+    [scope, userId, listFilters, sort],
   );
 
   const { data, isLoading, error, refetch, isRefetching } = useQuery({
     ...myIssueListOptions(wsId, scope, filter),
     enabled: !!wsId && !!userId,
   });
+  useRefreshOnFocus([issueKeys.myAll(wsId)]);
+
+  // 400 for the server-side filters (spec §2 "Zustände"): reset the named
+  // section and say so, instead of a load error that the user can't fix.
+  useEffect(() => {
+    if (!wsId || !(error instanceof ApiError) || error.status !== 400) return;
+    // The Go server sends {"error": "invalid assignee_types"}.
+    const body = error.body as { error?: unknown } | undefined;
+    const message = `${error.message} ${typeof body?.error === "string" ? body.error : ""}`;
+    const store = useIssueListFilterStore.getState();
+    // "invalid sort value" / "invalid direction value": back to "Manual".
+    if (isSortBadRequest(message)) {
+      store.setSort("my", wsId, MANUAL_SORT);
+      showToast({ key: "issues:sort.reset" });
+      return;
+    }
+    const sections = sectionsForBadRequest(message, listFilters);
+    if (sections.length === 0) return;
+    for (const section of sections) store.clearSection("my", wsId, section);
+    showToast({ key: "issues:filters.section_reset" });
+  }, [error, listFilters, wsId]);
 
   const total = useListTotal(myIssueListOptions(wsId, scope, filter).queryKey);
 
@@ -103,37 +187,172 @@ export default function MyIssues() {
 
   const activeFilterCount = issueListFilterCount(listFilters);
   const hasActiveFilters = activeFilterCount > 0;
-  const scopeItems = SCOPES.map((value) => ({
+  const scopeItems = MY_ISSUES_SCOPES.map((value) => ({
     value,
     label: t(`tabs.${value}`),
   }));
 
   const [viewMode, setViewMode] = useIssueViewMode("my");
+  // Saved view: name in the view bar, sheet "Ansichten".
+  const activeView = useActiveIssueView(wsId);
+  useDropGoneActiveView(activeView?.id ?? null);
+  const openViews = () => {
+    if (!wsSlug) return;
+    router.push({
+      pathname: "/[workspace]/issue-views",
+      params: { workspace: wsSlug, tab: scope },
+    });
+  };
+  // "· geändert" + Speichern/Verwerfen (D8c).
+  const qc = useQueryClient();
+  const { applyView, exitView, saveActiveView, discardChanges } = useIssueViewActions();
+  const canManage = useCanManageView();
+  const [savingView, setSavingView] = useState(false);
+  const online = useIsOnline();
+  const screenState = useMemo(
+    () => ({ tab: scope, filters: storedFilters, sort, viewMode }),
+    [scope, storedFilters, sort, viewMode],
+  );
+  const viewModified = activeView ? isViewModified(activeView.applied, screenState) : false;
+  const canSaveView =
+    !!activeView &&
+    canManage(activeView.view) &&
+    canSaveIntoView(activeView.view, screenState);
+  const onSaveView = async () => {
+    // Offline Save is disabled; nothing is queued.
+    if (!activeView || savingView || !online) return;
+    const { id, name } = activeView;
+    setSavingView(true);
+    try {
+      await runWhileOnline(saveActiveView);
+      showToast({ key: "issues:views.edit.saved", params: { name } });
+    } catch (err) {
+      const kind = viewUpdateErrorKind(err);
+      if (kind === "conflict") {
+        showViewConflictDialog(t, "save", {
+          reload: () => void applyView(id),
+          save_as_new: () => {
+            if (!wsSlug) return;
+            router.push({
+              pathname: "/[workspace]/issue-view-create",
+              params: { workspace: wsSlug, tab: scope },
+            });
+          },
+        });
+      } else if (kind === "gone") {
+        showToast({ key: "issues:views.gone" });
+        exitView();
+        void qc.invalidateQueries({ queryKey: issueViewKeys.all(wsId) });
+      } else if (kind === "forbidden") {
+        showToast({ key: "issues:views.create.error_forbidden" });
+        void qc.invalidateQueries({ queryKey: issueViewKeys.all(wsId) });
+      } else {
+        showToast({ key: `issues:views.edit.error_${kind === "offline" ? "offline" : "failed"}` });
+      }
+    } finally {
+      setSavingView(false);
+    }
+  };
 
   const showEmptyState =
     !isLoading && !error && filtered.length === 0;
+  const { height: windowHeight } = useWindowDimensions();
+  const controlsInList =
+    !isLoading && !error && !showEmptyState && listControlsScroll(windowHeight, viewMode);
+
+  const selecting = useIssueSelectionStore((s) => s.active);
+  const selectedIds = useIssueSelectionStore((s) => s.ids);
+  const selection = useIssueSelectionStore.getState;
+  const visibleIds = useMemo(() => filtered.map((i) => i.id), [filtered]);
+  const selectedSet = useMemo(() => new Set(selectedIds), [selectedIds]);
+  useEffect(() => {
+    selection().prune(visibleIds);
+  }, [selection, visibleIds]);
+  useEffect(() => {
+    selection().reset();
+  }, [selection, scope, wsId, viewMode]);
+  useEffect(() => {
+    // A batch picker sheet on top blurs the list but keeps the selection.
+    if (!isFocused && !selection().pickerOpen) selection().reset();
+  }, [selection, isFocused]);
+  useEffect(() => {
+    if (!selecting || !isFocused) return;
+    const sub = BackHandler.addEventListener("hardwareBackPress", () => {
+      selection().reset();
+      return true;
+    });
+    return () => sub.remove();
+  }, [selection, selecting, isFocused]);
+
+  // Tabs, view bar, chips and sort row: fixed on top, or the list header on
+  // low windows (B3; with only the last three scrolling, the selection mode
+  // still showed just two rows on 640×384 dp).
+  const listControls = (
+    <>
+        <ScopeToolbar
+          scopes={scopeItems}
+          scope={scope}
+          onChange={(v) => {
+            // A view belongs to its tab; the filters stay, the name goes.
+            if (wsId && v !== scope) useActiveIssueViewStore.getState().forget(wsId);
+            setScope(v);
+          }}
+          onOpenFilter={() => openFilter()}
+          activeFilterCount={activeFilterCount}
+        />
+        <IssueViewBar
+          active={activeView}
+          onOpen={openViews}
+          modified={viewModified}
+          canSave={canSaveView}
+          saving={savingView}
+          offline={!online}
+          onSave={() => void onSaveView()}
+          onDiscard={discardChanges}
+          right={<ViewModeToggle mode={viewMode} onChange={setViewMode} />}
+        />
+        {hasActiveFilters ? (
+          <ActiveFilterChips
+            list="my"
+            filters={listFilters}
+            loadedCount={data?.length ?? 0}
+            total={total}
+          />
+        ) : null}
+        <SortedByRow sort={sort} onPress={() => openFilter("sort")} />
+    </>
+  );
 
   return (
     <View className="flex-1 bg-background">
-      <Header title={t("navigation:tabs.my_issues")} right={<HeaderActions />} />
-      <ScopeToolbar
-        scopes={scopeItems}
-        scope={scope}
-        onChange={(v) => setScope(v)}
-        onOpenFilter={openFilter}
-        activeFilterCount={activeFilterCount}
-      />
-      <View className="flex-row justify-end px-4 pb-2">
-        <ViewModeToggle mode={viewMode} onChange={setViewMode} />
-      </View>
-      {hasActiveFilters ? (
-        <ActiveFilterChips
-          list="my"
-          filters={listFilters}
-          loadedCount={data?.length ?? 0}
-          total={total}
+      {selecting ? (
+        <IssueSelectionHeader
+          count={selectedIds.length}
+          visibleCount={visibleIds.length}
+          total={
+            total !== undefined && total > (data?.length ?? 0) ? total : undefined
+          }
+          allSelected={allSelected(selectedIds, visibleIds)}
+          onToggleAll={() => selection().toggleAll(visibleIds)}
+          onCancel={() => selection().reset()}
         />
-      ) : null}
+      ) : (
+        <Header
+          title={t("navigation:tabs.my_issues")}
+          right={
+            <>
+              <HeaderActions />
+              <IconButton
+                name="ellipsis-vertical"
+                onPress={() => openListMenu(t, () => selection().begin())}
+                accessibilityLabel={t("selection.menu")}
+                testID="my-issues-menu"
+              />
+            </>
+          }
+        />
+      )}
+      {controlsInList ? null : listControls}
       {isLoading ? (
         <IssuesLoading />
       ) : error ? (
@@ -154,6 +373,12 @@ export default function MyIssues() {
               ? t("empty.filtered")
               : t(`empty.${scope}`)
           }
+          // Spec §1 "Leer, mit Filter": resets the filters; tab and sort stay.
+          onResetFilters={
+            wsId && showResetFilters(showEmptyState, activeFilterCount)
+              ? () => useIssueListFilterStore.getState().clear("my", wsId)
+              : undefined
+          }
         />
       ) : viewMode === "board" ? (
         <IssueBoard
@@ -162,15 +387,22 @@ export default function MyIssues() {
           total={total}
           filtersActive={hasActiveFilters}
           statusFilters={listFilters.statuses}
+          sort={sort}
           onOpenIssue={(issue) => {
             if (wsSlug) router.push(`/${wsSlug}/issue/${issue.id}`);
           }}
+          selection={
+            selecting
+              ? { ids: selectedSet, onToggle: (issue) => selection().toggle(issue.id) }
+              : undefined
+          }
         />
       ) : (
         <SectionList
           sections={sections}
           keyExtractor={(item) => item.id}
           stickySectionHeadersEnabled={false}
+          ListHeaderComponent={controlsInList ? listControls : undefined}
           ItemSeparatorComponent={() => (
             <View className="h-px bg-border ml-4" />
           )}
@@ -181,11 +413,16 @@ export default function MyIssues() {
             />
           )}
           contentContainerClassName="pb-6"
+          contentContainerStyle={READING_WIDTH_STYLE}
+          extraData={selectedSet}
           renderItem={({ item }) => (
             <IssueRow
               issue={item}
+              selected={selecting ? selectedSet.has(item.id) : undefined}
+              onSelect={() => selection().start(item.id)}
               onPress={() => {
-                if (wsSlug) router.push(`/${wsSlug}/issue/${item.id}`);
+                if (selecting) selection().toggle(item.id);
+                else if (wsSlug) router.push(`/${wsSlug}/issue/${item.id}`);
               }}
             />
           )}
@@ -193,8 +430,21 @@ export default function MyIssues() {
           onRefresh={() => guardedRefresh(refetch)}
         />
       )}
-
+      {selecting ? <IssueSelectionActions wsSlug={wsSlug} /> : null}
     </View>
+  );
+}
+
+/** Header menu ⋮ of list and board: "Select" (D5b). */
+function openListMenu(t: ReturnType<typeof useT>["t"], onSelect: () => void) {
+  showActionSheet(
+    {
+      options: [t("common:actions.cancel"), t("selection.select")],
+      cancelButtonIndex: 0,
+    },
+    (i) => {
+      if (i === 1) onSelect();
+    },
   );
 }
 
@@ -272,9 +522,12 @@ function ScopeToolbar<S extends string>({
 }) {
   return (
     // Scope pills wrap at large font sizes instead of running under the
-    // filter button.
+    // filter button (200 %).
     <View className="flex-row items-center justify-between gap-2 px-4 pt-2 pb-2">
-      <View className="flex-1 flex-row flex-wrap items-center gap-1 min-w-0">
+      <View
+        role="tablist"
+        className="flex-1 flex-row flex-wrap items-center gap-2 min-w-0"
+      >
         {scopes.map((s) => {
           const active = scope === s.value;
           return (
@@ -283,7 +536,12 @@ function ScopeToolbar<S extends string>({
               variant="outline"
               size="sm"
               onPress={() => onChange(s.value)}
-              className={active ? "bg-accent" : ""}
+              // 44 dp + 2 dp hit-slop = 48 dp touch target.
+              className={active ? "h-11 min-w-11 bg-accent" : "h-11 min-w-11"}
+              hitSlop={2}
+              // `role` (not accessibilityRole): Button sets role="button",
+              // which would win over accessibilityRole.
+              role="tab"
               accessibilityState={{ selected: active }}
             >
               <Text
@@ -327,12 +585,32 @@ function SectionHeader({
   );
 }
 
-function EmptyState({ message }: { message: string }) {
+function EmptyState({
+  message,
+  onResetFilters,
+}: {
+  message: string;
+  /** Shown as "Filter zurücksetzen" below the text (empty list with filters). */
+  onResetFilters?: () => void;
+}) {
+  const { t } = useT("issues");
   return (
-    <View className="flex-1 items-center justify-center px-6">
+    <View className="flex-1 items-center justify-center gap-3 px-6">
       <Text className="text-sm text-muted-foreground text-center">
         {message}
       </Text>
+      {onResetFilters ? (
+        <Button
+          variant="outline"
+          onPress={onResetFilters}
+          // 44 dp + 2 dp hit-slop = 48 dp touch target.
+          className="h-11"
+          hitSlop={2}
+          testID="issues-empty-reset-filters"
+        >
+          <Text>{t("filters.clear")}</Text>
+        </Button>
+      ) : null}
     </View>
   );
 }

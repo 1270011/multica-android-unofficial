@@ -9,7 +9,9 @@
  * the legacy `useRunsSheetStore` is gone since the route system is the
  * single source of truth for what's open.
  *
- * Past-row tap is a no-op in v1 — transcript drilldown is deferred.
+ * A row tap opens its transcript in place. `?task=<id>` opens that run's
+ * transcript right away (wakeup runs); an unknown
+ * id falls back to the list.
  */
 import { useMemo, useState } from "react";
 import { ScrollView, View } from "react-native";
@@ -25,6 +27,8 @@ import {
 } from "@/data/queries/issues";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useT } from "@/lib/i18n";
+import { useRefreshOnFocus } from "@/lib/use-refresh-on-focus";
+import { issueScreenQueryKeys } from "@/data/queries/issue-keys";
 
 const PAST_STATUS_ORDER: Record<AgentTask["status"], number> = {
   failed: 0,
@@ -38,15 +42,18 @@ const PAST_STATUS_ORDER: Record<AgentTask["status"], number> = {
 };
 
 export default function IssueRunsRoute() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, task: focusTaskId } = useLocalSearchParams<{ id: string; task?: string }>();
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
   const { t } = useT("issues");
   const { data: activeTasks = [] } = useQuery(
     issueActiveTasksOptions(wsId, id),
   );
   const { data: allTasks = [] } = useQuery(issueTasksOptions(wsId, id));
+  // Pushed over the issue screen, which is parked then: register the same
+  // keys as focused so a reconnect refetches them here.
+  useRefreshOnFocus(issueScreenQueryKeys(wsId, id));
   // Transcript shown in place of the list (no second sheet on top).
-  const [openTaskId, setOpenTaskId] = useState<string | null>(null);
+  const [openTaskId, setOpenTaskId] = useState<string | null>(focusTaskId ?? null);
 
   const active = useMemo(
     () =>

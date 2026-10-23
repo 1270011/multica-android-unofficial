@@ -11,7 +11,14 @@ import {
   issueListFilterCount,
   type IssueListFilters,
   parseStoredIssueListFilters,
+  actorRefs,
+  parseActorKey,
   serializeIssueListFilters,
+  setIncludeNoAssignee,
+  setInvolvesMe,
+  toggleAssignee,
+  toggleAssigneeType,
+  toggleCreator,
   toggleIssueListFilter,
   withoutProjectFilter,
 } from "./issue-list-filters";
@@ -104,6 +111,12 @@ describe("toggle, count, project page", () => {
     expect(toggleIssueListFilter(on, "labels", "bug").labels).toEqual([]);
   });
 
+  it("counts 'My agents and squads' but leaves the list to the server (D1)", () => {
+    const value = f({ involvesMe: true });
+    expect(issueListFilterCount(value)).toBe(1);
+    expect(filterIssueList(ISSUES, value, TODAY)).toEqual(ISSUES);
+  });
+
   it("drops project filters on the project page, keeps the rest", () => {
     const stored = f({ projects: ["p1"], includeNoProject: true, labels: ["bug"] });
     expect(withoutProjectFilter(stored)).toEqual(f({ labels: ["bug"] }));
@@ -112,11 +125,90 @@ describe("toggle, count, project page", () => {
   });
 });
 
+describe("assignee and creator filters", () => {
+  it("counts every assignee and creator value", () => {
+    const value = f({
+      assignees: ["member:u1", "agent:a1"],
+      assigneeTypes: ["squad"],
+      creators: ["member:u2"],
+    });
+    expect(issueListFilterCount(value)).toBe(4);
+    expect(issueListFilterCount(f({ includeNoAssignee: true }))).toBe(1);
+  });
+
+  it("leaves the list to the server", () => {
+    const value = f({ assignees: ["member:u1"], creators: ["agent:a1"], assigneeTypes: ["agent"] });
+    expect(filterIssueList(ISSUES, value, TODAY)).toBe(ISSUES);
+    expect(filterIssueList(ISSUES, f({ includeNoAssignee: true }), TODAY)).toBe(ISSUES);
+  });
+
+  it("'Nobody' clears people, kinds and 'My agents and squads'", () => {
+    const before = f({
+      assignees: ["member:u1"],
+      assigneeTypes: ["agent"],
+      involvesMe: true,
+      creators: ["member:u2"],
+      labels: ["bug"],
+    });
+    expect(setIncludeNoAssignee(before, true)).toEqual(
+      f({ includeNoAssignee: true, creators: ["member:u2"], labels: ["bug"] }),
+    );
+    expect(setIncludeNoAssignee(f({ includeNoAssignee: true }), false)).toEqual(f({}));
+  });
+
+  it("picking an assignee value switches 'Nobody' off", () => {
+    const nobody = f({ includeNoAssignee: true });
+    expect(toggleAssignee(nobody, "member:u1")).toEqual(f({ assignees: ["member:u1"] }));
+    expect(toggleAssigneeType(nobody, "squad")).toEqual(f({ assigneeTypes: ["squad"] }));
+    expect(setInvolvesMe(nobody, true)).toEqual(f({ involvesMe: true }));
+    // Switching "My agents and squads" off does not bring "Nobody" back.
+    expect(setInvolvesMe(f({ involvesMe: true }), false)).toEqual(f({}));
+    // Creators are another section: "Nobody" stays.
+    expect(toggleCreator(nobody, "agent:a1")).toEqual(
+      f({ includeNoAssignee: true, creators: ["agent:a1"] }),
+    );
+  });
+
+  it("toggles actors on and off", () => {
+    const on = toggleAssignee(f({}), "squad:s1");
+    expect(on.assignees).toEqual(["squad:s1"]);
+    expect(toggleAssignee(on, "squad:s1").assignees).toEqual([]);
+    expect(toggleCreator(toggleCreator(f({}), "member:u1"), "member:u1").creators).toEqual([]);
+  });
+
+  it("parses actor keys like web's actorFilterKey", () => {
+    expect(parseActorKey("member:u1")).toEqual({ type: "member", id: "u1" });
+    expect(parseActorKey("squad:s:1")).toEqual({ type: "squad", id: "s:1" });
+    expect(parseActorKey("robot:x")).toBeNull();
+    expect(parseActorKey("member:")).toBeNull();
+    expect(parseActorKey("u1")).toBeNull();
+    expect(parseActorKey("squad:s1", ["member", "agent"])).toBeNull();
+    expect(actorRefs(["member:u2", "agent:a1", "member:u1"])).toEqual([
+      { type: "agent", id: "a1" },
+      { type: "member", id: "u1" },
+      { type: "member", id: "u2" },
+    ]);
+  });
+});
+
 describe("filtersMayMissIssues (100-cap hint)", () => {
   it("warns only when the server cap was hit and a filter is active", () => {
     expect(filtersMayMissIssues(100, f({ labels: ["bug"] }))).toBe(true);
     expect(filtersMayMissIssues(99, f({ labels: ["bug"] }))).toBe(false);
     expect(filtersMayMissIssues(100, EMPTY_ISSUE_LIST_FILTERS)).toBe(false);
+  });
+  it("ignores the server-side 'My agents and squads' filter (D1)", () => {
+    expect(filtersMayMissIssues(100, f({ involvesMe: true }))).toBe(false);
+    expect(filtersMayMissIssues(100, f({ involvesMe: true, labels: ["bug"] }))).toBe(true);
+  });
+  it("ignores the server-side assignee and creator filters (D3a)", () => {
+    expect(
+      filtersMayMissIssues(
+        100,
+        f({ assignees: ["member:u1"], includeNoAssignee: false, assigneeTypes: ["agent"], creators: ["agent:a1"] }),
+      ),
+    ).toBe(false);
+    expect(filtersMayMissIssues(100, f({ includeNoAssignee: true }))).toBe(false);
   });
   it("uses the server total when known", () => {
     expect(filtersMayMissIssues(100, f({ labels: ["bug"] }), 100)).toBe(false);
@@ -133,8 +225,52 @@ describe("persistence format", () => {
       includeNoProject: true,
       labels: ["bug"],
       due: ["overdue", "none"],
+      involvesMe: true,
+      assignees: ["member:u1", "squad:s1"],
+      assigneeTypes: ["agent", "squad"],
+      creators: ["agent:a1"],
     });
     expect(parseStoredIssueListFilters(serializeIssueListFilters(value))).toEqual(value);
+    const nobody = f({ includeNoAssignee: true, creators: ["member:u1"] });
+    expect(parseStoredIssueListFilters(serializeIssueListFilters(nobody))).toEqual(nobody);
+  });
+
+  it("loads filters stored before D3a without the new fields", () => {
+    const old = JSON.stringify({
+      statuses: ["todo"],
+      priorities: [],
+      projects: [],
+      includeNoProject: false,
+      labels: [],
+      due: [],
+      involvesMe: true,
+    });
+    expect(parseStoredIssueListFilters(old)).toEqual(
+      f({ statuses: ["todo"], involvesMe: true }),
+    );
+    // Even older: before involvesMe (D1).
+    expect(parseStoredIssueListFilters(JSON.stringify({ labels: ["bug"] }))).toEqual(
+      f({ labels: ["bug"] }),
+    );
+  });
+
+  it("drops broken actor values and keeps 'Nobody' alone", () => {
+    expect(
+      parseStoredIssueListFilters(
+        JSON.stringify({
+          assignees: ["member:u1", "robot:x", "member:", 7, "member:u1"],
+          assigneeTypes: ["agent", "bot"],
+          creators: ["squad:s1", "agent:a1"],
+          includeNoAssignee: "yes",
+        }),
+      ),
+    ).toEqual(f({ assignees: ["member:u1"], assigneeTypes: ["agent"], creators: ["agent:a1"] }));
+    // A hand-edited mix of "Nobody" and people keeps "Nobody" only.
+    expect(
+      parseStoredIssueListFilters(
+        JSON.stringify({ includeNoAssignee: true, assignees: ["member:u1"], involvesMe: true }),
+      ),
+    ).toEqual(f({ includeNoAssignee: true }));
   });
 
   it("tolerates missing, broken or foreign values", () => {
@@ -150,7 +286,7 @@ describe("persistence format", () => {
 });
 
 describe("filter strings", () => {
-  const KEYS = ["project", "no_project", "label", "due_date", "due_overdue", "due_this_week", "due_none", "remove_chip", "limit_hint", "project_scope_hint", "button_active"];
+  const KEYS = ["project", "no_project", "label", "due_date", "due_overdue", "due_this_week", "due_none", "remove_chip", "limit_hint", "project_scope_hint", "button_active", "involves_me"];
   for (const [lang, file] of Object.entries({ de, en, "zh-Hans": zh })) {
     it(`${lang} has every filter key`, () => {
       const filters = (file as { filters: Record<string, string> }).filters;

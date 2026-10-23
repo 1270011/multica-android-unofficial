@@ -24,6 +24,7 @@
  *   - reconnect                 → invalidate this session's messages +
  *                                  pendingTask
  */
+import { useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { chatKeys } from "@/data/queries/chat";
 import { useWSSubscriptions } from "@/lib/use-ws-subscriptions";
@@ -41,6 +42,12 @@ export function useChatSessionRealtime(
   onSessionDeleted?: () => void,
 ) {
   const qc = useQueryClient();
+  // The chat screen passes `onSessionDeleted` inline, so its identity changes
+  // on every render. Read it through a ref instead of listing it in the deps,
+  // which re-subscribed on every render (same pattern as in
+  // use-issue-realtime).
+  const onSessionDeletedRef = useRef(onSessionDeleted);
+  onSessionDeletedRef.current = onSessionDeleted;
 
   useWSSubscriptions(
     (ws) => {
@@ -100,7 +107,7 @@ export function useChatSessionRealtime(
         }),
         ws.on("chat:session_deleted", (payload) => {
           if (!isMine(payload)) return;
-          onSessionDeleted?.();
+          onSessionDeletedRef.current?.();
         }),
         // Live execution trace for any task firing under this chat session.
         // Per-record gate: `chat_session_id` is optional on the payload
@@ -115,6 +122,6 @@ export function useChatSessionRealtime(
         ws.onReconnect(invalidateMine),
       ];
     },
-    [sessionId, qc, onSessionDeleted],
+    [sessionId, qc],
   );
 }

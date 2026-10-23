@@ -26,7 +26,8 @@ import { THEME } from "@/lib/theme";
 import { useT } from "@/lib/i18n";
 
 interface Props {
-  value: IssueStatus;
+  /** null: no check mark (batch selection with mixed values). */
+  value: IssueStatus | null;
   onChange: (next: IssueStatus) => void;
 }
 

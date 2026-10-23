@@ -50,7 +50,7 @@ describe("buildTimelineRows", () => {
   });
 });
 
-describe("findLandingIndex", () => {
+describe("findLandingIndex (inbox landing)", () => {
   // A long thread: the target sits in the middle, far from both ends.
   const rows = buildTimelineRows([
     activity("x1"),
@@ -93,7 +93,7 @@ describe("findLandingIndex", () => {
   });
 });
 
-describe("timelineListTestID", () => {
+describe("timelineListTestID (e2e landing marker)", () => {
   it("flags a pending landing, including the first row", () => {
     expect(timelineListTestID(42, false)).toBe("timeline-list-landing");
     expect(timelineListTestID(0, false)).toBe("timeline-list-landing");

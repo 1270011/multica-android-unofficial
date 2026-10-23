@@ -26,12 +26,46 @@ import { File, Paths } from "expo-file-system";
 export const ROUTE_FILE = "last-route.json";
 export const MARKER_FILE = "restore-route-marker";
 
+/**
+ * Routes that became redirects: restore their target directly, so the
+ * redirect screen is never pushed onto the stack. `more/issues` is the tab
+ * "All" of My Issues since 2.0.
+ */
+const LEGACY_ROUTES: [RegExp, string][] = [
+  [/^\/([^/?#]+)\/more\/issues\/?$/, "/$1/my-issues?tab=all"],
+];
+
 export function resolveRestorePath(pathname: string | null | undefined): string | null {
   if (!pathname || pathname === "/") return null;
   for (const prefix of ["/login", "/verify", "/server-setup", "/token-login", "/select-workspace"]) {
     if (pathname.startsWith(prefix)) return null;
   }
+  for (const [from, to] of LEGACY_ROUTES) {
+    if (from.test(pathname)) return pathname.replace(from, to);
+  }
   return pathname;
+}
+
+/**
+ * Query keys that pick a segment and survive a recreation
+ * (`/<ws>/autopilots?tab=wakeups`; the tablet's selected autopilot,
+ * `?selected=<id>`). `usePathname()` drops the query, and
+ * the global params also carry route segments (`workspace`, `id`), so only
+ * these keys are appended.
+ */
+export const RESTORABLE_QUERY_KEYS = ["tab", "selected"] as const;
+
+export function restorablePath(
+  pathname: string | null | undefined,
+  params: Record<string, string | string[] | undefined> = {},
+): string | null | undefined {
+  if (!pathname) return pathname;
+  const query = RESTORABLE_QUERY_KEYS.flatMap((key) => {
+    const raw = params[key];
+    const value = Array.isArray(raw) ? raw[0] : raw;
+    return value ? [`${key}=${encodeURIComponent(value)}`] : [];
+  });
+  return query.length ? `${pathname}?${query.join("&")}` : pathname;
 }
 
 export function rememberRoute(pathname: string | null | undefined): void {
@@ -79,7 +113,8 @@ export function openRestoredRoute(
   const target = restoreTarget(restored, slug);
   if (!target) return false;
   const rest = target.slice(`/${slug}/`.length).split(/[/?#]/)[0] ?? "";
-  if (TAB_ROOTS.includes(rest) && !target.slice(`/${slug}/${rest}`.length).replace(/^\//, "")) {
+  const below = target.slice(`/${slug}/${rest}`.length).split(/[?#]/)[0] ?? "";
+  if (TAB_ROOTS.includes(rest) && !below.replace(/^\//, "")) {
     nav.replace(target);
     return true;
   }

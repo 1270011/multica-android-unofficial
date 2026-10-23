@@ -17,6 +17,10 @@
  *     project-related-issues), `showStatus` because pins are heterogeneous
  *     (no section grouping by status).
  *   - project → existing `<ProjectRow>` (used by more/projects).
+ *   - view → name of the saved view; a tap applies the view
+ *     and opens My Issues with its filters (lib/view-pins.ts). A view that
+ *     is gone (404 / unreadable) gets the placeholder; any other error hides
+ *     the row, so a server hiccup never offers to unpin a live view.
  *
  * Missing / no-permission rows: the detail query may 404 (issue/project
  * deleted, user lost access, server returned a parseWithFallback fallback
@@ -43,12 +47,17 @@ import { pinListOptions } from "@/data/queries/pins";
 import { useDeletePin } from "@/data/mutations/pins";
 import { issueDetailOptions } from "@/data/queries/issues";
 import { projectDetailOptions } from "@/data/queries/projects";
+import { issueViewDetailOptions } from "@/data/queries/issue-views";
+import { useIssueViewActions } from "@/data/use-issue-view-actions";
+import { openPinnedView } from "@/lib/view-pins";
 import { useAuthStore } from "@/data/auth-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { THEME } from "@/lib/theme";
 import { useT } from "@/lib/i18n";
 import { guardedRefresh } from "@/lib/refresh-guard";
+import { ListOffline } from "@/components/ui/list-offline";
+import { listState } from "@/lib/list-state";
 
 export default function PinsPage() {
   const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
@@ -56,9 +65,8 @@ export default function PinsPage() {
   const userId = useAuthStore((s) => s.user?.id ?? null);
   const { t } = useT("workspace");
 
-  const { data, isLoading, error, refetch, isRefetching } = useQuery(
-    pinListOptions(wsId, userId),
-  );
+  const query = useQuery(pinListOptions(wsId, userId));
+  const { data, error, refetch, isRefetching } = query;
 
   // Sort by `position` ascending so the order matches web's sidebar
   // (the reorder endpoint writes 1-based positions there too).
@@ -67,7 +75,9 @@ export default function PinsPage() {
     [data],
   );
 
-  if (isLoading) {
+  // Offline before the first load: not "no pins".
+  const state = listState(query);
+  if (state === "loading") {
     return (
       <View className="flex-1 items-center justify-center bg-background">
         <ActivityIndicator />
@@ -75,7 +85,15 @@ export default function PinsPage() {
     );
   }
 
-  if (error) {
+  if (state === "offline") {
+    return (
+      <View className="flex-1 bg-background">
+        <ListOffline onRetry={() => refetch()} testID="pins-offline" />
+      </View>
+    );
+  }
+
+  if (state === "error") {
     return (
       <View className="flex-1 bg-background px-4 gap-3 pt-4">
         <Text className="text-sm text-destructive">
@@ -136,6 +154,9 @@ function PinRow({
       <IssuePinRow pin={pin} wsId={wsId} wsSlug={wsSlug} />
     );
   }
+  if (pin.item_type === "view") {
+    return <ViewPinRow pin={pin} wsId={wsId} wsSlug={wsSlug} />;
+  }
   return <ProjectPinRow pin={pin} wsId={wsId} wsSlug={wsSlug} />;
 }
 
@@ -148,11 +169,12 @@ function IssuePinRow({
   wsId: string | null;
   wsSlug: string | null;
 }) {
-  const { data, isLoading } = useQuery(issueDetailOptions(wsId, pin.item_id));
+  const query = useQuery(issueDetailOptions(wsId, pin.item_id));
+  const { data } = query;
   // EMPTY_ISSUE_FALLBACK has an empty id — treat as deleted/no-access.
   const issue = data && data.id ? (data as Issue) : null;
 
-  if (isLoading) return <SkeletonRow />;
+  if (pinRowPending(query)) return <SkeletonRow />;
   if (!issue)
     return <MissingPinRow itemType="issue" itemId={pin.item_id} />;
 
@@ -176,12 +198,11 @@ function ProjectPinRow({
   wsId: string | null;
   wsSlug: string | null;
 }) {
-  const { data, isLoading } = useQuery(
-    projectDetailOptions(wsId, pin.item_id),
-  );
+  const query = useQuery(projectDetailOptions(wsId, pin.item_id));
+  const { data } = query;
   const project = data && data.id ? (data as Project) : null;
 
-  if (isLoading) return <SkeletonRow />;
+  if (pinRowPending(query)) return <SkeletonRow />;
   if (!project)
     return <MissingPinRow itemType="project" itemId={pin.item_id} />;
 
@@ -193,6 +214,61 @@ function ProjectPinRow({
       }}
     />
   );
+}
+
+function ViewPinRow({
+  pin,
+  wsId,
+  wsSlug,
+}: {
+  pin: PinnedItem;
+  wsId: string | null;
+  wsSlug: string | null;
+}) {
+  const { colorScheme } = useColorScheme();
+  const { t } = useT("workspace");
+  const { applyView } = useIssueViewActions();
+  const query = useQuery(issueViewDetailOptions(wsId, pin.item_id));
+  const { data, error } = query;
+
+  if (pinRowPending(query)) return <SkeletonRow />;
+  if (error && (error as { status?: unknown }).status !== 404) return null;
+  if (!data) return <MissingPinRow itemType="view" itemId={pin.item_id} />;
+
+  const view = data;
+  return (
+    <Pressable
+      onPress={() => {
+        if (!wsSlug) return;
+        void openPinnedView(view, wsSlug, {
+          applyView,
+          navigate: (href) => router.navigate(href),
+        });
+      }}
+      accessibilityRole="button"
+      accessibilityLabel={t("pins.view_a11y", { name: view.name })}
+      testID={`pinned-view-${view.id}`}
+      className="px-4 py-3 min-h-12 flex-row items-center gap-3 active:bg-secondary"
+    >
+      <Ionicons
+        name="layers-outline"
+        size={18}
+        color={THEME[colorScheme].mutedForeground}
+      />
+      <Text className="flex-1 text-sm text-foreground" numberOfLines={2}>
+        {view.name}
+      </Text>
+    </Pressable>
+  );
+}
+
+/**
+ * Loading, or offline before the first read: a placeholder, never the
+ * "unavailable — tap to unpin" row for a pin that may be alive.
+ */
+function pinRowPending(q: Parameters<typeof listState>[0]) {
+  const state = listState(q);
+  return state === "loading" || state === "offline";
 }
 
 function SkeletonRow() {
@@ -214,7 +290,7 @@ function MissingPinRow({
   itemType,
   itemId,
 }: {
-  itemType: "issue" | "project";
+  itemType: "issue" | "project" | "view";
   itemId: string;
 }) {
   const { colorScheme } = useColorScheme();
@@ -225,9 +301,7 @@ function MissingPinRow({
       onPress={() => deletePin.mutate({ itemType, itemId })}
       className="px-4 py-3 flex-row items-center gap-3 active:bg-secondary opacity-60"
       accessibilityLabel={
-        itemType === "issue"
-          ? t("pins.unavailable_issue")
-          : t("pins.unavailable_project")
+        t(`pins.unavailable_${itemType}`)
       }
     >
       <Ionicons
@@ -236,9 +310,7 @@ function MissingPinRow({
         color={THEME[colorScheme].mutedForeground}
       />
       <Text className="flex-1 text-sm text-muted-foreground" numberOfLines={1}>
-        {itemType === "issue"
-          ? t("pins.unavailable_issue")
-          : t("pins.unavailable_project")}
+        {t(`pins.unavailable_${itemType}`)}
       </Text>
     </Pressable>
   );

@@ -1,0 +1,38 @@
+# App baseline profile. Copied to android/app/src/main/ by
+# plugins/with-baseline-profile.js; AGP merges it with the library profiles
+# into assets/dexopt/baseline.prof. Without it the merged profile held only
+# androidx/fragment/appcompat rules (~1,700 lines, no React Native, Expo or
+# kotlin-reflect code), so even a compiled install ran the start path in the
+# interpreter. Wildcards (profgen syntax) are expanded against the dex at
+# build time. Scope = what the measured cold-start profile
+# shows on the JS thread: RN bridge/JNI + view managers, Expo module
+# definitions (kotlin-reflect), Kotlin stdlib/coroutines, native UI libs,
+# networking.
+Lcom/facebook/react/**;
+HSPLcom/facebook/react/**->**(**)**
+Lcom/facebook/hermes/**;
+HSPLcom/facebook/hermes/**->**(**)**
+Lcom/facebook/jni/**;
+HSPLcom/facebook/jni/**->**(**)**
+Lcom/facebook/soloader/**;
+HSPLcom/facebook/soloader/**->**(**)**
+Lcom/facebook/yoga/**;
+HSPLcom/facebook/yoga/**->**(**)**
+Lexpo/modules/**;
+HSPLexpo/modules/**->**(**)**
+Lkotlin/**;
+HSPLkotlin/**->**(**)**
+Lkotlinx/coroutines/**;
+HSPLkotlinx/coroutines/**->**(**)**
+Lcom/swmansion/**;
+HSPLcom/swmansion/**->**(**)**
+Lcom/th3rdwave/safeareacontext/**;
+HSPLcom/th3rdwave/safeareacontext/**->**(**)**
+Lcom/reactnativekeyboardcontroller/**;
+HSPLcom/reactnativekeyboardcontroller/**->**(**)**
+Lcom/recordingbeats/**;
+HSPLcom/recordingbeats/**->**(**)**
+Lokhttp3/**;
+HSPLokhttp3/**->**(**)**
+Lokio/**;
+HSPLokio/**->**(**)**

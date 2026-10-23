@@ -11,15 +11,21 @@
  *   - React Query: query and mutation cache (`QueryClient.clear()`)
  *   - failed comments (text + retry payload), last-viewed markers, the
  *     recently viewed issues behind the `@` suggestions
- *   - the saved route for the M4 restore (`last-route.json`)
+ *   - the saved route for the M4 restore (`reco-last-route.json`)
+ *   - the in-memory Markdown split cache
+ *   - the encrypted on-device timeline cache and its key
  */
 import { queryClient } from "./query-client";
 import { useFailedCommentsStore } from "./stores/failed-comments-store";
 import { useLastViewedStore } from "./stores/last-viewed-store";
 import { useViewedIssuesStore } from "./viewed-issues-store";
 import { forgetRememberedRoute } from "@/lib/route-restore";
+import { clearMarkdownSegmentCache } from "@/lib/markdown/segment-cache";
+import { clearTimelineCache } from "./timeline-cache";
 
 export function clearSessionData(): void {
+  // First: no throttled cache write may land after this point.
+  clearTimelineCache();
   // Running fetches would otherwise write the old account's answers back.
   void queryClient.cancelQueries();
   queryClient.clear();
@@ -27,4 +33,5 @@ export function clearSessionData(): void {
   useLastViewedStore.setState({ lastViewed: {} });
   useViewedIssuesStore.setState({ byWorkspace: {} });
   forgetRememberedRoute();
+  clearMarkdownSegmentCache();
 }

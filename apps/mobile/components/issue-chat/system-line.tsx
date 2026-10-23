@@ -7,6 +7,7 @@
  * Wording comes from `formatActivity`, the same helper the detail's
  * ActivityRow uses, so both views describe an event identically.
  */
+import { memo } from "react";
 import { Pressable, View } from "react-native";
 import type { TimelineEntry } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
@@ -32,7 +33,14 @@ function useDescribe() {
   };
 }
 
-export function SystemLine({ entry, emphasis }: { entry: TimelineEntry; emphasis: boolean }) {
+// Memoised like ChatBubble: rows re-render only when their entry changed.
+export const SystemLine = memo(function SystemLine({
+  entry,
+  emphasis,
+}: {
+  entry: TimelineEntry;
+  emphasis: boolean;
+}) {
   const { catalog, describe } = useDescribe();
   const to = (entry.details as Record<string, unknown> | undefined)?.to;
   const text = describe(entry);
@@ -63,20 +71,22 @@ export function SystemLine({ entry, emphasis }: { entry: TimelineEntry; emphasis
       </Text>
     </View>
   );
-}
+});
 
-export function SystemGroup({
+export const SystemGroup = memo(function SystemGroup({
+  groupId,
   entries,
   onExpand,
 }: {
+  groupId: string;
   entries: TimelineEntry[];
-  onExpand: () => void;
+  onExpand: (groupId: string) => void;
 }) {
   const { t } = useT("issues");
   return (
     <View className="items-center px-8">
       <Pressable
-        onPress={onExpand}
+        onPress={() => onExpand(groupId)}
         accessibilityRole="button"
         accessibilityLabel={t("chat.changes_expand", { count: entries.length })}
         className="min-h-[48px] justify-center px-3 active:opacity-60"
@@ -87,4 +97,4 @@ export function SystemGroup({
       </Pressable>
     </View>
   );
-}
+});

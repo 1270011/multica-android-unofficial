@@ -490,6 +490,7 @@ function CommentBody({
       parentId: failed.parentId,
       attachmentIds: failed.attachmentIds,
       sentAt: failed.sentAt,
+      knownIds: failed.knownIds,
     });
   }, [failed, qc, wsId, issueId, entry.id, createComment]);
 

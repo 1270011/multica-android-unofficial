@@ -29,6 +29,7 @@ import { useUpdateProject } from "@/data/mutations/projects";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useT } from "@/lib/i18n";
 import { HEADER_MAX_FONT_SCALE, MODAL_CLOSE_TITLE_GAP_DP } from "@/lib/header-scale";
+import { READING_WIDTH_STYLE } from "@/components/ui/reading-width";
 
 export default function EditProject() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -140,6 +141,7 @@ export default function EditProject() {
         <ScrollView
           className="flex-1"
           contentContainerClassName="px-4 pt-4 pb-6 gap-4"
+          contentContainerStyle={READING_WIDTH_STYLE}
           keyboardShouldPersistTaps="handled"
         >
           {!detail.data ? (

@@ -2,7 +2,7 @@ import { QueryClient } from "@tanstack/react-query";
 import type { Issue, IssueReaction, TimelineEntry } from "@multica/core/types";
 import { describe, expect, it, vi } from "vitest";
 
-import { issueKeys } from "@/data/queries/issue-keys";
+import { issueKeys, issueScreenQueryKeys } from "@/data/queries/issue-keys";
 import {
   addCommentReaction,
   addIssueReaction,
@@ -17,7 +17,7 @@ import {
 } from "./issue-ws-updaters";
 
 describe("invalidateIssueAfterReconnect", () => {
-  it("invalidates attachments together with the issue and task caches", () => {
+  it("marks every per-issue cache stale without an immediate refetch", () => {
     const qc = new QueryClient();
     const invalidate = vi.spyOn(qc, "invalidateQueries");
     const wsId = "workspace-1";
@@ -25,13 +25,23 @@ describe("invalidateIssueAfterReconnect", () => {
 
     invalidateIssueAfterReconnect(qc, wsId, issueId);
 
-    expect(invalidate.mock.calls.map(([filters]) => filters?.queryKey)).toEqual([
-      issueKeys.detail(wsId, issueId),
-      issueKeys.timeline(wsId, issueId),
-      issueKeys.attachments(wsId, issueId),
-      issueKeys.activeTasks(wsId, issueId),
-      issueKeys.tasks(wsId, issueId),
-    ]);
+    // Refetching (only if the screen is not parked) is
+    // `invalidateAfterReconnect`'s job, see reconnect-refresh.test.ts.
+    expect(invalidate.mock.calls.map(([filters]) => filters)).toEqual(
+      issueScreenQueryKeys(wsId, issueId).map((queryKey) => ({
+        queryKey,
+        refetchType: "none",
+      })),
+    );
+    expect(issueScreenQueryKeys(wsId, issueId)).toEqual(
+      expect.arrayContaining([
+        issueKeys.detail(wsId, issueId),
+        issueKeys.timeline(wsId, issueId),
+        issueKeys.attachments(wsId, issueId),
+        issueKeys.activeTasks(wsId, issueId),
+        issueKeys.tasks(wsId, issueId),
+      ]),
+    );
   });
 });
 

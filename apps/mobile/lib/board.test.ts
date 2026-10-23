@@ -60,6 +60,18 @@ describe("boardColumns", () => {
     ]);
     expect(cols[0]?.issues.map((i) => i.id)).toEqual(["new", "old"]);
   });
+
+  it("keeps the server order with a sort other than Manual", () => {
+    const cols = boardColumns(
+      [
+        issue("old", "todo", "2026-09-01T00:00:00Z"),
+        issue("new", "todo", "2026-10-01T00:00:00Z"),
+      ],
+      [],
+      { sort: { field: "title", direction: "asc" } },
+    );
+    expect(cols[0]?.issues.map((i) => i.id)).toEqual(["old", "new"]);
+  });
 });
 
 describe("status filter vs hidden columns", () => {

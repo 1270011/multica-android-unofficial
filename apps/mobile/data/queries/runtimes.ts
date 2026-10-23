@@ -11,3 +11,15 @@ export const runtimeListOptions = (wsId: string | null) =>
     queryFn: ({ signal }) => api.listRuntimes({ signal }),
     enabled: !!wsId,
   });
+
+// Hour-of-day activity of one runtime (R3 detail). `tz` is part of the key
+// because the server buckets in that zone. Own key root so the realtime
+// invalidation of ["runtimes", wsId] (daemon events) does not refetch it;
+// refreshed by pull-to-refresh like the other report-style reads.
+export const runtimeActivityOptions = (wsId: string | null, runtimeId: string, tz: string) =>
+  queryOptions({
+    queryKey: ["runtime-activity", wsId, runtimeId, tz] as const,
+    queryFn: ({ signal }) => api.getRuntimeActivity(runtimeId, { tz, signal }),
+    enabled: !!wsId && !!runtimeId,
+    staleTime: 5 * 60_000,
+  });

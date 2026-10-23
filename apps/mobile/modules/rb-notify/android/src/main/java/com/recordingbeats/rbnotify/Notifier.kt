@@ -73,7 +73,7 @@ class Notifier(private val context: Context, private val prefs: NotifyPrefs) {
 
   @Synchronized
   fun notifyEntry(workspace: Workspace, entry: InboxEntry, channel: String, category: String) {
-    if (stateFile.closed) return // after logout (N1)
+    if (stateFile.closed) return // after logout
     val issueId = entry.issueId ?: return
     forgetInvisible()
     val state = issues.getOrPut(issueId) {
@@ -88,7 +88,7 @@ class Notifier(private val context: Context, private val prefs: NotifyPrefs) {
       state.lines.add(NotifyLine(entry.id, lineText(entry, category), senderName(entry), entry.createdAtMs ?: System.currentTimeMillis()))
       while (state.lines.size > MAX_LINES) state.lines.removeAt(0)
     }
-    post(state, category, alert = first)
+    post(state, category, alert = first, issueKey = entry.issueKey, itemId = entry.id)
     postSummary()
     persist()
   }
@@ -276,24 +276,33 @@ class Notifier(private val context: Context, private val prefs: NotifyPrefs) {
     stateFile.reopen()
   }
 
-  private fun post(state: NotifyIssue, category: String?, alert: Boolean) {
+  private fun post(state: NotifyIssue, category: String?, alert: Boolean, issueKey: String? = null, itemId: String? = null) {
     if (stateFile.closed || !canPost()) return
     val me = Person.Builder().setName(prefs.string("me", "Me")).build()
     // §8.4: with several switched-on workspaces the name is shown. Android
     // drops subText for messaging notifications, so it also goes into the
     // conversation title.
     val workspaceLabel = NotifyDisplay.workspaceLabel(prefs.workspaces, state.workspaceSlug)
+    val headline = when (category) {
+      null -> state.title
+      PingRule.ASSIGNMENTS -> NotifyDisplay.assignedTitle(
+        prefs.string("title_assigned", "Assigned to you: {title}"), issueKey, state.title,
+      )
+      else -> "${state.title} · ${reason(category)}"
+    }
+    // MessagingStyle shows the conversation title, not setContentTitle
+    //So an assignment carries its headline there.
     val style = NotificationCompat.MessagingStyle(me)
-      .setConversationTitle(NotifyDisplay.conversationTitle(state.title, workspaceLabel))
-    for (line in state.lines) {
+      .setConversationTitle(NotifyDisplay.visibleTitle(category, headline, state.title, workspaceLabel))
+    val lines = NotifyDisplay.visibleLines(category, state.lines, itemId)
+    for (line in lines) {
       style.addMessage(line.text, line.at, Person.Builder().setName(line.sender).build())
     }
     val stamp = System.currentTimeMillis()
-    val headline = category?.let { "${state.title} · ${reason(it)}" } ?: state.title
     val builder = NotificationCompat.Builder(context, state.channel)
       .setSmallIcon(smallIcon())
       .setContentTitle(headline)
-      .setContentText(state.lines.lastOrNull()?.text ?: "")
+      .setContentText(lines.lastOrNull()?.text ?: "")
       .setStyle(style)
       .setGroup(GROUP)
       .setOnlyAlertOnce(!alert)
@@ -368,6 +377,13 @@ class Notifier(private val context: Context, private val prefs: NotifyPrefs) {
   }
 
   private fun lineText(entry: InboxEntry, category: String): String {
+    if (category == PingRule.ASSIGNMENTS) {
+      return NotifyDisplay.assignedLine(
+        prefs.string("line_assigned", "{name} assigned this issue to you."),
+        prefs.string("line_assigned_unknown", "An issue was assigned to you."),
+        prefs.actorName(entry.actorId),
+      )
+    }
     val body = entry.body?.let { plain(it) }?.takeIf { it.isNotEmpty() }
     return when {
       body != null -> body.take(120)

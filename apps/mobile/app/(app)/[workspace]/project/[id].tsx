@@ -36,6 +36,7 @@ import { ProjectResourcesSection } from "@/components/project/project-resources-
 import {
   projectDetailOptions,
   projectResourcesOptions,
+  projectScreenQueryKeys,
 } from "@/data/queries/projects";
 import { issueKeys } from "@/data/queries/issue-keys";
 import { useDeleteProject } from "@/data/mutations/projects";
@@ -48,6 +49,7 @@ import { useT } from "@/lib/i18n";
 import { webProjectUrl } from "@/lib/web-links";
 import { getWebBaseUrl } from "@/data/server-config-store";
 import { guardedRefresh } from "@/lib/refresh-guard";
+import { useRefreshOnFocus } from "@/lib/use-refresh-on-focus";
 
 export default function ProjectDetail() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -61,6 +63,9 @@ export default function ProjectDetail() {
   // Per-record realtime — when another client deletes the project we're
   // viewing, pop back so the user isn't stranded on a 404.
   useProjectRealtime(id, () => router.back());
+  // Parked in the back stack, a reconnect only marks these stale; they
+  // refetch here when the screen regains focus.
+  useRefreshOnFocus(projectScreenQueryKeys(wsId, id));
 
   const onRefresh = useCallback(
     () =>
