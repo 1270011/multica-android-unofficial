@@ -4,9 +4,56 @@ All notable changes of this unofficial Android app are listed here. The format f
 
 The baseline is the upstream Multica mobile client (`apps/mobile`) at tag `v0.6.1` of <https://github.com/multica-ai/multica>, which supports iOS only.
 
+## [2.0.0] – 2026-10-24
+
+Supported server: Multica v0.6.1 (self-hosted). Features the server does not offer (for example Autopilots) stay hidden.
+
+Update from 1.0.0: install the APK over the existing app; it keeps your server, sign-in and settings (same signing key, versionCode 2).
+
+### Added – Tablet layout
+- Navigation rail on the left from 600 dp window width (tablets, foldables, large phones in landscape); the tabs that do not fit move into a "More" menu.
+- Issue view in two columns on wide windows: issue details on the left, chat or activity on the right, with column widths that follow the space the screen really gets.
+- Limited reading width (720 dp) for lists and forms, centred on wide windows; phones are unchanged.
+
+### Added – Issue lists
+- My Issues with the tabs Assigned, Created and All; "All" replaces the former workspace Issues page (old filters move over once).
+- Server-side sort for the issue lists, including "Manual" order on the board.
+- Assignee and creator filters; "Reset filters".
+- Saved views: apply, save, rename, share, delete and pin, also from the view bar.
+- Multi-select by long press in the list and on the board, with batch status, priority, assignee and delete (with confirmation).
+
+### Added – Wakeups, autopilots and runtimes
+- Wakeups on the issue: section and header chip, create (time, reply, run end, conditions), edit the instruction, reschedule, turn off, trigger, delete, and the runs of a wakeup.
+- System wakeup "sub-issues done" on the issue.
+- Workspace wakeup overview with filters and bulk "Turn off".
+- "AI Team" group under More: autopilot list, detail, "Run now", runs and run sheet.
+- Runtime list grouped by machine with a problem banner; runtime detail with queue and activity.
+- "Why is my agent stuck?" notice on the agent and issue detail.
+
+### Added – Notifications
+- "Assigned to me" notification category with the issue key in the headline; an assignment notification shows only its own event.
+
+### Changed – Speed
+- Issue chat opens at once: first render only of the visible rows, older rows are added in blocks, landing on the target comment without a visible jump.
+- Encrypted on-device timeline cache (AES-256, key in the Android Keystore): a reopened issue shows its last known timeline at once and syncs only when needed. It is cleared on logout and when access to an issue is lost.
+- Fewer re-renders and refetches: changed chat bubbles only, bundled presence refetches, no timeline reload on every agent-run event, a reconnect reloads only the focused screen.
+- Faster cold start through a baseline profile in the APK.
+- Markdown tables in the chat scroll horizontally.
+
+### Fixed
+- Opening an issue from the inbox lands on the triggering comment instead of jumping.
+- A sent chat message appears exactly once.
+- The chat no longer flickers while the cached timeline is replaced by the server's.
+- Live updates when switching tabs, for closed issues and chats and for assignments.
+- Offline: lists show an offline state instead of an empty list; saved views cannot be saved offline.
+- Action menus work after a configuration change (rotation, font size); the active view stays selected.
+- Long press selects the row; TalkBack scrolling no longer gets stuck at the end of the chat.
+- Notification service: network requests no longer hang after a network change.
+- Larger touch targets and layouts checked at 200 % font size in the new screens.
+
 ## [1.0.0] – 2026-10-18
 
-> ⚠️ **Early release.** v1.0.0 was built fast and may have rough edges. It is not extensively end-to-end tested. It is functional and usable, but not state of the art. Known issues are listed in [KNOWN_ISSUES.md](KNOWN_ISSUES.md) and are being fixed for v2.0.0.
+> ⚠️ **Early release.** v1.0.0 was built fast and may have rough edges. It is not extensively end-to-end tested. It is functional and usable, but not state of the art. Known issues are listed in [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
 
 First public release as a standalone repository. Earlier builds were private test builds; this release contains everything from them.
 
@@ -76,4 +123,5 @@ Supported server: Multica v0.6.1 (self-hosted). From this release on, the app ha
 - No camera, microphone, storage, media or overlay permissions; Expo Clipboard's exported file provider removed.
 - Session end clears all account data, cached filters, drafts and notification state.
 
+[2.0.0]: ../../releases/tag/v2.0.0
 [1.0.0]: ../../releases/tag/v1.0.0

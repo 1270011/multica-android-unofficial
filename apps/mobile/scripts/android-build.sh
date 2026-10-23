@@ -12,7 +12,7 @@
 # Environment (all optional):
 #   ANDROID_HOME / JAVA_HOME      SDK + JDK 17 (required)
 #   GRADLE_USER_HOME              Gradle cache (default: ~/.gradle)
-#   ANDROID_VERSION_CODE          versionCode baked into the APK (default 1)
+#   ANDROID_VERSION_CODE          versionCode baked into the APK (default 2)
 #   APP_ENV                       Expo variant, default "production"
 #   RB_ARCHS                      comma list of ABIs; default depends on the
 #                                 build type (debug: x86_64 for the emulator,
@@ -58,7 +58,7 @@ if [ "$CLEAN" = 1 ] || ! scripts/prebuild-stamp.sh check; then
   rm -rf android
 fi
 
-echo "==> expo prebuild (android, APP_ENV=$APP_ENV, versionCode=${ANDROID_VERSION_CODE:-1})"
+echo "==> expo prebuild (android, APP_ENV=$APP_ENV, versionCode=${ANDROID_VERSION_CODE:-2})"
 pnpm exec expo prebuild --platform android --no-install
 scripts/prebuild-stamp.sh write
 

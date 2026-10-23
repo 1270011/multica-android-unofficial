@@ -26,13 +26,11 @@ export default ({ config }: ConfigContext): ExpoConfig => {
         ? "Multica (Unofficial Staging)"
         : "Multica (Unofficial Dev)",
     slug: "multica-android-unofficial",
-    // Android build: versionName tracks the upstream Multica version the
-    // app is built against plus a release suffix. Release builds set
-    // ANDROID_VERSION_NAME (e.g. "0.6.1-rb3") and ANDROID_VERSION_CODE;
-    // Android refuses to update an
-    // installed app to a lower or equal versionCode. Without the variables
-    // (dev builds) the upstream version is used.
-    version: process.env.ANDROID_VERSION_NAME || "0.6.1",
+    // Android build: the app has its own version numbers (see
+    // CHANGELOG.md). Release builds may override them with
+    // ANDROID_VERSION_NAME and ANDROID_VERSION_CODE; Android refuses to
+    // update an installed app to a lower or equal versionCode.
+    version: process.env.ANDROID_VERSION_NAME || "2.0.0",
     // Portrait and landscape. MainActivity keeps
     // orientation|screenSize in configChanges, so turning the phone does not
     // recreate it; layouts react through lib/breakpoints.ts.
@@ -79,7 +77,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // single sideloaded APK, so there is no dev/staging/prod side-by-side
       // install to keep apart (that is what the iOS suffixes above do).
       package: "net.recordingbeats.multica.unofficial",
-      versionCode: Number.parseInt(process.env.ANDROID_VERSION_CODE ?? "1", 10),
+      versionCode: Number.parseInt(process.env.ANDROID_VERSION_CODE ?? "2", 10),
       adaptiveIcon: {
         foregroundImage: "./assets/icon.png",
         backgroundColor: "#ffffff",
@@ -149,6 +147,8 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       "./plugins/with-rb-notify",
       // Removes expo-clipboard's exported ClipboardFileProvider.
       "./plugins/with-android-manifest-hardening",
+      // App baseline profile for the RN/Expo start path.
+      "./plugins/with-baseline-profile",
     ],
     extra: { APP_ENV: env },
   };

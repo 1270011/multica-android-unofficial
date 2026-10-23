@@ -49,7 +49,7 @@ apps/mobile/scripts/android-build.sh debug --archs arm64-v8a  # for a phone
 # -> apps/mobile/android/app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Options: `--archs <list>` (comma-separated ABIs, also `RB_ARCHS`), `--clean` (clean prebuild), `ANDROID_VERSION_CODE` (default 1).
+Options: `--archs <list>` (comma-separated ABIs, also `RB_ARCHS`), `--clean` (clean prebuild), `ANDROID_VERSION_CODE` (default 2).
 
 The debug APK contains the JS bundle, so it runs without Metro. With `pnpm dev` running and the device able to reach your machine (for an emulator or USB device: `adb reverse tcp:8081 tcp:8081`), **Reload** in the dev menu loads the current JS from Metro.
 
@@ -80,9 +80,9 @@ The script compares the signer certificate with `release-signer.sha256`. That fi
 ```bash
 export ANDROID_HOME=/path/to/android-sdk JAVA_HOME=/path/to/jdk-17
 export RB_SIGNING_ENV=/secure/path/signing.env
-export ANDROID_VERSION_NAME=1.0.0 ANDROID_VERSION_CODE=1
+export ANDROID_VERSION_NAME=2.0.0 ANDROID_VERSION_CODE=2
 pnpm android:release
-# -> apps/mobile/build/release-apk/multica-unofficial-1.0.0.apk (+ .sha256)
+# -> apps/mobile/build/release-apk/multica-unofficial-2.0.0.apk (+ .sha256)
 ```
 
 Options of `scripts/build-release.sh`: `--version-code N`, `--out <dir>` (also `RB_OUT_DIR`), `--clean`, `--abi-suffix`. The default ABIs are `arm64-v8a,armeabi-v7a` (`RB_ARCHS`). The script refuses to run when a debug-only switch is set in the environment, verifies the APK with `apksigner` and writes a SHA-256 checksum next to it.

@@ -2,7 +2,7 @@
 
 <p align="center"><img src="docs/social-preview.png" alt="Multica for Android (unofficial) – inbox, issues, Kanban board and agent chat on your phone" width="100%"></p>
 
-> ⚠️ **Early release (v1.0.0).** This app was built fast and may have rough edges. It is **not extensively end-to-end tested**. It is functional and usable, but not state of the art. Known issues are being fixed for **v2.0.0** → [Known issues](KNOWN_ISSUES.md)
+> **v2.0.0:** tablet layout (navigation rail from 600 dp, two-pane issue view, limited reading width), saved views, multi-select and batch actions, wakeups, autopilots and runtimes, and a faster issue chat → [Changelog](CHANGELOG.md) · [Known issues](KNOWN_ISSUES.md)
 
 [![Release](https://img.shields.io/github/v/release/1270011/multica-android-unofficial?include_prereleases&sort=semver)](https://github.com/1270011/multica-android-unofficial/releases)
 [![License](https://img.shields.io/badge/license-Multica%20License%20(Apache--2.0%20based)-blue)](LICENSE)
@@ -230,7 +230,7 @@ Install the CA certificate on the phone (Settings → Security → Encryption & 
 Turn on the notification service under **Settings → Notifications** and enable the workspaces you want notifications for. Allow notifications for the app in Android's settings. Some vendors stop background services aggressively – exclude the app from battery optimisation.
 
 **Content looks stale or the offline bar is wrong**
-The offline indicator is not always accurate in v1.0.0 (see [Known issues](KNOWN_ISSUES.md)). Pull to refresh. Comments written while offline are kept and sent later.
+The offline indicator is not always accurate (see [Known issues](KNOWN_ISSUES.md)). Pull to refresh. Comments written while offline are kept and sent later.
 
 **The paste button is hidden by the keyboard**
 Close the keyboard to reach it, or long-press the input field and paste.
@@ -273,7 +273,7 @@ It is source-available. The complete source is in this repository under the Mult
 Yes. There is no paid version, no account with this project and no in-app purchase. You need your own Multica instance or a Multica Cloud account.
 
 **What is planned next?**
-v1.0.0 is an early release. v2.0.0 focuses on fixing the [known issues](KNOWN_ISSUES.md), more end-to-end tests, and more of the web app's filters, settings and management features.
+Fixing the remaining [known issues](KNOWN_ISSUES.md), more end-to-end tests, and more of the web app's settings and management features.
 
 <sub>Multica for Android (unofficial) is not affiliated with or endorsed by Multica / Index Labs (Hong Kong) Limited.</sub>
 
@@ -281,7 +281,7 @@ v1.0.0 is an early release. v2.0.0 focuses on fixing the [known issues](KNOWN_IS
 
 ## Roadmap
 
-v1.0.0 is a first, early release. **v2.0.0** focuses on fixing the [known issues](KNOWN_ISSUES.md), more end-to-end tests, and more of the web app's filters, settings and management features. There are no dates yet.
+**v2.0.0** brought the tablet layout, saved views, batch actions, wakeups, autopilots and runtimes (see [CHANGELOG.md](CHANGELOG.md)). Next: fixing the remaining [known issues](KNOWN_ISSUES.md), more end-to-end tests, and more of the web app's settings and management features. There are no dates yet.
 
 ## Build from source
 
