@@ -258,6 +258,9 @@ The offline indicator is not always accurate (see [Known issues](KNOWN_ISSUES.md
 **The paste button is hidden by the keyboard**
 Close the keyboard to reach it, or long-press the input field and paste.
 
+**Tables in the issue chat are cut off**
+Swipe horizontally directly on the table, or open the comment in the web app (see [Known issues](KNOWN_ISSUES.md)). A fix is planned.
+
 **Signed out after changing the server**
 This is intended: changing or forgetting the server under **Settings → Server connection** signs you out. Sign in again with the e-mail code.
 
@@ -296,7 +299,7 @@ It is source-available. The complete source is in this repository under the Mult
 Yes. There is no paid version, no account with this project and no in-app purchase. You need your own Multica instance or a Multica Cloud account.
 
 **What is planned next?**
-Fixing the remaining [known issues](KNOWN_ISSUES.md), more end-to-end tests, and more of the web app's settings and management features.
+Fewer @-mentions needed (replies as in the web app), chat and new issues directly from the agent view, hiding members and agents in the settings, a fix for tables in the issue chat, the remaining [known issues](KNOWN_ISSUES.md), and more end-to-end tests.
 
 <sub>Multica for Android (unofficial) is not affiliated with or endorsed by Multica / Index Labs (Hong Kong) Limited.</sub>
 
@@ -304,7 +307,7 @@ Fixing the remaining [known issues](KNOWN_ISSUES.md), more end-to-end tests, and
 
 ## Roadmap
 
-**v2.0.0** brought the tablet layout, saved views, batch actions, wakeups, autopilots and runtimes (see [CHANGELOG.md](CHANGELOG.md)). Next: fixing the remaining [known issues](KNOWN_ISSUES.md), more end-to-end tests, and more of the web app's settings and management features. There are no dates yet.
+**v2.0.0** brought the tablet layout, saved views, batch actions, wakeups, autopilots and runtimes (see [CHANGELOG.md](CHANGELOG.md)). Next: fewer @-mentions needed (replies as in the web app), chat and new issues directly from the agent view, hiding members and agents in the settings, a fix for tables in the issue chat, the remaining [known issues](KNOWN_ISSUES.md), and more end-to-end tests. There are no dates yet.
 
 ## Build from source
 

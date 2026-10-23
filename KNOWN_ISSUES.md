@@ -9,6 +9,7 @@ The points below are known in v2.0.0. Most testing ran on emulators against one 
 - **Offline indicator is unreliable.** The offline bar and the connection state are not always accurate and can lag behind or differ from the real network state. Pull to refresh if the content looks stale. Comments written offline are still kept and sent later. (Improved in v2.0.0: lists show an offline state instead of an empty list.)
 - **"Paste" button can be hidden by the keyboard.** On some screens and screen sizes the paste button next to an input field ends up under the on-screen keyboard. Close the keyboard to reach it, or paste with a long press into the field.
 - **"Unknown Agent" in the issue chat.** In the issue chat view, the author of some messages is shown as "Unknown Agent" instead of the agent's name. The classic activity view shows the correct author.
+- **Tables in the issue chat are cut off.** Wide Markdown tables in the issue chat are clipped at the screen edge. They can be scrolled sideways, but this is hard to discover, and a long press opens the message menu instead. Workaround: swipe horizontally directly on the table, or open the comment in the web app. A fix is planned.
 - **Placeholder in "Local / VPN" mode.** The server URL field in "Local / VPN" mode shows the placeholder `https://multica.example.lan`. It is only an example; enter your real server URL (any `https://` address works).
 
 ### Platform and distribution
@@ -28,8 +29,14 @@ The points below are known in v2.0.0. Most testing ran on emulators against one 
 
 No dates yet. Planned:
 
+- **Fewer @-mentions needed.** Replies reach the right agent the same way as in the web app, so you do not have to mention it every time.
+- **Chat and new issue from the agent view.** Start a chat with an agent or create an issue for it directly from its detail screen.
+- **Hide members and agents.** Choose in the settings which members and agents are shown in lists and pickers.
+- **Tables in the issue chat.** Wide tables become fully readable in the chat.
+- **@-mention list without scrolling back.** The mention list stays reachable while you type.
+- **Filter issues by title.**
 - **Settings and management closer to the web app.**
-- **Fixes for the issues above.**
+- **Fixes for the other issues above.**
 - **More end-to-end tests** on emulators and real devices, so that regressions are caught before a release.
 
 Changes per release are listed in [CHANGELOG.md](CHANGELOG.md).
