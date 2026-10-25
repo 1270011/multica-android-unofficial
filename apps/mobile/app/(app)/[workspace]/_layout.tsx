@@ -27,6 +27,7 @@ import { useNotifyBridge } from "@/lib/notify/use-notify-bridge";
 import { showToast } from "@/lib/toast";
 import { modalPresentation } from "@/lib/modal-presentation";
 import { perfMark } from "@/lib/perf-mark";
+import { MENTION_SHEET_DETENTS } from "@/lib/mention-picker-selection";
 
 /**
  * Shared Stack.Screen options for every iOS formSheet-presented sheet route.
@@ -290,6 +291,9 @@ export default function WorkspaceLayout() {
           name="mention-picker"
           options={{
             ...SHEET_OPTIONS,
+            // Tall detent only, so the pinned "Done (n)" is
+            // never cut off (content is laid out for 0.95).
+            sheetAllowedDetents: MENTION_SHEET_DETENTS,
             headerShown: true,
             title: t("navigation:routes.mention"),
           }}
@@ -325,7 +329,13 @@ export default function WorkspaceLayout() {
           options={SHEET_OPTIONS}
         />
         <Stack.Screen name="issue/[id]/runs" options={SHEET_OPTIONS} />
-        {/* Wakeup instruction edit and new time. */}
+        {/* Full view of a markdown table; draws its own header
+            (✕, title as heading, copy) and follows rotation. */}
+        <Stack.Screen
+          name="table-view"
+          options={{ ...MODAL_PRESENTATION, headerShown: false }}
+        />
+        {/* W3: wakeup instruction edit and new time. */}
         <Stack.Screen name="issue/[id]/wakeup-instruction" options={SHEET_OPTIONS} />
         <Stack.Screen name="issue/[id]/wakeup-reschedule" options={SHEET_OPTIONS} />
         {/* System wakeup "Unteraufgaben fertig". */}
@@ -500,6 +510,12 @@ export default function WorkspaceLayout() {
               headerBackTitle: t("back"),
             }}
         />
+        {/* Agent chat above the agent detail: back returns to
+            the agent. The screen draws its own header like the chat tab. */}
+        <Stack.Screen
+          name="agent/[id]/chat"
+          options={{ headerShown: false }}
+        />
         <Stack.Screen
           name="squad/[id]"
             options={{
@@ -532,6 +548,27 @@ export default function WorkspaceLayout() {
           name="more/settings/notifications"
             options={{
               title: t("navigation:routes.notifications"),
+              headerBackTitle: t("navigation:routes.settings"),
+            }}
+        />
+        <Stack.Screen
+          name="more/settings/hidden-actors"
+            options={{
+              title: t("navigation:routes.hidden_actors"),
+              headerBackTitle: t("navigation:routes.settings"),
+            }}
+        />
+        <Stack.Screen
+          name="more/settings/title-filter"
+            options={{
+              title: t("navigation:routes.title_filter"),
+              headerBackTitle: t("navigation:routes.settings"),
+            }}
+        />
+        <Stack.Screen
+          name="more/settings/mention-sort"
+            options={{
+              title: t("navigation:routes.mention_sort"),
               headerBackTitle: t("navigation:routes.settings"),
             }}
         />

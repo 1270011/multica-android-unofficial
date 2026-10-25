@@ -54,5 +54,20 @@
     "weeks_ago_other": "{{count}} 周前"
   },
   "states.empty": "暂无内容",
-  "states.error": "出现错误"
+  "states.error": "出现错误",
+  "table": {
+    "title": "表格",
+    "rows_other": "{{count}} 行",
+    "cols_other": "{{count}} 列",
+    "row": "第 {{n}} 行",
+    "column": "第 {{n}} 列",
+    "full_title": "表格（{{rows}}，{{cols}}）",
+    "open_button": "以表格打开",
+    "open_full_a11y": "在全屏视图中打开表格",
+    "open_nth_a11y": "打开表格 {{n}}",
+    "row_of": "第 {{n}} 行，共 {{total}} 行",
+    "open_link_a11y": "打开链接：{{link}}",
+    "copied": "已将表格复制为 Markdown",
+    "gone": "此表格已不再加载。请从消息中重新打开。"
+  }
 }

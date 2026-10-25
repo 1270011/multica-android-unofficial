@@ -13,7 +13,9 @@
  *     recently viewed issues behind the `@` suggestions
  *   - the saved route for the M4 restore (`reco-last-route.json`)
  *   - the in-memory Markdown split cache
- *   - the encrypted on-device timeline cache and its key
+ *   - the encrypted on-device timeline cache and its key (C7)
+ *   - the @-mention frequency of every workspace; the
+ *     device sort mode in view-prefs-store stays
  */
 import { queryClient } from "./query-client";
 import { useFailedCommentsStore } from "./stores/failed-comments-store";
@@ -22,6 +24,7 @@ import { useViewedIssuesStore } from "./viewed-issues-store";
 import { forgetRememberedRoute } from "@/lib/route-restore";
 import { clearMarkdownSegmentCache } from "@/lib/markdown/segment-cache";
 import { clearTimelineCache } from "./timeline-cache";
+import { clearAllMentionUsage } from "@/lib/mention-usage";
 
 export function clearSessionData(): void {
   // First: no throttled cache write may land after this point.
@@ -34,4 +37,5 @@ export function clearSessionData(): void {
   useViewedIssuesStore.setState({ byWorkspace: {} });
   forgetRememberedRoute();
   clearMarkdownSegmentCache();
+  clearAllMentionUsage();
 }

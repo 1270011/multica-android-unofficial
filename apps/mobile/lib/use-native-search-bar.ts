@@ -17,16 +17,36 @@
  * the layout. See `apps/mobile/app/(app)/[workspace]/_layout.tsx` for the
  * pattern.
  */
-import { useLayoutEffect, useState } from "react";
+import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { useNavigation } from "expo-router";
 import type { NativeSyntheticEvent, TextInputFocusEventData } from "react-native";
+import type { SearchBarCommands } from "react-native-screens";
 
 export function useNativeSearchBar(
   placeholder: string,
   options?: { autoFocus?: boolean },
 ): string {
+  return useClearableNativeSearchBar(placeholder, options).query;
+}
+
+/**
+ * Same as `useNativeSearchBar`, plus `clearQuery()` that empties the field
+ * while keeping focus and keyboard (W3-P3: the @-sheet
+ * clears the search after a pick so the next name can be typed at once).
+ *
+ * `clearText()` goes through the native ref. On Android it is
+ * `SearchView.setQuery("", false)`: only the text changes, focus stays in
+ * the EditText, so the keyboard stays up. iOS does not fire `onChangeText`
+ * for it, hence the explicit `setQuery("")` (harmless on Android, where
+ * the native change event delivers the same empty string).
+ */
+export function useClearableNativeSearchBar(
+  placeholder: string,
+  options?: { autoFocus?: boolean },
+): { query: string; clearQuery: () => void } {
   const navigation = useNavigation();
   const [query, setQuery] = useState("");
+  const searchBarRef = useRef<SearchBarCommands>(null);
   const autoFocus = options?.autoFocus;
 
   useLayoutEffect(() => {
@@ -40,6 +60,7 @@ export function useNativeSearchBar(
         // HIG cautions against auto-keyboard for browse-first lists; pass
         // `autoFocus: true` only when the picker is search-first.
         autoFocus,
+        ref: searchBarRef,
         onChangeText: (e: NativeSyntheticEvent<TextInputFocusEventData>) =>
           setQuery(e.nativeEvent.text),
         onCancelButtonPress: () => setQuery(""),
@@ -47,5 +68,10 @@ export function useNativeSearchBar(
     });
   }, [navigation, placeholder, autoFocus]);
 
-  return query;
+  const clearQuery = useCallback(() => {
+    searchBarRef.current?.clearText();
+    setQuery("");
+  }, []);
+
+  return { query, clearQuery };
 }

@@ -16,8 +16,10 @@
  * reader scrolls near the window's top, one block per frame toward a landing
  * target or quote root, and slowly while idle when a screen reader is on.
  * Landings wait for the first frame and for their target inside the window.
- * While the cover stands or a landing is anchored, that growth waits:
- * the small first window settles sooner, and no block is
+ * A target further up than one block opens the window around itself with a
+ * cover, and the rows below follow per `onEndReached`.
+ * While the cover stands or a landing is anchored, that growth waits
+ *: the small first window settles sooner, and no block is
  * prepended under a landing.
  *
  * Until FlashList stands at the end, a plain bottom-aligned copy of the last
@@ -40,6 +42,7 @@ import {
   type NativeSyntheticEvent,
 } from "react-native";
 import { FlashList, type FlashListRef } from "@shopify/flash-list";
+import { useFocusEffect } from "expo-router";
 import { Ionicons } from "@/components/ui/ionicons";
 import { Text } from "@/components/ui/text";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -55,16 +58,23 @@ import {
   ANCHOR_TOLERANCE_PX,
   anchorHolds,
   anchorIsEnd,
+  anchorIsNear,
   anchorNeedsCorrection,
   anchorScrollParams,
   anchorTargetOffset,
   autoscrollThreshold,
+  innerOffset,
   newMessagesFollow,
+  returnInner,
+  tableReturnKeeps,
+  tableReturnRowInner,
 } from "@/lib/chat-anchor";
 import {
   CHAT_IDLE_MS,
   CHAT_IDLE_STEP,
-  chatWindowStart,
+  CHAT_WINDOW_SIZE,
+  chatWindowRange,
+  grownWindowEnd,
   grownWindowStart,
   windowStepTowards,
   WindowGrowthGate,
@@ -80,6 +90,7 @@ import { PERF_MARKS_ON, perfMark } from "@/lib/perf-mark";
 import {
   COVER_FALLBACK_MS,
   COVER_MAX_MS,
+  COVER_PAINT_MS,
   COVER_TOUCH_PROPS,
   CoverHandOver,
   coverMode,
@@ -90,9 +101,13 @@ import {
   nativeStandsAtEnd,
 } from "@/lib/chat-first-frame";
 import { createProbeScrollView } from "./probe-scroll-view";
+import { getTableNode, registerTableRowProbe, takeTableViewReturn } from "@/lib/markdown";
 
 const AT_BOTTOM_SLACK_PX = 80;
 const HIGHLIGHT_MS = 3000;
+/** After the jump back to the bubble, when its table is drawn and measured
+ * ; between the first anchor re-checks. */
+const TABLE_RETURN_MEASURE_MS = 400;
 
 interface Props {
   items: ChatItem[];
@@ -144,14 +159,24 @@ export function IssueChatList({
   // window; growing moves it up by one block.
   const [windowTop, setWindowTop] = useState<WindowTop | null>(null);
   const top = windowTop?.issueId === issueId ? windowTop : null;
-  const start = chatWindowStart(items, {
+  // The window's last row while it is cut off below (far landing).
+  const [windowBottom, setWindowBottom] = useState<{ issueId: string; id: string | null } | null>(null);
+  const bottom = windowBottom?.issueId === issueId ? windowBottom : null;
+  const { start, end } = chatWindowRange(items, {
     focusId: top ? null : focusId,
     keepFromId: top?.id,
     keepFromEnd: top?.fromEnd,
+    keepToId: bottom?.id,
   });
-  // Keyed by `start`: recording the top row does not hand the list a new array.
-  const data = useMemo(() => (start === 0 ? items : items.slice(start)), [items, start]);
-  perfMark(() => `list:render items=${items.length} start=${start} data=${data.length} ready=${ready}`);
+  const atLastRow = end === items.length;
+  const atLastRowRef = useRef(atLastRow);
+  atLastRowRef.current = atLastRow;
+  // Keyed by the range: recording its rows does not hand the list a new array.
+  const data = useMemo(
+    () => (start === 0 && end === items.length ? items : items.slice(start, end)),
+    [items, start, end],
+  );
+  perfMark(() => `list:render items=${items.length} start=${start} end=${end} data=${data.length} ready=${ready}`);
   useEffect(() => {
     perfMark("list:mount");
     return () => perfMark("list:unmount");
@@ -161,6 +186,8 @@ export function IssueChatList({
   allRef.current = items;
   const startRef = useRef(start);
   startRef.current = start;
+  const endRef = useRef(end);
+  endRef.current = end;
   useEffect(() => {
     const first = data[0];
     if (!first) return;
@@ -169,7 +196,9 @@ export function IssueChatList({
         ? cur
         : { issueId, id: first.id, fromEnd: data.length },
     );
-  }, [data, issueId]);
+    const lastId = atLastRow ? null : (data[data.length - 1]?.id ?? null);
+    setWindowBottom((cur) => (cur?.issueId === issueId && cur.id === lastId ? cur : { issueId, id: lastId }));
+  }, [data, issueId, atLastRow]);
   useEffect(() => {
     if (ready || items.length === 0) return;
     const raf = requestAnimationFrame(() => setReadyFor(issueId));
@@ -195,6 +224,38 @@ export function IssueChatList({
     if (growthGate.request()) growTo(grownWindowStart(startRef.current));
     else perfMark("list:grow-held");
   }, [growTo, growthGate]);
+  // Below a far landing: appending moves nothing on screen, so
+  // only the cover holds it (the list under it must stand at the landing).
+  const growDown = useCallback(() => {
+    const all = allRef.current;
+    const next = grownWindowEnd(endRef.current, all.length);
+    if (next <= endRef.current) return;
+    const id = next >= all.length ? null : (all[next - 1]?.id ?? null);
+    perfMark(`list:grow-down end=${next}`);
+    startTransition(() => setWindowBottom({ issueId, id }));
+  }, [issueId]);
+  const [downGate] = useState(() => new WindowGrowthGate(() => coverUpRef.current));
+  const onEndReached = useCallback(() => {
+    if (endRef.current >= allRef.current.length) return;
+    if (downGate.request()) growDown();
+  }, [downGate, growDown]);
+  // Jump to the end from a window cut off below: a fresh suffix window, the
+  // scroll follows once it is committed (`endJump`).
+  const [endJump, setEndJump] = useState(0);
+  const openEnd = useCallback(() => {
+    const all = allRef.current;
+    const from = Math.max(0, all.length - CHAT_WINDOW_SIZE);
+    const row = all[from];
+    if (!row) return;
+    setWindowTop({ issueId, id: row.id, fromEnd: all.length - from });
+    setWindowBottom({ issueId, id: null });
+    setEndJump((n) => n + 1);
+  }, [issueId]);
+  useEffect(() => {
+    if (endJump === 0 || !atLastRow) return;
+    const raf = requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: false }));
+    return () => cancelAnimationFrame(raf);
+  }, [endJump, atLastRow]);
 
   // Read through a ref so `scrollTo` → `onPressQuote` → `renderItem` keep
   // their identity across refetches; a new `renderItem` would
@@ -205,6 +266,8 @@ export function IssueChatList({
   // jumps to the end. Turns the bottom-follow down (see `autoscrollThreshold`).
   const [anchored, setAnchored] = useState(false);
   const anchorIdRef = useRef<string | null>(null);
+  // Landing spot inside the anchored row; 0 = its top.
+  const anchorInnerRef = useRef(0);
   const anchoredAtRef = useRef<number | null>(null);
   const recheckRef = useRef<ReturnType<typeof setTimeout>[]>([]);
   const settleRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -270,6 +333,7 @@ export function IssueChatList({
       contentHeight: l.getChildContainerDimensions().height,
       windowHeight: native?.viewport ?? l.getWindowSize().height,
       scrollHeight: native?.content,
+      inner: anchorInnerRef.current,
     };
     if (id === "unread" && anchorIsEnd(measure)) {
       // Divider in the last screen: the landing is the native end, with
@@ -282,8 +346,13 @@ export function IssueChatList({
       return;
     }
     if (!anchorNeedsCorrection(measure)) return;
-    perfMark(`list:anchor-fix off=${measure.scrollOffset} aim=${anchorTargetOffset(measure)}`);
-    void l.scrollToIndex(anchorScrollParams(i));
+    const aim = anchorTargetOffset(measure);
+    perfMark(`list:anchor-fix off=${measure.scrollOffset} aim=${aim}`);
+    // A few pixels off (8 px after the start at the target's top):
+    // FlashList's stepped `scrollToIndex` did not move the list; the measured
+    // aim is exact. Far off, the rows at the target must be rendered first.
+    if (anchorIsNear(measure)) l.scrollToOffset({ offset: aim, animated: false });
+    else void l.scrollToIndex(anchorScrollParams(i, measure.inner));
   }, [nativeScroll]);
   const markAnchorHeld = useCallback(() => {
     const id = anchorIdRef.current;
@@ -312,17 +381,18 @@ export function IssueChatList({
   }, [correctAnchor]);
 
   const scrollTo = useCallback(
-    (id: string) => {
+    (id: string, inner = 0) => {
       const index = itemsRef.current.findIndex((i) => i.id === id);
       const list = listRef.current;
       if (index < 0 || !list) return false;
       clearTimers();
       releaseEndHold();
       anchorIdRef.current = id;
+      anchorInnerRef.current = inner;
       anchoredAtRef.current = Date.now();
       anchoredRef.current = true;
       setAnchored(true);
-      void list.scrollToIndex(anchorScrollParams(index));
+      void list.scrollToIndex(anchorScrollParams(index, inner));
       recheckRef.current = ANCHOR_RECHECK_MS.map((ms) => setTimeout(correctAnchor, ms));
       // The unread divider at the end holds only while rows settle.
       if (id === "unread") {
@@ -338,6 +408,103 @@ export function IssueChatList({
       return true;
     },
     [clearTimers, correctAnchor, markAnchorHeld, nativeScroll, releaseAnchor, releaseEndHold],
+  );
+
+  // Back from a table full view in which the device was turned:
+  // the rotation re-laid out the rows underneath, so land on the table that
+  // opened the full view again, at the place on screen it had then. First
+  // the bubble's top (renders the row), then, once it is drawn, the table
+  // inside it: at 200 % it can sit screens below the bubble's top
+  //. Without a rotation the list kept its place.
+  const listBoxRef = useRef<View>(null);
+  const landOnTable = useCallback(
+    (entryId: string, node: ReturnType<typeof getTableNode>, savedTop: number | null) => {
+      const l = listRef.current;
+      const box = listBoxRef.current;
+      if (!node || !l || !box || anchorIdRef.current !== entryId) return;
+      node.measureInWindow((_x, viewTop, _w, viewH) => {
+        box.measureInWindow((_bx, listTop) => {
+          const i = itemsRef.current.findIndex((it) => it.id === entryId);
+          const layout = i >= 0 ? l.getLayout(i) : undefined;
+          if (!layout || !viewH || anchorIdRef.current !== entryId) return;
+          const native = nativeScroll.probe();
+          anchorInnerRef.current = returnInner({
+            inner: innerOffset({
+              viewTop,
+              listTop,
+              itemTop: layout.y,
+              firstItemOffset: l.getFirstItemOffset(),
+              scrollOffset: native?.offset ?? l.getAbsoluteLastScrollOffset(),
+            }),
+            height: viewH,
+            savedTop,
+            listTop,
+            windowHeight: native?.viewport ?? l.getWindowSize().height,
+          });
+          perfMark(`list:table-return inner=${anchorInnerRef.current} top=${viewTop} saved=${savedTop} off=${native?.offset}`);
+          clearTimers();
+          anchoredAtRef.current = Date.now();
+          correctAnchor();
+          recheckRef.current = ANCHOR_RECHECK_MS.map((ms) => setTimeout(correctAnchor, ms));
+          // Measuring only: where does the table stand once the list settled?
+          if (PERF_MARKS_ON) {
+            for (const ms of [1500, 3000, ANCHOR_HOLD_MS + 500]) {
+              recheckRef.current.push(
+                setTimeout(() => node.measureInWindow((_cx, cy) => perfMark(`list:table-held ${ms} top=${cy} saved=${savedTop} off=${nativeScroll.probe()?.offset}`)), ms),
+              );
+            }
+          }
+        });
+      });
+    },
+    [clearTimers, correctAnchor, nativeScroll],
+  );
+  // Where a comment's row sits in this list: from FlashList's
+  // layout and the native offset, saved when a table opens its full view.
+  const rowPlace = useCallback(
+    (entryId: string) => {
+      const l = listRef.current;
+      const i = l ? itemsRef.current.findIndex((it) => it.id === entryId) : -1;
+      const layout = l && i >= 0 ? l.getLayout(i) : undefined;
+      if (!l || !layout) return null;
+      const off = nativeScroll.probe()?.offset ?? l.getAbsoluteLastScrollOffset();
+      return { top: layout.y + l.getFirstItemOffset() - off, height: layout.height };
+    },
+    [nativeScroll],
+  );
+  useEffect(() => registerTableRowProbe(rowPlace), [rowPlace]);
+  useFocusEffect(
+    useCallback(() => {
+      const ret = takeTableViewReturn();
+      if (!ret) return;
+      // The row has its old place and height: the chat stands as it stood
+      // when the table was opened. A correction from window measurements
+      // moved it at 100 % by 107.8 dp.
+      const now = rowPlace(ret.entryId);
+      if (tableReturnKeeps(ret.row, now)) {
+        perfMark(`list:table-return kept row=${now?.top}/${now?.height} saved=${ret.row?.top}/${ret.row?.height}`);
+        return;
+      }
+      perfMark(`list:table-return moved row=${now?.top}/${now?.height} saved=${ret.row?.top}/${ret.row?.height}`);
+      // Same height, other place (the list lost its offset in the rotation,
+      // 200 %): the bubble inside is laid out as before, so its row goes
+      // back to its old top from the list layout alone. Window measurements
+      // after the rotation were 66 dp off here too.
+      const back = tableReturnRowInner(ret.row, now);
+      if (back !== null) {
+        const raf = requestAnimationFrame(() => scrollTo(ret.entryId, back));
+        return () => cancelAnimationFrame(raf);
+      }
+      const raf = requestAnimationFrame(() => scrollTo(ret.entryId));
+      const timer = setTimeout(
+        () => landOnTable(ret.entryId, getTableNode(ret.table, ret.entryId), ret.screenTop),
+        TABLE_RETURN_MEASURE_MS,
+      );
+      return () => {
+        cancelAnimationFrame(raf);
+        clearTimeout(timer);
+      };
+    }, [scrollTo, landOnTable, rowPlace]),
   );
 
   // Cover: decided once per issue on the first render, so a
@@ -387,7 +554,11 @@ export function IssueChatList({
         const p = probeEnd();
         perfMark(`list:cover-off ${reason} off=${p?.offset} win=${p?.viewport} content=${p?.content} aim=${p?.aim}`);
         if (!coverTargetRef.current && reason !== "unmount") armEndHold();
-        setCoverFor((cur) => (cur.issueId === issueId && cur.mode ? { issueId, mode: null } : cur));
+        const drop = () => setCoverFor((cur) => (cur.issueId === issueId && cur.mode ? { issueId, mode: null } : cur));
+        // Bubble text is drawn natively off the JS thread: a cell the list
+        // just (re)bound can show its old text or none for a frame.
+        if (reason === "unmount") drop();
+        else setTimeout(drop, COVER_PAINT_MS);
       },
       (cb) => requestAnimationFrame(cb),
       probeEnd,
@@ -416,6 +587,18 @@ export function IssueChatList({
   perfMark(
     () => `list:cover ${cover ? `${coverModeNow?.kind} ${cover.above.length}+${cover.from.length}` : "off"}`,
   );
+  // A landing under the cover starts FlashList at the target instead of
+  // its end: its own initial scroll to the end (repeated by timers for the
+  // first renders) raced the landing jump and pulled the chat to the end
+  // after the hand-over. Read by FlashList on mount only.
+  const landingIndex = () => {
+    const target = coverModeNow?.kind === "landing" ? coverModeNow.targetId : null;
+    const i = target ? data.findIndex((it) => it.id === target) : -1;
+    return i >= 0 ? i : undefined;
+  };
+  const [initialFor, setInitialFor] = useState(() => ({ issueId, index: landingIndex() }));
+  if (initialFor.issueId !== issueId) setInitialFor({ issueId, index: landingIndex() });
+  const initialIndex = initialFor.issueId === issueId ? initialFor.index : undefined;
   // With a cover the list mounts one frame later: the cover is painted first.
   const [listFor, setListFor] = useState<string | null>(coverOn ? null : issueId);
   const showList = !coverOn || listFor === issueId;
@@ -428,11 +611,19 @@ export function IssueChatList({
   // blocks so every row is reachable without a scroll gesture. Not under
   // the cover: its window stays small until the list stands.
   useEffect(() => {
-    if (!screenReader || !ready || start === 0 || coverOn) return;
-    const timer = setTimeout(() => growTo(grownWindowStart(start, CHAT_IDLE_STEP)), CHAT_IDLE_MS);
+    if (!screenReader || !ready || (start === 0 && atLastRow) || coverOn) return;
+    const timer = setTimeout(
+      () => (atLastRow ? growTo(grownWindowStart(start, CHAT_IDLE_STEP)) : growDown()),
+      CHAT_IDLE_MS,
+    );
     return () => clearTimeout(timer);
-  }, [screenReader, ready, start, growTo, coverOn]);
+  }, [screenReader, ready, start, atLastRow, growTo, growDown, coverOn]);
   // The block held back while the cover stood or the landing held.
+  useEffect(() => {
+    if (coverOn || !downGate.release()) return;
+    const raf = requestAnimationFrame(growDown);
+    return () => cancelAnimationFrame(raf);
+  }, [coverOn, downGate, growDown]);
   useEffect(() => {
     if (coverOn || anchored || !growthGate.release() || startRef.current === 0) return;
     perfMark("list:grow-released");
@@ -475,6 +666,10 @@ export function IssueChatList({
   // restarts the timer instead of swallowing the jump (seen at 200 % font
   // scale).
   const landedRef = useRef<string | null>(null);
+  // The landing waits for the list's first layout: before it, FlashList's
+  // own initial scroll can still override the jump (seen under
+  // load when the 250 ms below ran out before `onLoad`).
+  const [listLoaded, setListLoaded] = useState(false);
   useEffect(() => {
     // The list mounts a frame after a cover: land once it is there.
     if (!ready || !showList || items.length === 0) return;
@@ -492,6 +687,7 @@ export function IssueChatList({
       const raf = requestAnimationFrame(() => growTo(next));
       return () => cancelAnimationFrame(raf);
     }
+    if (!listLoaded) return;
     const timer = setTimeout(() => {
       landedRef.current = stamp;
       const landed =
@@ -508,28 +704,30 @@ export function IssueChatList({
       }
     }, 250);
     return () => clearTimeout(timer);
-  }, [items, start, ready, showList, targetCommentId, targetNonce, scrollTo, flash, growTo, armFallback, handOver]);
+  }, [items, start, ready, showList, listLoaded, targetCommentId, targetNonce, scrollTo, flash, growTo, armFallback, handOver]);
 
   useEffect(() => {
     const diff = messageCount - lastCountRef.current;
     lastCountRef.current = messageCount;
     if (diff <= 0) return;
     // Your own new message ends the anchor hold and follows to the end.
-    const last = itemsRef.current[itemsRef.current.length - 1];
+    const last = allRef.current[allRef.current.length - 1];
     if (last?.kind === "message" && last.own && anchoredRef.current) {
       releaseAnchor();
-      requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
+      if (!atLastRowRef.current) openEnd();
+      else requestAnimationFrame(() => listRef.current?.scrollToEnd({ animated: true }));
     }
     if (newMessagesFollow(atBottomRef.current, anchoredRef.current)) {
       setAnnounce(t(diff === 1 ? "chat.new_one" : "chat.new_other", { count: diff }));
     } else {
       setNewCount((n) => n + diff);
     }
-  }, [messageCount, t, releaseAnchor]);
+  }, [messageCount, t, releaseAnchor, openEnd]);
 
   const onLoad = useCallback(
     ({ elapsedTimeInMs }: { elapsedTimeInMs: number }) => {
       perfMark(`list:onLoad ${Math.round(elapsedTimeInMs)}ms`);
+      setListLoaded(true);
       if (!coverOn || !handOver.active) return;
       if (!coverTargetRef.current) armFallback();
       handOver.markLoaded();
@@ -550,7 +748,8 @@ export function IssueChatList({
       const dist = contentSize.height - (contentOffset.y + layoutMeasurement.height);
       if (coverOn && handOver.active) handOver.check();
       const was = atBottomRef.current;
-      atBottomRef.current = dist < AT_BOTTOM_SLACK_PX;
+      // The end of a window cut off below is not the chat's end.
+      atBottomRef.current = dist < AT_BOTTOM_SLACK_PX && atLastRowRef.current;
       settleAnchor();
       if (!was && atBottomRef.current) {
         setNewCount(0);
@@ -562,10 +761,11 @@ export function IssueChatList({
 
   const jumpToEnd = useCallback(() => {
     releaseAnchor();
-    listRef.current?.scrollToEnd({ animated: true });
+    if (atLastRowRef.current) listRef.current?.scrollToEnd({ animated: true });
+    else openEnd();
     setNewCount(0);
     onReachEnd();
-  }, [onReachEnd, releaseAnchor]);
+  }, [onReachEnd, releaseAnchor, openEnd]);
 
   // A quote whose root is above the window opens it block by block.
   const [pendingQuote, setPendingQuote] = useState<string | null>(null);
@@ -638,6 +838,7 @@ export function IssueChatList({
               replyTo={item.replyTo}
               mentionsMe={item.mentionsMe}
               resolved={item.resolved}
+              replyRootId={item.replyRootId}
               highlighted={highlightId === item.id}
               onPressQuote={onPressQuote}
             />
@@ -654,11 +855,12 @@ export function IssueChatList({
   const keyboardInset = chatKeyboardInset(keyboardVisible, keyboardHeight, useSafeAreaInsets().bottom);
 
   return (
-    <View className="flex-1" style={{ paddingBottom: keyboardInset }}>
+    <View ref={listBoxRef} collapsable={false} className="flex-1" style={{ paddingBottom: keyboardInset }}>
       {showList ? (
       <FlashList
         ref={listRef}
         data={data}
+        initialScrollIndex={initialIndex}
         keyExtractor={(item) => item.id}
         getItemType={(item) => item.kind}
         extraData={highlightId}
@@ -667,7 +869,7 @@ export function IssueChatList({
         ItemSeparatorComponent={Separator}
         // The element itself: a new wrapper component per render would
         // remount the footer on every list render.
-        ListFooterComponent={footer}
+        ListFooterComponent={atLastRow ? footer : null}
         keyboardDismissMode="on-drag"
         keyboardShouldPersistTaps="handled"
         onScroll={onScroll}
@@ -675,6 +877,8 @@ export function IssueChatList({
         onStartReached={onStartReached}
         // One screen ahead: the next block is in before the reader hits the top.
         onStartReachedThreshold={1}
+        onEndReached={onEndReached}
+        onEndReachedThreshold={1}
         onLoad={onLoad}
         onCommitLayoutEffect={onCommitLayoutEffect}
         onScrollBeginDrag={onScrollBeginDrag}

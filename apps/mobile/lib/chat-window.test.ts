@@ -5,8 +5,11 @@ import {
   CHAT_WINDOW_LEAD,
   CHAT_WINDOW_SIZE,
   CHAT_WINDOW_STEP,
+  CHAT_LANDING_BELOW,
   chatWindow,
+  chatWindowRange,
   chatWindowStart,
+  grownWindowEnd,
   grownWindowStart,
   windowStepTowards,
   WindowGrowthGate,
@@ -64,8 +67,14 @@ describe("chatWindow", () => {
     expect(first.at(-1)!.id).toBe("c299");
   });
 
-  it("an older target does not widen the first window (reached block by block)", () => {
-    expect(chatWindowStart(rows(300), { focusId: "c40" })).toBe(300 - CHAT_WINDOW_SIZE);
+  it("an older target opens the first window around itself", () => {
+    expect(chatWindowRange(rows(300), { focusId: "c40" })).toEqual({
+      start: 40 - CHAT_WINDOW_LEAD,
+      end: 40 + CHAT_LANDING_BELOW,
+    });
+    const first = chatWindow(rows(300), { focusId: "c40" });
+    expect(first).toHaveLength(CHAT_WINDOW_LEAD + CHAT_LANDING_BELOW);
+    expect(first[CHAT_WINDOW_LEAD]!.id).toBe("c40");
   });
 
   it("keeps CHAT_WINDOW_LEAD rows above a target near the window's top edge", () => {
@@ -136,9 +145,9 @@ describe("chat window blocks", () => {
     expect(Math.max(...added(sim.commits))).toBeLessThanOrEqual(100);
   });
 
-  it("an anchor on an old comment opens block by block until it is in, with lead rows above", () => {
+  it("a quote root above the window opens block by block until it is in, with lead rows above", () => {
     const items = rows(1122);
-    const sim = simulate(items, "c40");
+    const sim = simulate(items);
     expect(sim.commits[0]).toHaveLength(CHAT_WINDOW_SIZE);
     while (sim.towards("c40"));
     const last = sim.commits.at(-1)!;
@@ -164,6 +173,48 @@ describe("chat window blocks", () => {
     const grown = grownWindowStart(top);
     const more = rows(305);
     expect(chatWindowStart(more, { keepFromId: `c${grown}`, keepFromEnd: 300 - grown })).toBe(grown);
+  });
+});
+
+describe("window around a far target", () => {
+  const items = rows(1122);
+  const target = 667; // ~455 rows above the end
+
+  it("the first commit holds the target with lead rows and a few below, nothing grown toward it", () => {
+    const { start, end } = chatWindowRange(items, { focusId: `c${target}` });
+    expect(start).toBe(target - CHAT_WINDOW_LEAD);
+    expect(end).toBe(target + CHAT_LANDING_BELOW);
+    expect(end).toBeLessThan(items.length);
+  });
+
+  it("a target within one block stays a suffix window", () => {
+    const near = 1122 - CHAT_WINDOW_SIZE - CHAT_WINDOW_STEP + 1;
+    expect(chatWindowRange(items, { focusId: `c${near}` }).end).toBe(1122);
+  });
+
+  it("once recorded, top and bottom rows keep the window; new rows stay below it", () => {
+    const opts = { keepFromId: `c${target - CHAT_WINDOW_LEAD}`, keepToId: `c${target + CHAT_LANDING_BELOW - 1}` };
+    expect(chatWindowRange(items, opts)).toEqual({ start: target - CHAT_WINDOW_LEAD, end: target + CHAT_LANDING_BELOW });
+    expect(chatWindowRange(rows(1130), opts)).toEqual({ start: target - CHAT_WINDOW_LEAD, end: target + CHAT_LANDING_BELOW });
+  });
+
+  it("grows below block by block up to the last row, then reaches the end", () => {
+    let end = target + CHAT_LANDING_BELOW;
+    const steps: number[] = [];
+    while (end < items.length) {
+      const next = grownWindowEnd(end, items.length);
+      steps.push(next - end);
+      end = next;
+    }
+    expect(end).toBe(items.length);
+    expect(Math.max(...steps)).toBeLessThanOrEqual(CHAT_WINDOW_STEP);
+    const opts = { keepFromId: `c${target - CHAT_WINDOW_LEAD}`, keepToId: null };
+    expect(chatWindowRange(items, opts).end).toBe(items.length);
+  });
+
+  it("a vanished bottom row opens to the end; a kept top ignores the focus", () => {
+    const opts = { focusId: "c100", keepFromId: `c${target}`, keepToId: "gone" };
+    expect(chatWindowRange(items, opts)).toEqual({ start: target, end: items.length });
   });
 });
 

@@ -53,6 +53,20 @@
       "unstable": "连接不稳定",
       "offline": "离线",
       "archived": "已归档"
+    },
+    "hidden_note": "已隐藏",
+    "hidden_count_other": "已隐藏 {{count}} 个",
+    "hidden_show": "显示",
+    "hidden_hide": "收起",
+    "actions": {
+      "label": "{{name}} 的操作",
+      "chat": "聊天",
+      "chat_a11y": "与 {{name}} 聊天",
+      "new_issue": "新建 Issue",
+      "new_issue_a11y": "为 {{name}} 新建 Issue",
+      "blocked_archived": "已归档的智能体——无法聊天或分配",
+      "blocked_no_runtime": "请先绑定运行时",
+      "blocked_no_access": "你无权访问此智能体"
     }
   },
   "actions": {

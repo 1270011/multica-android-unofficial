@@ -20,6 +20,7 @@ import type {
   ChatPendingTask,
   ChatSession,
   Comment,
+  CommentTriggerPreview,
   InboxItem,
   InboxWorkspaceUnread,
   IssueLabelsResponse,
@@ -115,6 +116,13 @@ export const EMPTY_COMMENT: Comment = {
   resolved_at: null,
   resolved_by_type: null,
   resolved_by_id: null,
+};
+
+/** Fallback for POST /api/issues/:id/comments/trigger-preview: "starts
+ *  nobody". The schema itself comes from core (CommentTriggerPreviewSchema). */
+export const EMPTY_COMMENT_TRIGGER_PREVIEW: CommentTriggerPreview = {
+  agents: [],
+  blocked: [],
 };
 
 /** GET/PUT /api/notification-preferences. Preferences are partial — absent

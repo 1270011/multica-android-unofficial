@@ -9,6 +9,9 @@
  * Subscreens push under more/settings/:
  *   - more/settings/profile        — edit name + avatar
  *   - more/settings/notifications  — per-group inbox + system toggles
+ *   - more/settings/hidden-actors  — hide people/agents locally
+ *   - more/settings/title-filter   — hide issues by title regex
+ *   - more/settings/mention-sort   — @-suggestions by frequency or name
  *
  * Theme picker stays inline (3 fixed options, fits in one section).
  */
@@ -36,6 +39,13 @@ import { authImageSource } from "@/lib/image-source";
 import { useServerConfigStore } from "@/data/server-config-store";
 import { serverLabel } from "@/lib/server-config";
 import { READING_WIDTH_STYLE } from "@/components/ui/reading-width";
+import {
+  useHiddenActors,
+  useMentionSortMode,
+  useTitleFilterSettings,
+  useViewPrefsHydration,
+} from "@/data/stores/view-prefs-store";
+import { hiddenActorCount, titleFilterSummary } from "@/lib/view-prefs";
 
 const THEME_OPTIONS: ThemePreference[] = ["light", "dark", "system"];
 const LANGUAGE_OPTIONS: LocalePreference[] = ["system", "en", "de", "zh-Hans"];
@@ -55,6 +65,12 @@ export default function SettingsPage() {
   const user = useAuthStore((s) => s.user);
   const logout = useAuthStore((s) => s.logout);
   const currentSlug = useWorkspaceStore((s) => s.currentWorkspaceSlug);
+  const wsId = useWorkspaceStore((s) => s.currentWorkspaceId);
+  useViewPrefsHydration(wsId);
+  const hiddenCount = hiddenActorCount(useHiddenActors(wsId));
+  const titleFilter = useTitleFilterSettings(wsId);
+  const titleFilterState = titleFilterSummary(titleFilter);
+  const mentionSort = useMentionSortMode();
   const setCurrentWorkspace = useWorkspaceStore((s) => s.setCurrentWorkspace);
   const clearWorkspace = useWorkspaceStore((s) => s.clear);
   const { data, isLoading, error } = useQuery(workspaceListOptions());
@@ -101,6 +117,18 @@ export default function SettingsPage() {
   const goProfile = () => router.push(`/${currentSlug}/more/settings/profile`);
   const goNotifications = () =>
     router.push(`/${currentSlug}/more/settings/notifications`);
+  const goHiddenActors = () =>
+    router.push(`/${currentSlug}/more/settings/hidden-actors`);
+  const goTitleFilter = () =>
+    router.push(`/${currentSlug}/more/settings/title-filter`);
+  const goMentionSort = () =>
+    router.push(`/${currentSlug}/more/settings/mention-sort`);
+  const titleFilterSubtitle =
+    titleFilterState === "on"
+      ? t("view.hidden_issues_on", { pattern: titleFilter.pattern })
+      : titleFilterState === "invalid"
+        ? t("view.hidden_issues_invalid")
+        : t("view.hidden_issues_off");
   const goServer = () =>
     router.push({ pathname: "/server-setup", params: { from: "settings" } });
   const serverSubtitle = server
@@ -236,6 +264,33 @@ export default function SettingsPage() {
             );
           })}
         </RadioGroup>
+      </SectionGroup>
+
+      <SectionGroup title={t("view.title")}>
+        <NavRow
+          onPress={goHiddenActors}
+          chevronColor={mutedFg}
+          title={t("view.hidden_actors")}
+          subtitle={
+            hiddenCount > 0
+              ? t("view.hidden_actors_count", { count: hiddenCount })
+              : t("view.hidden_actors_none")
+          }
+        />
+        <Separator />
+        <NavRow
+          onPress={goTitleFilter}
+          chevronColor={mutedFg}
+          title={t("view.hidden_issues")}
+          subtitle={titleFilterSubtitle}
+        />
+        <Separator />
+        <NavRow
+          onPress={goMentionSort}
+          chevronColor={mutedFg}
+          title={t("view.mention_sort")}
+          subtitle={t(`view.mention_sort_${mentionSort}`)}
+        />
       </SectionGroup>
 
       <View className="pt-2">

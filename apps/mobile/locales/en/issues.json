@@ -82,7 +82,9 @@
     "not_with_nobody": "Not together with “Nobody”",
     "section_reset": "Filter couldn't be applied and was reset",
     "back": "Back",
-    "no_matches": "No matches"
+    "no_matches": "No matches",
+    "hidden_section": "Hidden",
+    "hidden_note": "hidden"
   },
   "list": {
     "empty": "No issues match your filters",
@@ -252,6 +254,7 @@
     "people": "People",
     "agents": "Agents",
     "squads": "Squads",
+    "frequent": "Frequent",
     "issues": "Issues",
     "everyone": "Everyone (@all)",
     "unknown": "Unknown",
@@ -267,10 +270,23 @@
     "search_issues": "Search issues",
     "type_to_search": "Type to search.",
     "no_labels_hint": "Type a name above to create one. Colors and descriptions are managed on the web under Settings → Labels.",
-    "no_labels_hint_web": "Labels are created on the web under Settings → Labels."
+    "no_labels_hint_web": "Labels are created on the web under Settings → Labels.",
+    "selected_count": "{{count}} selected",
+    "done_count": "Done ({{count}})",
+    "done": "Done",
+    "done_a11y": "Done, {{count}} selected",
+    "remove_chip_a11y": "Remove {{name}}",
+    "added_a11y": "{{name}} added, {{count}} selected",
+    "removed_a11y": "{{name}} removed, {{count}} selected",
+    "selection_a11y": "Selected",
+    "hidden_section": "Hidden",
+    "hidden_note": "hidden"
   },
   "comments": {
     "reply": "Reply",
+    "reply_to": "Reply to {{name}}",
+    "suggest_reply": "Reply to {{name}}",
+    "suggest_reply_hint": "Replies to this comment; sending starts {{name}}",
     "react": "React...",
     "copy": "Copy",
     "select_text": "Select Text",
@@ -287,7 +303,21 @@
     "composer_pill": "Add a comment, type @ to mention...",
     "editing": "Editing comment",
     "cancel_edit": "Cancel edit",
-    "edit_failed": "Couldn't save the edit."
+    "edit_failed": "Couldn't save the edit.",
+    "trigger": {
+      "will_start": "Starts: {{name}}",
+      "wont_start": "Won't start: {{name}}",
+      "row_label": "Agents this comment starts",
+      "hint_deselect": "Double-tap so {{name}} is not started",
+      "hint_select": "Double-tap to start {{name}} again",
+      "reason": {
+        "issue_assignee": "assignee",
+        "mention_agent": "mentioned",
+        "mention_squad_leader": "squad lead",
+        "thread_parent": "reply to agent",
+        "conversation_continuation": "continues conversation"
+      }
+    }
   },
   "suggestions": {
     "everyone": "Everyone",
@@ -1029,5 +1059,15 @@
       "error_offline": "No connection. The change was not saved.",
       "error_failed": "The view could not be changed. Please try again."
     }
+  },
+  "title_filter": {
+    "hint_one": "{{count}} hidden by title filter",
+    "hint_other": "{{count}} hidden by title filter",
+    "hint_revealed": "Title filter off for now",
+    "show": "Show",
+    "hide": "Hide",
+    "all_hidden": "All issues here are hidden by the title filter",
+    "settings": "Title filter settings",
+    "settings_a11y": "Long press opens the title filter settings"
   }
 }

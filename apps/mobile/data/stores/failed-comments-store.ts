@@ -33,6 +33,8 @@ export interface FailedCommentPayload {
   parentId?: string;
   /** Attachment ids the user uploaded and referenced in `content`. */
   attachmentIds?: string[];
+  /** Deselected agents of the original send; a retry must not start them. */
+  suppressAgentIds?: string[];
   /** Time of the first POST that may have reached the server; "Retry"
    *  passes it on so the resend checks for it first. */
   sentAt?: string;

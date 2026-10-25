@@ -7,17 +7,23 @@
  * `comment` sections:
  *   1. `@all` (single static row; visible when query matches "all"
  *      prefix or is empty)
- *   2. Members — sorted alphabetically
- *   3. Agents — sorted alphabetically
- *   4. Squads — sorted alphabetically (archived hidden). Selecting a squad
+ *   2. Frequent — sort mode "Most mentioned" with history: up to 8
+ *      people, agents and squads, most mentioned first; they leave their
+ *      own section (lib/mention-frequent.ts)
+ *   3. Members — sorted alphabetically
+ *   4. Agents — sorted alphabetically
+ *   5. Squads — sorted alphabetically (archived hidden). Selecting a squad
  *      emits `mention://squad/<uuid>`; backend wakes the squad's leader
  *      agent (server/internal/handler/comment.go:444).
+ *   6. Hidden — people and agents hidden in Settings › View,
+ *      only once a name is typed after `@`, dimmed but pickable.
  *
  * `chat` sections (chat is user ↔ single agent — `@member`/`@agent` are
  * noise; `@` here means "reference a resource for the agent"):
  *   1. Recent — issues the user opened most recently (from the in-memory
  *      viewed-issues store), max 5
  *   2. My issues — assigned-to-me, deduped against Recent, max 10
+ *   Both leave out issues hidden by the title filter.
  *
  * Closed issues (status `done` / `cancelled`) are dimmed but selectable,
  * matching web's behaviour (mention-suggestion.tsx).
@@ -51,15 +57,25 @@ import {
 import type { MentionMarker } from "@/lib/mention-serialize";
 import { cn } from "@/lib/utils";
 import { isAgentRuntimeBound } from "@/lib/is-agent-runtime-bound";
+import { useTitleFilterMatcher } from "@/lib/use-title-filter";
+import { useVisibleActors } from "@/lib/use-visible-actors";
+import { type PickerActorRef, withHiddenNote } from "@/lib/visible-actors";
+import { PickerHiddenSection } from "@/components/issue/pickers/picker-hidden-section";
+import { splitFrequent, type FrequentKey } from "@/lib/mention-frequent";
+import { mentionUsageKey } from "@/lib/mention-usage";
+import { useMentionUsage } from "@/lib/use-mention-usage";
+import { useMentionSortMode } from "@/data/stores/view-prefs-store";
 
 type Mode = "comment" | "chat";
 
+/** `frequentIndex`: position in the "Frequent" section (W6-P10). */
 type Row =
   | { kind: "all" }
-  | { kind: "section"; label: string }
-  | { kind: "member"; member: MemberWithUser }
-  | { kind: "agent"; agent: Agent }
-  | { kind: "squad"; squad: Squad }
+  | { kind: "section"; label: string; frequent?: boolean }
+  | { kind: "hidden_section" }
+  | { kind: "member"; member: MemberWithUser; hidden?: boolean; frequentIndex?: number }
+  | { kind: "agent"; agent: Agent; hidden?: boolean; frequentIndex?: number }
+  | { kind: "squad"; squad: Squad; frequentIndex?: number }
   | { kind: "issue"; issue: Issue }
   | { kind: "empty" };
 
@@ -70,6 +86,22 @@ interface Props {
   /** Default `"comment"` to preserve existing comment-composer and
    *  new-issue behaviour. `"chat"` switches the bar to issue mode. */
   mode?: Mode;
+}
+
+function actorRef(row: Row): PickerActorRef | null {
+  if (row.kind === "member") return { type: "member", id: row.member.user_id };
+  if (row.kind === "agent") return { type: "agent", id: row.agent.id };
+  return null;
+}
+
+function frequentKey(row: Row): FrequentKey | null {
+  if (row.kind === "member")
+    return { key: mentionUsageKey("member", row.member.user_id), name: row.member.name };
+  if (row.kind === "agent")
+    return { key: mentionUsageKey("agent", row.agent.id), name: row.agent.name };
+  if (row.kind === "squad")
+    return { key: mentionUsageKey("squad", row.squad.id), name: row.squad.name };
+  return null;
 }
 
 const RECENT_LIMIT = 5;
@@ -132,14 +164,21 @@ export function MentionSuggestionBar({
     enabled: isChat && !!wsId && !!userId,
   });
 
+  const titleFilter = useTitleFilterMatcher(wsId);
+  const visibleActors = useVisibleActors(wsId);
+  const sortMode = useMentionSortMode();
+  // Comment mode only; the counts change after a send, when the bar is gone.
+  const usage = useMentionUsage(isChat ? null : wsId);
+
   const rows = useMemo<Row[]>(() => {
     const q = query.trim().toLowerCase();
 
     if (isChat) {
       const issueMatches = (i: Issue) =>
-        !q ||
-        i.identifier.toLowerCase().includes(q) ||
-        i.title.toLowerCase().includes(q);
+        !titleFilter.matchesTitleFilter(i) &&
+        (!q ||
+          i.identifier.toLowerCase().includes(q) ||
+          i.title.toLowerCase().includes(q));
 
       const matchedRecent = recentIssues.filter(issueMatches);
       const recentIdSet = new Set(matchedRecent.map((i) => i.id));
@@ -199,23 +238,60 @@ export function MentionSuggestionBar({
       )
       .sort((a, b) => a.name.localeCompare(b.name));
 
+    const people = visibleActors.split(
+      matchedMembers.map((m): Row => ({ kind: "member", member: m })),
+      actorRef,
+      { query },
+    );
+    const bots = visibleActors.split(
+      matchedAgents.map((a): Row => ({ kind: "agent", agent: a })),
+      actorRef,
+      { query },
+    );
+
+    // Agents and squads here are already pickable only; hidden ones are
+    // not in `visible`.
+    const {
+      frequent,
+      sections: [memberRows = [], agentRows = [], squadRows = []],
+    } = splitFrequent(
+      [
+        people.visible,
+        bots.visible,
+        matchedSquads.map((s): Row => ({ kind: "squad", squad: s })),
+      ],
+      frequentKey,
+      usage,
+      { mode: sortMode },
+    );
+
     const out: Row[] = [];
     if (showAll) out.push({ kind: "all" });
-    if (matchedMembers.length > 0) {
-      out.push({ kind: "section", label: t("picker.people") });
-      for (const m of matchedMembers) out.push({ kind: "member", member: m });
+    if (frequent.length > 0) {
+      out.push(
+        { kind: "section", label: t("picker.frequent"), frequent: true },
+        ...frequent.map((r, i): Row => ({ ...r, frequentIndex: i }) as Row),
+      );
     }
-    if (matchedAgents.length > 0) {
-      out.push({ kind: "section", label: t("picker.agents") });
-      for (const a of matchedAgents) out.push({ kind: "agent", agent: a });
+    if (memberRows.length > 0) {
+      out.push({ kind: "section", label: t("picker.people") }, ...memberRows);
     }
-    if (matchedSquads.length > 0) {
-      out.push({ kind: "section", label: t("picker.squads") });
-      for (const s of matchedSquads) out.push({ kind: "squad", squad: s });
+    if (agentRows.length > 0) {
+      out.push({ kind: "section", label: t("picker.agents") }, ...agentRows);
+    }
+    if (squadRows.length > 0) {
+      out.push({ kind: "section", label: t("picker.squads") }, ...squadRows);
+    }
+    const dimmed = [...people.hidden, ...bots.hidden];
+    if (dimmed.length > 0) {
+      out.push(
+        { kind: "hidden_section" },
+        ...dimmed.map((r): Row => ({ ...r, hidden: true }) as Row),
+      );
     }
     if (out.length === 0) out.push({ kind: "empty" });
     return out;
-  }, [isChat, query, recentIssues, myIssuesAll, members, agents, squads, userId, t]);
+  }, [isChat, query, recentIssues, myIssuesAll, members, agents, squads, userId, t, titleFilter, visibleActors, usage, sortMode]);
 
   if (!visible) return null;
 
@@ -238,18 +314,27 @@ export function MentionSuggestionBar({
             ? "row:all"
             : row.kind === "section"
               ? `row:section:${row.label}`
+              : row.kind === "hidden_section"
+                ? "row:hidden_section"
               : row.kind === "member"
                 ? `row:m:${row.member.user_id}`
                 : row.kind === "agent"
                   ? `row:a:${row.agent.id}`
+                  : row.kind === "squad"
+                    ? `row:s:${row.squad.id}`
                   : row.kind === "issue"
                     ? `row:i:${row.issue.id}`
                     : `row:empty:${i}`
         }
         renderItem={({ item, index }) => {
+          if (item.kind === "hidden_section") {
+            return <PickerHiddenSection label={t("picker.hidden_section")} compact />;
+          }
           if (item.kind === "section") {
             return (
               <View
+                testID={item.frequent ? "suggestion-frequent-section" : undefined}
+                accessibilityRole="header"
                 className={cn(
                   "px-3 pt-2 pb-1",
                   index > 0 && "border-t border-border/60 mt-1",
@@ -298,17 +383,21 @@ export function MentionSuggestionBar({
                     name: item.member.name,
                   })
                 }
-                className="flex-row items-center gap-3 px-3 py-2 active:bg-secondary"
+                accessibilityHint={item.hidden ? t("picker.hidden_note") : undefined}
+                className={cn(
+                  "flex-row items-center gap-3 px-3 py-2 active:bg-secondary",
+                  item.hidden && "opacity-50",
+                )}
               >
                 <ActorAvatar
                   type="member"
                   id={item.member.user_id}
                   size={28}
                 />
-                <Text className="flex-1 text-sm text-foreground">
+                <Text testID={frequentNameId(item.frequentIndex)} className="flex-1 text-sm text-foreground">
                   {item.member.name}
                 </Text>
-                <Badge label={t("suggestions.member")} />
+                <Badge label={withHiddenNote(t("suggestions.member"), !!item.hidden, t)} />
               </Pressable>
             );
           }
@@ -324,19 +413,22 @@ export function MentionSuggestionBar({
                     name: item.agent.name,
                   })
                 }
+                accessibilityHint={item.hidden ? t("picker.hidden_note") : undefined}
                 className={cn(
                   "flex-row items-center gap-3 px-3 py-2 active:bg-secondary",
-                  !runtimeBound && "opacity-50",
+                  (!runtimeBound || item.hidden) && "opacity-50",
                 )}
               >
                 <ActorAvatar type="agent" id={item.agent.id} size={28} showPresence />
-                <Text className="flex-1 text-sm text-foreground">
+                <Text testID={frequentNameId(item.frequentIndex)} className="flex-1 text-sm text-foreground">
                   {item.agent.name}
                 </Text>
                 <Badge
-                  label={runtimeBound
-                    ? t("picker.agent")
-                    : t("picker.needs_runtime")}
+                  label={withHiddenNote(
+                    runtimeBound ? t("picker.agent") : t("picker.needs_runtime"),
+                    !!item.hidden,
+                    t,
+                  )}
                   tone={runtimeBound ? "brand" : "outline"}
                 />
               </Pressable>
@@ -355,7 +447,7 @@ export function MentionSuggestionBar({
                 className="flex-row items-center gap-3 px-3 py-2 active:bg-secondary"
               >
                 <ActorAvatar type="squad" id={item.squad.id} size={28} />
-                <Text className="flex-1 text-sm text-foreground">
+                <Text testID={frequentNameId(item.frequentIndex)} className="flex-1 text-sm text-foreground">
                   {item.squad.name}
                 </Text>
                 <Badge label={t("picker.squad")} tone="outline" />
@@ -405,6 +497,10 @@ export function MentionSuggestionBar({
       />
     </View>
   );
+}
+
+function frequentNameId(index: number | undefined): string | undefined {
+  return index === undefined ? undefined : `suggestion-frequent-name-${index}`;
 }
 
 function Badge({

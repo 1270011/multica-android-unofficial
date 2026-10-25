@@ -5,6 +5,9 @@
  *   unstable / offline / no runtime), runtime and the last finished run.
  *   Archived agents are not listed (web hides them by default too).
  * - Squads: name, member count and preview; tap opens the squad detail.
+ * - Agents hidden in Settings › View are left out; the list ends
+ *   with "2 hidden · Show", which unfolds them in this screen only, so their
+ *   detail stays reachable.
  *
  * Creating or editing agents and squads stays on the web.
  */
@@ -23,12 +26,17 @@ import { runtimeListOptions } from "@/data/queries/runtimes";
 import { squadListOptions } from "@/data/queries/squads";
 import { agentTaskSnapshotOptions } from "@/data/queries/agent-task-snapshot";
 import { useWorkspaceStore } from "@/data/workspace-store";
+import {
+  useHiddenActors,
+  useViewPrefsHydration,
+} from "@/data/stores/view-prefs-store";
 import { useWorkspacePresenceMap } from "@/lib/use-agent-presence";
 import {
   agentRuntimeLabel,
   agentStatus,
   type AgentStatus,
   lastRunByAgent,
+  splitHiddenAgents,
   visibleAgents,
 } from "@/lib/agent-overview";
 import {
@@ -54,7 +62,15 @@ export default function AgentsPage() {
   const squads = useQuery({ ...squadListOptions(wsId), enabled: !!wsId && tab === "squads" });
   const { byAgent } = useWorkspacePresenceMap(wsId);
 
-  const rows = useMemo(() => visibleAgents(agents.data ?? []), [agents.data]);
+  useViewPrefsHydration(wsId);
+  const hiddenActors = useHiddenActors(wsId);
+  const [showHidden, setShowHidden] = useState(false);
+  const { shown, hidden } = useMemo(
+    () => splitHiddenAgents(visibleAgents(agents.data ?? []), hiddenActors.agents),
+    [agents.data, hiddenActors.agents],
+  );
+  const hiddenIds = useMemo(() => new Set(hidden.map((a) => a.id)), [hidden]);
+  const rows = showHidden ? [...shown, ...hidden] : shown;
   const lastRuns = useMemo(() => lastRunByAgent(snapshot.data ?? []), [snapshot.data]);
   const squadRows = useMemo(
     () => (squads.data ?? []).filter((s) => !s.archived_at).sort((a, b) => a.name.localeCompare(b.name)),
@@ -91,13 +107,25 @@ export default function AgentsPage() {
           keyExtractor={(a) => a.id}
           contentContainerClassName="pb-6"
           ItemSeparatorComponent={() => <View className="h-px bg-border ml-16" />}
-          ListEmptyComponent={<Empty text={t("agent.empty")} />}
+          ListEmptyComponent={
+            hidden.length === 0 ? <Empty text={t("agent.empty")} /> : null
+          }
+          ListFooterComponent={
+            hidden.length > 0 ? (
+              <HiddenFooter
+                count={hidden.length}
+                expanded={showHidden}
+                onPress={() => setShowHidden((v) => !v)}
+              />
+            ) : null
+          }
           renderItem={({ item }) => (
             <AgentRow
               agent={item}
               status={agentStatus(item, byAgent.get(item.id))}
               runtime={agentRuntimeLabel(item, runtimes.data ?? [])}
               lastRun={lastRuns.get(item.id)}
+              hidden={hiddenIds.has(item.id)}
               onPress={() => open(`agent/${item.id}`)}
             />
           )}
@@ -131,35 +159,82 @@ function AgentRow({
   status,
   runtime,
   lastRun,
+  hidden,
   onPress,
 }: {
   agent: Agent;
   status: AgentStatus;
   runtime: ReturnType<typeof agentRuntimeLabel>;
   lastRun: AgentTask | undefined;
+  /** Unfolded from the "n hidden" footer: dimmed and marked (W4). */
+  hidden: boolean;
   onPress: () => void;
 }) {
+  const { t } = useT("workspace");
   const statusText = useAgentStatusText()(status);
   const runtimeText = useRuntimeText()(runtime);
   const lastRunText = useLastRunText()(lastRun);
+  const hiddenNote = hidden ? `, ${t("agent.hidden_note")}` : "";
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`${agent.name}, ${statusText.text}, ${runtimeText}, ${lastRunText}`}
-      testID="agent-row"
-      className="flex-row items-center gap-3 px-4 py-3 min-h-12 active:bg-secondary"
+      accessibilityLabel={`${agent.name}${hiddenNote}, ${statusText.text}, ${runtimeText}, ${lastRunText}`}
+      testID={hidden ? "agent-row-hidden" : "agent-row"}
+      className={cn(
+        "flex-row items-center gap-3 px-4 py-3 min-h-12 active:bg-secondary",
+        hidden && "opacity-60",
+      )}
     >
       <ActorAvatar type="agent" id={agent.id} size={36} showPresence />
       <View className="flex-1 gap-0.5">
-        <Text className="text-sm font-medium text-foreground" numberOfLines={1}>
+        <Text
+          className="text-sm font-medium text-foreground"
+          numberOfLines={1}
+          testID={hidden ? undefined : "agent-row-name"}
+        >
           {agent.name}
+          {hidden ? (
+            <Text className="text-xs font-normal text-muted-foreground">
+              {` · ${t("agent.hidden_note")}`}
+            </Text>
+          ) : null}
         </Text>
         <Text className={cn("text-xs", statusText.className)}>{statusText.text}</Text>
         <Text className="text-xs text-muted-foreground" numberOfLines={2}>
           {runtimeText} · {lastRunText}
         </Text>
       </View>
+    </Pressable>
+  );
+}
+
+/** "2 hidden · Show" / "2 hidden · Hide" at the end of the agent list. */
+function HiddenFooter({
+  count,
+  expanded,
+  onPress,
+}: {
+  count: number;
+  expanded: boolean;
+  onPress: () => void;
+}) {
+  const { t } = useT("workspace");
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ expanded }}
+      testID="agents-hidden-footer"
+      className="flex-row items-center px-4 py-3 min-h-12 active:bg-secondary"
+    >
+      <Text className="text-sm text-muted-foreground">
+        {t("agent.hidden_count", { count })}
+        {" · "}
+        <Text className="text-sm font-medium text-primary">
+          {t(expanded ? "agent.hidden_hide" : "agent.hidden_show")}
+        </Text>
+      </Text>
     </Pressable>
   );
 }

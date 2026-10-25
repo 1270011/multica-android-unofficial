@@ -205,5 +205,13 @@
     "clear_confirm_message_other": "{{count}} 条等待中的消息将不会发送。",
     "fallback": "等待中的消息",
     "failed": "无法更新队列。"
+  },
+  "agent_handover": {
+    "latest": "与 {{name}} 的最近聊天",
+    "new_chat": "新聊天",
+    "new_chat_a11y": "与 {{name}} 开始新聊天"
+  },
+  "agent_chat": {
+    "back_a11y": "返回智能体"
   }
 }

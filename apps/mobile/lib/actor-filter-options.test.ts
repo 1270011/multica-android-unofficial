@@ -8,9 +8,12 @@ import {
   actorDisplayName,
   actorFilterChips,
   actorOptionA11yLabel,
+  actorOptionHint,
   actorOptions,
   clearActorChip,
   clearFilterSection,
+  hiddenActorOptions,
+  isOptionHidden,
   lockedByNobody,
   previewOptions,
   sectionsForBadRequest,
@@ -86,6 +89,68 @@ describe("actorOptions", () => {
       query: " AL ",
     }).map((o) => o.name);
     expect(names).toEqual(["Alf"]);
+  });
+});
+
+describe("hidden people and agents", () => {
+  const HIDDEN = { members: ["u-bo"], agents: ["a-alf"] };
+  const ALL = ["member", "agent", "squad"] as const;
+
+  it("leaves hidden members and agents out of the filter lists", () => {
+    const keys = actorOptions(DIR, { userId: ME, types: ALL, hidden: HIDDEN }).map((o) => o.key);
+    expect(keys).toEqual(["agent:a-zed", "member:u-ana", "squad:s-core"]);
+  });
+
+  it("keeps a hidden actor that is an active filter value, so it can be cleared", () => {
+    const keys = actorOptions(DIR, {
+      userId: ME,
+      types: ALL,
+      selected: ["agent:a-alf"],
+      hidden: HIDDEN,
+    }).map((o) => o.key);
+    expect(keys).toContain("agent:a-alf");
+    expect(keys).not.toContain("member:u-bo");
+  });
+
+  it("member and agent ids do not cross over; squads are never hidden", () => {
+    const crossed = { members: ["a-zed"], agents: ["u-ana", "s-core"] };
+    const keys = actorOptions(DIR, { userId: ME, types: ALL, hidden: crossed }).map((o) => o.key);
+    expect(keys).toEqual(["agent:a-zed", "member:u-ana", "member:u-bo", "agent:a-alf", "squad:s-core"]);
+    expect(isOptionHidden({ type: "squad", id: "s-core" }, crossed)).toBe(false);
+    expect(isOptionHidden({ type: "agent", id: "a-alf" }, undefined)).toBe(false);
+  });
+
+  it("search lists hidden matches separately; nothing without a query", () => {
+    expect(hiddenActorOptions(DIR, { userId: ME, types: ALL, hidden: HIDDEN })).toEqual([]);
+    expect(
+      hiddenActorOptions(DIR, { userId: ME, types: ALL, hidden: HIDDEN, query: "  " }),
+    ).toEqual([]);
+    const q = { userId: ME, types: ALL, hidden: HIDDEN, query: "b" };
+    expect(actorOptions(DIR, q).map((o) => o.key)).toEqual([]);
+    expect(hiddenActorOptions(DIR, q).map((o) => o.key)).toEqual(["member:u-bo"]);
+  });
+
+  it("a picked hidden actor is not listed twice", () => {
+    const q = { userId: ME, types: ALL, hidden: HIDDEN, query: "alf", selected: ["agent:a-alf" as ActorKey] };
+    expect(actorOptions(DIR, q).map((o) => o.key)).toEqual(["agent:a-alf"]);
+    expect(hiddenActorOptions(DIR, q)).toEqual([]);
+  });
+
+  it("hidden archived agents stay out of the search too", () => {
+    const q = { userId: ME, types: ALL, hidden: { members: [], agents: ["a-old"] }, query: "old" };
+    expect(hiddenActorOptions(DIR, q)).toEqual([]);
+  });
+
+  it("never touches me (the sheet's own Me row)", () => {
+    const q = { userId: ME, types: ALL, hidden: { members: [ME], agents: [] }, query: "me" };
+    expect(actorOptions(DIR, q)).toEqual([]);
+    expect(hiddenActorOptions(DIR, q)).toEqual([]);
+  });
+
+  it("marks hidden rows in text and for TalkBack, not by colour alone", () => {
+    expect(actorOptionHint("agent", t)).toBe("Agent");
+    expect(actorOptionHint("agent", t, true)).toBe("Agent · ausgeblendet");
+    expect(actorOptionA11yLabel("Alf", "agent", false, t, true)).toBe("Alf, Agent, ausgeblendet");
   });
 });
 
@@ -255,6 +320,8 @@ describe("strings", () => {
     "people_load_failed",
     "not_with_nobody",
     "section_reset",
+    "hidden_section",
+    "hidden_note",
   ] as const;
   it.each([
     ["de", de],

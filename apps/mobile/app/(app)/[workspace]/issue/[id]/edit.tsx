@@ -26,15 +26,8 @@
  * `title_base` check opens the same dialog. See data/issue-edit.ts.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
-  Pressable,
-  ScrollView,
-  TextInput,
-  View,
-} from "react-native";
+import { Alert, Pressable, ScrollView, TextInput, View } from "react-native";
+import { KeyboardAvoidingView } from "react-native-keyboard-controller";
 import { Stack, router, useLocalSearchParams } from "expo-router";
 import { useQuery } from "@tanstack/react-query";
 import { stripChannelMediaMarkers } from "@multica/core/types";
@@ -270,48 +263,52 @@ export default function EditIssue() {
   return (
     <>
       <Stack.Screen options={{ headerLeft, headerRight }} />
-      <KeyboardAvoidingView
-        className="flex-1 bg-background"
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
-      >
-        <ScrollView
-          className="flex-1"
-          contentContainerClassName="px-4 pt-4 pb-6 gap-4"
-          contentContainerStyle={READING_WIDTH_STYLE}
-          keyboardShouldPersistTaps="handled"
-        >
-          {!detail.data ? (
-            <Text className="text-sm text-muted-foreground">
-              {t("common:states.loading")}
-            </Text>
-          ) : (
-            <>
-              <Field label={t("common:fields.title")}>
-                <TextInput
-                  value={title}
-                  onChangeText={setTitle}
-                  placeholder={t("new.title_placeholder")}
-                  placeholderTextColor={MOBILE_PLACEHOLDER_COLOR}
-                  className="text-base text-foreground bg-secondary/50 rounded-md px-3 py-2"
-                  returnKeyType="next"
-                  editable={!busy}
-                />
-              </Field>
+      {/* RN's KeyboardAvoidingView had no behavior on Android, and under
+          edge-to-edge (targetSdk 36) adjustResize does nothing: the
+          @-suggestion bar sat behind the keyboard. The
+          keyboard-controller one with "padding" lifts it on both
+          platforms, like chat-screen.tsx. */}
+      <View className="flex-1 bg-background">
+        <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
+          <ScrollView
+            className="flex-1"
+            contentContainerClassName="px-4 pt-4 pb-6 gap-4"
+            contentContainerStyle={READING_WIDTH_STYLE}
+            keyboardShouldPersistTaps="handled"
+          >
+            {!detail.data ? (
+              <Text className="text-sm text-muted-foreground">
+                {t("common:states.loading")}
+              </Text>
+            ) : (
+              <>
+                <Field label={t("common:fields.title")}>
+                  <TextInput
+                    value={title}
+                    onChangeText={setTitle}
+                    placeholder={t("new.title_placeholder")}
+                    placeholderTextColor={MOBILE_PLACEHOLDER_COLOR}
+                    className="text-base text-foreground bg-secondary/50 rounded-md px-3 py-2"
+                    returnKeyType="next"
+                    editable={!busy}
+                  />
+                </Field>
 
-              <Field label={t("common:fields.description")}>
-                <DescriptionField
-                  description={description}
-                  disabled={busy}
-                />
-              </Field>
-            </>
-          )}
-        </ScrollView>
-        {/* Mention suggestion bar floats above the keyboard while the user
-            is mid-@. Outside the ScrollView so it doesn't scroll with the
-            form body. */}
-        <MentionSuggestionBar {...description.suggestionBar} />
-      </KeyboardAvoidingView>
+                <Field label={t("common:fields.description")}>
+                  <DescriptionField
+                    description={description}
+                    disabled={busy}
+                  />
+                </Field>
+              </>
+            )}
+          </ScrollView>
+          {/* Mention suggestion bar floats above the keyboard while the user
+              is mid-@. Outside the ScrollView so it doesn't scroll with the
+              form body. */}
+          <MentionSuggestionBar {...description.suggestionBar} />
+        </KeyboardAvoidingView>
+      </View>
     </>
   );
 }

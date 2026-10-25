@@ -9,9 +9,10 @@
  *     highlighting, copy button, and horizontal scroll. Shares the
  *     `github-light` / `github-dark` themes with web for byte-identical
  *     palettes.
- *   - Top-level tables → in-house `MarkdownTable` in a horizontal
- *     ScrollView (enriched's native table scroller lost the
- *     swipe to the bubble gestures and clipped wide tables).
+ *   - Top-level tables → in-house `MarkdownTable`, a wrapping grid or
+ *     stacked cards without horizontal scroll
+ *     (enriched's native table scroller lost the swipe to the bubble
+ *     gestures and clipped wide tables).
  *   - Images → in-house `MarkdownImage` with expo-image + auto aspect
  *     ratio + tap-to-lightbox dispatch.
  *
@@ -40,17 +41,16 @@
  * a custom renderer — mobile doesn't lose anything that exists by
  * default elsewhere.
  */
-import { useCallback, useMemo } from "react";
-import { Linking, View } from "react-native";
-import { router } from "expo-router";
+import { useMemo } from "react";
+import { View } from "react-native";
 import { EnrichedMarkdownText } from "react-native-enriched-markdown";
 import type { Attachment } from "@multica/core/types";
-import { useWorkspaceStore } from "@/data/workspace-store";
 import { useMarkdownStyle } from "./markdown-style";
 import { getMarkdownSegments } from "./segment-cache";
 import { CodeBlock } from "./code-block";
 import { MarkdownImage } from "./markdown-image";
 import { MarkdownTable } from "./markdown-table";
+import { useMarkdownLinkPress } from "./link-press";
 
 interface Props {
   content: string;
@@ -114,7 +114,6 @@ export function Markdown({
   selectable = true,
   compact = false,
 }: Props) {
-  const wsSlug = useWorkspaceStore((s) => s.currentWorkspaceSlug);
   const baseStyle = useMarkdownStyle();
   const markdownStyle = useMemo(
     () =>
@@ -134,45 +133,7 @@ export function Markdown({
   // Module-wide LRU: survives FlashList cell recycling.
   const segments = useMemo(() => getMarkdownSegments(content), [content]);
 
-  const onLinkPress = useCallback(
-    ({ url }: { url: string }) => {
-      // `mention://` is an internal scheme — never hand it to the system.
-      // No app is registered for it, so `Linking.openURL("mention://...")`
-      // would surface iOS's "Cannot open URL" prompt or silently fail
-      // (depending on iOS version). Handle every shape inline and ALWAYS
-      // return without falling through to Linking.
-      //
-      //   mention://issue/<uuid>   → navigate to that issue detail
-      //   mention://project/<uuid> → navigate to that project detail
-      //   mention://member/<uuid>  → no-op (no member profile screen yet)
-      //   mention://agent/<uuid>   → no-op (no agent profile screen yet)
-      //   mention://squad/<uuid>   → no-op (no squad profile screen yet)
-      //   mention://all/all        → no-op (semantic only — "everyone")
-      //   anything malformed       → no-op
-      if (url.startsWith("mention://")) {
-        const rest = url.slice("mention://".length);
-        const slash = rest.indexOf("/");
-        if (slash < 0) return;
-        const type = rest.slice(0, slash);
-        const id = rest.slice(slash + 1);
-        if (id && wsSlug) {
-          // Route segments are singular on mobile (`/issue/`, `/project/`)
-          // while the mention type and web's route are the same word — keep
-          // the mapping explicit so a new type can't silently no-op.
-          if (type === "issue") router.push(`/${wsSlug}/issue/${id}`);
-          else if (type === "project") router.push(`/${wsSlug}/project/${id}`);
-        }
-        return;
-      }
-      // Everything else — http(s), mailto, tel, app-scheme deep links —
-      // hand off to the system. Linking.openURL throws if no app handles
-      // the URL; the catch keeps a stray tap from crashing the screen.
-      Linking.openURL(url).catch(() => {
-        // Silent: failing loudly is worse than a no-op tap.
-      });
-    },
-    [wsSlug],
-  );
+  const onLinkPress = useMarkdownLinkPress();
 
   if (segments.length === 0) return null;
 

@@ -15,7 +15,7 @@ const read = (path: string) => readFileSync(join(__dirname, "..", path), "utf8")
 
 describe("chat keyboard handling", () => {
   it("the chat tab uses keyboard-controller's KeyboardAvoidingView with padding", () => {
-    const src = read("app/(app)/[workspace]/(tabs)/chat.tsx");
+    const src = read("components/chat/chat-screen.tsx");
     expect(src).toMatch(/import \{ KeyboardAvoidingView \} from "react-native-keyboard-controller";/);
     expect(src).toMatch(/<KeyboardAvoidingView behavior="padding"/);
     const rnImport = /import \{([^}]*)\} from "react-native";/.exec(src)?.[1] ?? "";
@@ -25,6 +25,17 @@ describe("chat keyboard handling", () => {
     const src = read("components/composer/message-composer.tsx");
     expect(src).toContain('import { KeyboardStickyView } from "react-native-keyboard-controller";');
     expect(read("components/issue/inline-comment-composer.tsx")).not.toContain("manageKeyboard={false}");
+  });
+  it.each([
+    "app/(app)/[workspace]/new-issue.tsx",
+    "app/(app)/[workspace]/issue/[id]/edit.tsx",
+  ])("%s lifts the @-suggestion bar above the keyboard", (path) => {
+    const src = read(path);
+    expect(src).toContain("<MentionSuggestionBar");
+    expect(src).toMatch(/import \{ KeyboardAvoidingView \} from "react-native-keyboard-controller";/);
+    expect(src).toMatch(/<KeyboardAvoidingView behavior="padding"/);
+    const rnImport = /import \{([^}]*)\} from "react-native";/.exec(src)?.[1] ?? "";
+    expect(rnImport).not.toContain("KeyboardAvoidingView");
   });
   it("the empty chat scrolls instead of spilling over the header when the keyboard shrinks it", () => {
     const src = read("components/chat/chat-empty-state.tsx");

@@ -22,6 +22,7 @@ import { useInboxFilterStore } from "./stores/inbox-filter-store";
 import { useIssueListFilterStore } from "./stores/issue-list-filter-store";
 import { useMyIssuesViewStore } from "@/data/stores/my-issues-view-store";
 import { useActiveIssueViewStore } from "@/data/stores/active-issue-view-store";
+import { useViewPrefsStore } from "./stores/view-prefs-store";
 import { clearAllFilterStorage } from "@/lib/filter-storage";
 import { clearSessionData } from "./session-end";
 import { openTimelineCache, prefetchTimelineCacheKey } from "./timeline-cache";
@@ -51,6 +52,7 @@ async function forgetRememberedFilters() {
   useIssueListFilterStore.getState().reset();
   useMyIssuesViewStore.getState().reset();
   useActiveIssueViewStore.getState().reset();
+  useViewPrefsStore.getState().reset();
   await clearAllFilterStorage();
 }
 

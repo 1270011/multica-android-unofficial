@@ -28,7 +28,11 @@ import type { Reaction, TimelineEntry } from "@multica/core/types";
 import { useAuthStore } from "@/data/auth-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useCommentSelectStore } from "@/data/comment-select-store";
-import { useReplyTargetStore } from "@/data/stores/reply-target-store";
+import {
+  clearReplyTarget,
+  clearReplyTargetIf,
+  setReplyTarget,
+} from "@/data/stores/reply-target-store";
 import { useEditTargetStore } from "@/data/stores/edit-target-store";
 import { useActorLookup } from "@/data/use-actor-name";
 import {
@@ -148,7 +152,7 @@ export function useCommentLongPress(
                 entry.actor_type as "member" | "agent" | null | undefined,
                 entry.actor_id,
               );
-            useReplyTargetStore.getState().setTarget({
+            setReplyTarget(issueId, {
               commentId: entry.id,
               actorName: actorName || t("comments.fallback_actor"),
               preview: entry.content ?? "",
@@ -198,7 +202,7 @@ export function useCommentLongPress(
             });
             return;
           case "edit":
-            useReplyTargetStore.getState().clear();
+            clearReplyTarget(issueId);
             useEditTargetStore.getState().setTarget({
               commentId: entry.id,
               content: entry.content ?? "",
@@ -217,7 +221,11 @@ export function useCommentLongPress(
                 {
                   text: t("common:actions.delete"),
                   style: "destructive",
-                  onPress: () => deleteComment.mutate(entry.id),
+                  onPress: () => {
+                    // A reply to a deleted comment could not be sent.
+                    clearReplyTargetIf(issueId, entry.id);
+                    deleteComment.mutate(entry.id);
+                  },
                 },
               ],
             );

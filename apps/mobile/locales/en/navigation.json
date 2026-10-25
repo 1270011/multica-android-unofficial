@@ -43,7 +43,10 @@
     "autopilot_runs": "Runs",
     "autopilot_runs_of": "Runs: {{title}}",
     "wakeup_runs": "Wakeup runs",
-    "wakeup_runs_of": "Runs: {{agent}}"
+    "wakeup_runs_of": "Runs: {{agent}}",
+    "hidden_actors": "Hide people & agents",
+    "title_filter": "Hide issues",
+    "mention_sort": "Sort @ suggestions"
   },
   "ai_team": {
     "segment_label": "View",

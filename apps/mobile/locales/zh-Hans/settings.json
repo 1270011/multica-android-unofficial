@@ -160,5 +160,51 @@
     "debug_test": "发送测试通知（调试）",
     "connection_refused": "Multica · 连接被拒绝（Cloudflare Access？）",
     "no_workspace_text": "没有可用于通知的工作区。请在应用中检查。"
+  },
+  "view": {
+    "title": "视图",
+    "hidden_actors": "隐藏成员和智能体",
+    "hidden_actors_count_other": "已隐藏 {{count}} 个",
+    "hidden_actors_none": "无",
+    "hidden_issues": "隐藏任务",
+    "hidden_issues_off": "关闭",
+    "hidden_issues_on": "开启 · {{pattern}}",
+    "hidden_issues_invalid": "模式无效 – 已关闭",
+    "mention_sort": "@ 建议排序",
+    "mention_sort_frequency": "最常提及",
+    "mention_sort_frequency_hint": "最常提及的成员和智能体排在前面",
+    "mention_sort_name": "名称",
+    "mention_sort_name_hint": "按字母顺序",
+    "mention_sort_reset": "清除记录",
+    "mention_sort_reset_done": "已清除提及记录",
+    "mention_sort_footer": "在此设备上发送提及时计数，不会同步。",
+    "mention_sort_debug_seed": "填充测试记录（调试）"
+  },
+  "hidden_actors": {
+    "intro": "仅在此应用和此工作区中生效。任务和评论仍然可见。",
+    "search_placeholder": "搜索成员和智能体",
+    "section_people_other": "成员 · 已隐藏 {{count}} 个",
+    "section_agents_other": "智能体 · 已隐藏 {{count}} 个",
+    "you": "（你）",
+    "show_all": "全部重新显示",
+    "switch_a11y": "隐藏 {{name}}",
+    "no_results": "未找到成员或智能体",
+    "load_failed": "无法加载成员和智能体。"
+  },
+  "title_filter": {
+    "enabled": "按标题隐藏任务",
+    "pattern": "模式（正则表达式）",
+    "pattern_help": "多个词用 | 分隔，例如 ^AUTO: |^TEST",
+    "ignore_case": "忽略大小写",
+    "preview": "匹配已加载的 {{total}} 个任务中的 {{hidden}} 个",
+    "preview_empty": "尚未加载任务",
+    "invalid": "无效的模式：{{message}}。筛选已关闭。",
+    "too_long": "模式过长（最多 200 个字符）。筛选已关闭。",
+    "too_complex": "模式过于复杂（嵌套重复）。筛选已关闭。",
+    "too_slow": "模式过慢。筛选已关闭。",
+    "mute_push": "同时关闭推送通知",
+    "mute_push_help": "标题匹配的任务不再推送，但仍显示在收件箱中。已隐藏的成员和智能体仍会推送。",
+    "mute_push_unavailable": "开启标题筛选且模式有效时可用。",
+    "scope": "适用于我的任务（列表和看板）、项目和聊天建议。搜索、收件箱、子任务和已打开的任务仍显示全部内容。"
   }
 }

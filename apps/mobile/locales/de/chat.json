@@ -195,5 +195,13 @@
     "clear_confirm_message_other": "{{count}} wartende Nachrichten werden nicht gesendet.",
     "fallback": "Wartende Nachricht",
     "failed": "Die Warteschlange konnte nicht geändert werden."
+  },
+  "agent_handover": {
+    "latest": "Letzter Chat mit {{name}}",
+    "new_chat": "Neuer Chat",
+    "new_chat_a11y": "Neuen Chat mit {{name}} beginnen"
+  },
+  "agent_chat": {
+    "back_a11y": "Zurück zum Agenten"
   }
 }

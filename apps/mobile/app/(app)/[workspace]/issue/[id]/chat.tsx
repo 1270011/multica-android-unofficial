@@ -47,7 +47,6 @@ import { useIssueRealtime } from "@/data/realtime/use-issue-realtime";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useViewedIssuesStore } from "@/data/viewed-issues-store";
 import { useCommentSelectStore } from "@/data/comment-select-store";
-import { useReplyTargetStore } from "@/data/stores/reply-target-store";
 import { useEditTargetStore } from "@/data/stores/edit-target-store";
 import { useFailedCommentsStore } from "@/data/stores/failed-comments-store";
 import { getWebBaseUrl } from "@/data/server-config-store";
@@ -167,7 +166,7 @@ export function IssueChat({
     () => () => {
       if (embedded) return;
       useCommentSelectStore.getState().clear();
-      useReplyTargetStore.getState().clear();
+      // The reply target stays with the draft.
       useEditTargetStore.getState().clear();
     },
     [embedded],
@@ -342,7 +341,7 @@ export function IssueChat({
               footer={<AgentActivityRow issueId={id} reserveSpace />}
             />
           )}
-          <InlineCommentComposer issueId={id} />
+          <InlineCommentComposer issueId={id} entries={entries} anchorCommentId={comment} />
         </View>
       )}
     </View>

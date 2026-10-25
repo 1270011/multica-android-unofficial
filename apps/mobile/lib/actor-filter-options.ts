@@ -16,6 +16,7 @@ import {
   type IssueListFilters,
   parseActorKey,
 } from "./issue-list-filters";
+import { type HiddenActors, isActorHidden } from "./view-prefs";
 
 /** Rows the sheet shows before "Show all (n)" opens the sub-screen. */
 export const ACTOR_LIST_PREVIEW = 8;
@@ -45,22 +46,21 @@ export interface ActorDirectory {
  * row). Order: my agents first, then members, agents and squads, each by
  * name. Archived agents and squads are left out unless picked, so a picked
  * one can still be unticked. `query` matches the name, case-insensitive.
+ * People and agents in `hidden` (Settings › View) are left out
+ * the same way: a picked one stays so its filter can be cleared.
  */
 export function actorOptions(
   dir: ActorDirectory,
-  opts: {
-    userId: string | null;
-    types: readonly IssueAssigneeType[];
-    selected?: readonly ActorKey[];
-    query?: string;
-  },
+  opts: ActorOptionsQuery,
 ): ActorOption[] {
   const q = (opts.query ?? "").trim().toLowerCase();
   const selected = new Set(opts.selected ?? []);
   const match = (name: string) => !q || name.toLowerCase().includes(q);
   const byName = (a: ActorOption, b: ActorOption) => a.name.localeCompare(b.name);
   const keep = (o: ActorOption, archived: boolean) =>
-    match(o.name) && (!archived || selected.has(o.key));
+    match(o.name) &&
+    (!archived || selected.has(o.key)) &&
+    (!isOptionHidden(o, opts.hidden) || selected.has(o.key));
 
   const members: ActorOption[] = opts.types.includes("member")
     ? dir.members
@@ -91,6 +91,40 @@ export function actorOptions(
         .sort(byName)
     : [];
   return [...mine, ...members, ...others, ...squads];
+}
+
+export interface ActorOptionsQuery {
+  userId: string | null;
+  types: readonly IssueAssigneeType[];
+  selected?: readonly ActorKey[];
+  query?: string;
+  hidden?: HiddenActors;
+}
+
+/** Whether W4 hides the option; squads cannot be hidden (decision 1). */
+export function isOptionHidden(
+  o: Pick<ActorOption, "type" | "id">,
+  hidden: HiddenActors | undefined,
+): boolean {
+  if (!hidden || o.type === "squad") return false;
+  return isActorHidden(hidden, o.type === "member" ? "members" : "agents", o.id);
+}
+
+/**
+ * Hidden people and agents matching a search, for the dimmed "Hidden"
+ * section of the "Show all" sub-screen (W4: a targeted search never comes
+ * up empty). Empty without a query; picked ones are already in
+ * `actorOptions`.
+ */
+export function hiddenActorOptions(
+  dir: ActorDirectory,
+  opts: ActorOptionsQuery,
+): ActorOption[] {
+  if (!opts.hidden || !(opts.query ?? "").trim()) return [];
+  const selected = new Set(opts.selected ?? []);
+  return actorOptions(dir, { ...opts, hidden: undefined }).filter(
+    (o) => isOptionHidden(o, opts.hidden) && !selected.has(o.key),
+  );
 }
 
 function option(
@@ -133,16 +167,29 @@ export function actorTypeLabel(type: IssueAssigneeType, t: Translate): string {
   return t(`filters.actor_type_${type}`);
 }
 
-/** TalkBack: "Ana, Member, selected" (D3b). */
+/** TalkBack: "Ana, Member, selected" (spec §2, D3b); "…, hidden" for a
+ *  hidden actor found by search (W4: not by colour alone). */
 export function actorOptionA11yLabel(
   name: string,
   type: IssueAssigneeType,
   selected: boolean,
   t: Translate,
+  hidden = false,
 ): string {
   const parts = [name, actorTypeLabel(type, t)];
+  if (hidden) parts.push(t("filters.hidden_note"));
   if (selected) parts.push(t("filters.selected"));
   return parts.join(", ");
+}
+
+/** Second line of a row: "Agent", or "Agent · hidden" in the hidden section. */
+export function actorOptionHint(
+  type: IssueAssigneeType,
+  t: Translate,
+  hidden = false,
+): string {
+  const kind = actorTypeLabel(type, t);
+  return hidden ? `${kind} · ${t("filters.hidden_note")}` : kind;
 }
 
 /**

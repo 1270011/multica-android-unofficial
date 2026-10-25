@@ -15,6 +15,7 @@ export function FilterRow({
   a11yLabel,
   hint,
   testID,
+  dimmed = false,
 }: {
   checked: boolean;
   label: string;
@@ -26,6 +27,8 @@ export function FilterRow({
   /** Second line, e.g. the actor kind. */
   hint?: string;
   testID?: string;
+  /** Still pickable but greyed out, e.g. a hidden actor found by search. */
+  dimmed?: boolean;
 }) {
   return (
     <Pressable
@@ -38,7 +41,7 @@ export function FilterRow({
       className={cn(
         "flex-row items-center gap-3 px-4 py-2.5 min-h-12 active:bg-secondary",
         checked && "bg-secondary/60",
-        disabled && "opacity-40",
+        disabled ? "opacity-40" : dimmed && "opacity-60",
       )}
     >
       {icon}

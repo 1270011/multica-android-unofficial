@@ -11,6 +11,10 @@
  * `headerShown: true` + `title`); the route file wires
  * `headerSearchBarOptions.onChangeText` to a local `query` state and passes
  * it in as the `query` prop. This body is just a FlatList — no chrome.
+ *
+ * People and agents hidden in Settings › View are left out
+ * unless assigned; a search lists them dimmed under "Hidden" at the end
+ * (`useVisibleActors`).
  */
 import { useMemo } from "react";
 import { FlatList, Pressable, View } from "react-native";
@@ -34,6 +38,9 @@ import { THEME } from "@/lib/theme";
 import { cn } from "@/lib/utils";
 import { isAgentRuntimeBound } from "@/lib/is-agent-runtime-bound";
 import { useT } from "@/lib/i18n";
+import { useVisibleActors } from "@/lib/use-visible-actors";
+import { type PickerActorRef, withHiddenNote } from "@/lib/visible-actors";
+import { PickerHiddenSection } from "@/components/issue/pickers/picker-hidden-section";
 
 const AVATAR_SIZE = 36;
 
@@ -51,13 +58,20 @@ interface Props {
 
 type Row =
   | { kind: "unassigned" }
-  | { kind: "member"; member: MemberWithUser }
-  | { kind: "agent"; agent: Agent }
+  | { kind: "hidden_section" }
+  | { kind: "member"; member: MemberWithUser; hidden?: boolean }
+  | { kind: "agent"; agent: Agent; hidden?: boolean }
   | { kind: "squad"; squad: Squad };
+
+function actorRef(row: Row): PickerActorRef | null {
+  if (row.kind === "member") return { type: "member", id: row.member.user_id };
+  if (row.kind === "agent") return { type: "agent", id: row.agent.id };
+  return null;
+}
 
 function isRowSelected(value: AssigneeValue | undefined, row: Row): boolean {
   if (row.kind === "unassigned") return value === null;
-  if (!value) return false;
+  if (!value || row.kind === "hidden_section") return false;
   if (row.kind === "member")
     return value.type === "member" && value.id === row.member.user_id;
   if (row.kind === "agent")
@@ -80,6 +94,7 @@ export function AssigneePickerBody({ value, query, onChange }: Props) {
       ),
     [agents],
   );
+  const visibleActors = useVisibleActors(wsId);
   const listRef = useScrollToTopOnChange(query);
   const { colorScheme } = useColorScheme();
   // Tint color for the checkmark accessory. Project uses a monochrome
@@ -93,20 +108,41 @@ export function AssigneePickerBody({ value, query, onChange }: Props) {
     const q = query.trim().toLowerCase();
     const matchName = (name: string) => !q || name.toLowerCase().includes(q);
 
-    const memberRows: Row[] = [...members]
-      .filter((m) => matchName(m.name))
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((m) => ({ kind: "member" as const, member: m }));
-    const agentRows: Row[] = [...agents]
-      .filter((a) => matchName(a.name))
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((a) => ({ kind: "agent" as const, agent: a }));
+    const opts = { selected: value ? [value] : [], query };
+    const people = visibleActors.split(
+      [...members]
+        .filter((m) => matchName(m.name))
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((m): Row => ({ kind: "member", member: m })),
+      actorRef,
+      opts,
+    );
+    const bots = visibleActors.split(
+      [...agents]
+        .filter((a) => matchName(a.name))
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((a): Row => ({ kind: "agent", agent: a })),
+      actorRef,
+      opts,
+    );
+    const memberRows = people.visible;
+    const agentRows = bots.visible;
     const squadRows: Row[] = [...squads]
       .filter((s) => !s.archived_at && matchName(s.name))
       .sort((a, b) => a.name.localeCompare(b.name))
       .map((s) => ({ kind: "squad" as const, squad: s }));
 
-    if (q) return [...memberRows, ...agentRows, ...squadRows];
+    if (q) {
+      const dimmed = [...people.hidden, ...bots.hidden].map(
+        (r): Row => ({ ...r, hidden: true }) as Row,
+      );
+      return [
+        ...memberRows,
+        ...agentRows,
+        ...squadRows,
+        ...(dimmed.length > 0 ? [{ kind: "hidden_section" } as Row, ...dimmed] : []),
+      ];
+    }
 
     // Pin the currently-selected actor right below Unassigned and remove it
     // from its own section so it doesn't render twice. Apple HIG doesn't
@@ -122,11 +158,12 @@ export function AssigneePickerBody({ value, query, onChange }: Props) {
       ...agentRows.filter((r) => !isRowSelected(value, r)),
       ...squadRows.filter((r) => !isRowSelected(value, r)),
     ];
-  }, [members, agents, squads, query, value]);
+  }, [members, agents, squads, query, value, visibleActors]);
 
   const isSelected = (row: Row) => isRowSelected(value, row);
 
   const select = (row: Row) => {
+    if (row.kind === "hidden_section") return;
     if (row.kind === "unassigned") onChange(null);
     else if (row.kind === "member")
       onChange({ type: "member", id: row.member.user_id });
@@ -149,11 +186,17 @@ export function AssigneePickerBody({ value, query, onChange }: Props) {
       contentInsetAdjustmentBehavior="automatic"
       keyExtractor={(row) => {
         if (row.kind === "unassigned") return "unassigned";
+        if (row.kind === "hidden_section") return "hidden_section";
         if (row.kind === "member") return `m:${row.member.user_id}`;
         if (row.kind === "agent") return `a:${row.agent.id}`;
         return `s:${row.squad.id}`;
       }}
       renderItem={({ item }) => {
+        if (item.kind === "hidden_section") {
+          return <PickerHiddenSection label={t("picker.hidden_section")} />;
+        }
+        const dimmed =
+          (item.kind === "member" || item.kind === "agent") && !!item.hidden;
         const needsRuntime =
           (item.kind === "agent" && !isAgentRuntimeBound(item.agent)) ||
           (item.kind === "squad" &&
@@ -162,9 +205,11 @@ export function AssigneePickerBody({ value, query, onChange }: Props) {
           <Pressable
           disabled={needsRuntime}
           onPress={() => select(item)}
+          testID={dimmed ? "assignee-row-hidden" : undefined}
+          accessibilityHint={dimmed ? t("picker.hidden_note") : undefined}
           className={cn(
             "flex-row items-center gap-3 px-4 py-3 active:bg-secondary",
-            needsRuntime && "opacity-50",
+            (needsRuntime || dimmed) && "opacity-50",
           )}
         >
           {item.kind === "unassigned" ? (
@@ -197,12 +242,21 @@ export function AssigneePickerBody({ value, query, onChange }: Props) {
           {/* Right-aligned secondary label. Mirrors Apple's
               UITableViewCellStyleValue1 / UIListContentConfiguration.valueCell
               pattern used throughout iOS Settings — type tag in lighter font on
-              the same row. Members carry no tag (they're the default actor). */}
+              the same row. Members carry no tag (they're the default actor)
+              unless hidden: then "hidden", not by the dimming alone (W4). */}
           {item.kind === "agent" ? (
             <Text className="text-sm text-muted-foreground">
-              {isAgentRuntimeBound(item.agent)
-                ? t("picker.agent")
-                : t("picker.needs_runtime")}
+              {withHiddenNote(
+                isAgentRuntimeBound(item.agent)
+                  ? t("picker.agent")
+                  : t("picker.needs_runtime"),
+                dimmed,
+                t,
+              )}
+            </Text>
+          ) : item.kind === "member" && dimmed ? (
+            <Text className="text-sm text-muted-foreground">
+              {t("picker.hidden_note")}
             </Text>
           ) : item.kind === "squad" ? (
             <Text className="text-sm text-muted-foreground">

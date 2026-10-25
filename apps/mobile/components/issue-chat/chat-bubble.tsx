@@ -16,7 +16,12 @@
  * and the full menu.
  *
  * At large font scales (≥ 1.5) bubbles take the full width and the avatar
- * moves away; name and time stay above the bubble.
+ * moves away; name and time stay above the bubble. A bubble with a table
+ * always takes the full width, and its markdown gets that width
+ * via `MarkdownWidthProvider` so the table picks grid or cards without
+ * measuring; TalkBack reads tables as "Tabelle, n Zeilen …" instead of raw
+ * `|` markdown and gets an action per table that opens its full view
+ *.
  */
 import { memo, useCallback, useMemo, useRef } from "react";
 import { Pressable, View, useWindowDimensions } from "react-native";
@@ -34,7 +39,18 @@ import type { Reaction, TimelineEntry } from "@multica/core/types";
 import { Ionicons } from "@/components/ui/ionicons";
 import { Text } from "@/components/ui/text";
 import { ActorAvatar } from "@/components/ui/actor-avatar";
-import { Markdown } from "@/lib/markdown";
+import {
+  Markdown,
+  MarkdownEntryIdProvider,
+  MarkdownLongPressProvider,
+  MarkdownWidthProvider,
+  chatBubbleContentWidth,
+  getMarkdownSegments,
+  markdownToSpeech,
+  usePaneWidth,
+  useTableA11yActions,
+  useTableSpeechWords,
+} from "@/lib/markdown";
 import { CommentAttachmentList } from "@/components/issue/comment-attachment-list";
 import { ReactionBar } from "@/components/issue/reaction-bar";
 import { FailedActions, PendingHint } from "@/components/issue/comment-card";
@@ -46,7 +62,7 @@ import {
 } from "@/data/mutations/issues";
 import { issueAttachmentsOptions } from "@/data/queries/issues";
 import { useFailedCommentsStore } from "@/data/stores/failed-comments-store";
-import { useReplyTargetStore } from "@/data/stores/reply-target-store";
+import { setReplyTarget } from "@/data/stores/reply-target-store";
 import { useAuthStore } from "@/data/auth-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useActorLookup } from "@/data/use-actor-name";
@@ -58,6 +74,7 @@ import { cn } from "@/lib/utils";
 import { continuousCorners } from "@/lib/radius";
 import { useT } from "@/lib/i18n";
 import { formatChatTime } from "./format";
+import { ThreadReplyButton } from "@/components/issue/thread-reply-button";
 
 const SWIPE_WIDTH = 64;
 const LARGE_FONT_SCALE = 1.5;
@@ -71,6 +88,8 @@ interface Props {
   replyTo: ReplyQuote | null;
   mentionsMe: boolean;
   resolved: boolean;
+  /** Set on the last message of a thread: "Reply" button to this root. */
+  replyRootId: string | null;
   highlighted: boolean;
   onPressQuote: (rootId: string) => void;
 }
@@ -91,12 +110,20 @@ export const ChatBubble = memo(function ChatBubble({
   replyTo,
   mentionsMe,
   resolved,
+  replyRootId,
   highlighted,
   onPressQuote,
 }: Props) {
   const { t } = useT("issues");
   const { fontScale } = useWindowDimensions();
   const large = fontScale >= LARGE_FONT_SCALE;
+  const paneWidth = usePaneWidth();
+  const tableWords = useTableSpeechWords();
+  const hasTable = useMemo(
+    () => !!entry.content && getMarkdownSegments(entry.content).some((s) => s.type === "table"),
+    [entry.content],
+  );
+  const fullWidth = large || hasTable;
   const { getName } = useActorLookup();
   const { colorScheme } = useColorScheme();
   const userId = useAuthStore((s) => s.user?.id);
@@ -108,6 +135,8 @@ export const ChatBubble = memo(function ChatBubble({
   const pending = !failed && isOptimisticCommentId(entry.id);
   const { data: attachments } = useQuery(issueAttachmentsOptions(wsId, issueId));
   const longPress = useCommentLongPress(entry, issueId, issueIdentifier);
+  // "Tabelle in Vollansicht öffnen" / "Tabelle n öffnen".
+  const tableActions = useTableA11yActions(hasTable ? entry.content : null);
   const swipeRef = useRef<SwipeableMethods>(null);
 
   const name =
@@ -123,12 +152,12 @@ export const ChatBubble = memo(function ChatBubble({
   const attachmentCount = entry.attachments?.length ?? 0;
 
   const setReply = useCallback(() => {
-    useReplyTargetStore.getState().setTarget({
+    setReplyTarget(issueId, {
       commentId: entry.id,
       actorName: name || t("comments.fallback_actor"),
       preview: entry.content ?? "",
     });
-  }, [entry.id, entry.content, name, t]);
+  }, [issueId, entry.id, entry.content, name, t]);
 
   const onToggleReaction = useCallback(
     (emoji: string) => {
@@ -147,6 +176,7 @@ export const ChatBubble = memo(function ChatBubble({
       content: failed.content,
       parentId: failed.parentId,
       attachmentIds: failed.attachmentIds,
+      suppressAgentIds: failed.suppressAgentIds,
       sentAt: failed.sentAt,
       knownIds: failed.knownIds,
     });
@@ -161,7 +191,7 @@ export const ChatBubble = memo(function ChatBubble({
     time,
     mentionsMe ? t("chat.mention_you") : null,
     replyTo ? t("chat.a11y_reply_to", { name: quoteName }) : null,
-    entry.content ?? "",
+    hasTable ? markdownToSpeech(entry.content ?? "", tableWords) : (entry.content ?? ""),
     attachmentCount > 0 ? t("chat.a11y_attachments", { count: attachmentCount }) : null,
     reactions.length > 0 ? t("chat.a11y_reactions", { count: reactions.length }) : null,
     resolved ? t("chat.resolved") : null,
@@ -213,7 +243,15 @@ export const ChatBubble = memo(function ChatBubble({
           {t("chat.mention_you")}
         </Text>
       ) : null}
-      {entry.content ? <Markdown content={entry.content} attachments={attachments} /> : null}
+      {entry.content ? (
+        <MarkdownWidthProvider value={chatBubbleContentWidth(paneWidth)}>
+          <MarkdownLongPressProvider value={interactive ? longPress.onLongPress : undefined}>
+            <MarkdownEntryIdProvider value={entry.id}>
+              <Markdown content={entry.content} attachments={attachments} />
+            </MarkdownEntryIdProvider>
+          </MarkdownLongPressProvider>
+        </MarkdownWidthProvider>
+      ) : null}
       <CommentAttachmentList attachments={entry.attachments} content={entry.content} />
       <View className="flex-row items-center justify-end gap-1">
         {resolved ? (
@@ -248,10 +286,15 @@ export const ChatBubble = memo(function ChatBubble({
               { name: "reply", label: t("comments.reply") },
               { name: "react", label: t("comments.react") },
               { name: "menu", label: t("chat.more_actions") },
+              ...tableActions.actions,
             ]
-          : undefined
+          : tableActions.actions.length > 0
+            ? tableActions.actions
+            : undefined
       }
       onAccessibilityAction={(e) => {
+        if (tableActions.onAction(e.nativeEvent.actionName)) return;
+        if (!interactive) return;
         if (e.nativeEvent.actionName === "reply") setReply();
         else if (e.nativeEvent.actionName === "react" || e.nativeEvent.actionName === "menu")
           longPress.onLongPress();
@@ -272,7 +315,7 @@ export const ChatBubble = memo(function ChatBubble({
           <Text className="text-xs font-medium text-foreground">{name}</Text>
         </View>
       ) : null}
-      <View className={large ? "w-full" : "max-w-[85%]"}>
+      <View className={fullWidth ? "w-full" : "max-w-[85%]"}>
         {interactive ? (
           <Pressable onLongPress={longPress.onLongPress} delayLongPress={450}>
             {bubble}
@@ -297,7 +340,18 @@ export const ChatBubble = memo(function ChatBubble({
 
   if (!interactive) return content;
 
-  return (
+  // Outside the `accessible` row so TalkBack reaches it as its own button.
+  const replyButton = replyRootId ? (
+    <ThreadReplyButton
+      issueId={issueId}
+      rootId={replyRootId}
+      rootContent={replyRootId === entry.id ? entry.content : replyTo?.preview}
+      actorName={replyRootId === entry.id ? name : quoteName}
+      className={own ? "self-end mx-3" : "mx-3"}
+    />
+  ) : null;
+
+  const swipeable = (
     <ReanimatedSwipeable
       ref={swipeRef}
       friction={2}
@@ -311,6 +365,14 @@ export const ChatBubble = memo(function ChatBubble({
     >
       {content}
     </ReanimatedSwipeable>
+  );
+
+  if (!replyButton) return swipeable;
+  return (
+    <View>
+      {swipeable}
+      {replyButton}
+    </View>
   );
 }, shallowEqualProps);
 

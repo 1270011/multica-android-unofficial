@@ -36,7 +36,14 @@
  * unread divider shows the rows from the target down, top-aligned with the
  * landing gap, and hands over once the ScrollView stands at the landing
  * offset (`aim`, from the list's layout of the target) with the same values
- * twice. A target above the first window keeps the old way without cover.
+ * twice. A target further up opens the first window around itself
+ * (`chatWindowRange`), so it is inside the window and gets a cover
+ * too; one just above the window keeps the old way without cover.
+ *
+ * Bubble text (`EnrichedMarkdownText`) is laid out natively off the JS
+ * thread and posted to the view later, so a cell the list just bound can
+ * show its old text or none for a frame. The cover therefore stays
+ * `COVER_PAINT_MS` longer once the hand-over is decided.
  */
 
 import { ANCHOR_HOLD_MS, ANCHOR_TOLERANCE_PX } from "@/lib/chat-anchor";
@@ -50,6 +57,8 @@ export const COVER_ROWS = 6;
 export const COVER_FALLBACK_MS = 800;
 /** Cover goes at the latest this long after mount (list never loaded). */
 export const COVER_MAX_MS = 2000;
+/** Cover stays this long after the hand-over (native text drawn). */
+export const COVER_PAINT_MS = 120;
 
 export interface CoverOptions {
   targetCommentId?: string | null;

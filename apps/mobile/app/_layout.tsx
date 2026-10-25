@@ -15,6 +15,7 @@ import { maybeRenewSession } from "@/data/session-renewal";
 import { queryClient } from "@/data/query-client";
 // Registers the encrypted timeline cache and its persister.
 import "@/data/timeline-cache/native";
+import "@/lib/mention-usage-native";
 import { useAuthStore } from "@/data/auth-store";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useServerConfigStore } from "@/data/server-config-store";

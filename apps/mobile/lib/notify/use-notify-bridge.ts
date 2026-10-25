@@ -2,8 +2,9 @@
  * Keeps the native notification service in line with the app while it runs
  *: UI strings in the in-app language,
  * the workspace list of the account, actor names for the notification
- * lines, and a (re)start whenever the app comes to the foreground — the only
- * moment Android 12+ allows starting the foreground service besides boot.
+ * lines, the title-filter push mute of every workspace, and a
+ * (re)start whenever the app comes to the foreground — the only moment
+ * Android 12+ allows starting the foreground service besides boot.
  *
  * Mounted once in the workspace layout. Never asks for permissions.
  */
@@ -13,11 +14,13 @@ import { useQueries, useQuery } from "@tanstack/react-query";
 import { api } from "@/data/api";
 import { workspaceListOptions } from "@/data/queries/workspaces";
 import { useWorkspaceStore } from "@/data/workspace-store";
+import { useViewPrefsStore } from "@/data/stores/view-prefs-store";
 import { i18n, useLocale } from "@/lib/i18n";
 import { notifyAvailable, rbNotify } from "./native";
 import { buildNativeStrings } from "./push-logic";
 import { handOverSession } from "./session";
 import { buildActorMap, notifyActorsOptions } from "./actors";
+import { createTitleMuteMirror } from "./title-mute";
 
 /** Start/re-sync the service if switched on; hand over the session if it lost it. */
 export function ensureNotifyRunning(): void {
@@ -59,6 +62,30 @@ export function useNotifyBridge(): void {
     // actorKey changes exactly when one of the lists changes.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [actorKey]);
+
+  // Title filter push mute (W7): load every workspace's stored filter, not
+  // only the open one, because the service notifies for all of them.
+  const workspaceIds = (workspaces ?? []).map((w) => w.id).join(",");
+  useEffect(() => {
+    if (!notifyAvailable || !workspaceIds) return;
+    const store = useViewPrefsStore.getState();
+    for (const id of workspaceIds.split(",")) void store.hydrate(id);
+  }, [workspaceIds]);
+
+  useEffect(() => {
+    if (!notifyAvailable) return;
+    const mirror = createTitleMuteMirror((id, config) => rbNotify.setTitleMute(id, config));
+    let generation = useViewPrefsStore.getState().generation;
+    mirror.sync(useViewPrefsStore.getState().titleFilterByWorkspace);
+    return useViewPrefsStore.subscribe((state) => {
+      // Logout cleared the native copy with the session: push everything again.
+      if (state.generation !== generation) {
+        generation = state.generation;
+        mirror.reset();
+      }
+      mirror.sync(state.titleFilterByWorkspace);
+    });
+  }, []);
 
   useEffect(() => {
     if (!notifyAvailable) return;

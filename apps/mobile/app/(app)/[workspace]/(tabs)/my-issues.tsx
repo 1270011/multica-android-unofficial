@@ -22,6 +22,11 @@
  * only way in on the board, whose long press is the status menu / drag);
  * on the board taps then toggle cards and dragging is off.
  *
+ * Title filter: the stored regex hides matching titles in
+ * every tab, list and board, as the last step after the other filters; a
+ * hint row below the chips counts them and "Show" lifts it for this screen
+ * (lib/use-title-filter.ts).
+ *
  * Low windows (< 480 dp, small phone in landscape): tabs, view
  * bar, filter chips and sort row scroll with the list, see
  * lib/issue-list-layout.ts.
@@ -103,6 +108,9 @@ import { useListTotal } from "@/data/queries/list-total";
 import { issueKeys } from "@/data/queries/issue-keys";
 import { useRefreshOnFocus } from "@/lib/use-refresh-on-focus";
 import { READING_WIDTH_STYLE } from "@/components/ui/reading-width";
+import { TitleFilterAllHidden, TitleFilterHint } from "@/components/issue/title-filter-hint";
+import { useTitleFilteredIssues } from "@/lib/use-title-filter";
+import { allHiddenByTitle } from "@/lib/issue-title-filter";
 
 export default function MyIssues() {
   const isFocused = useIsFocused();
@@ -178,10 +186,13 @@ export default function MyIssues() {
 
   // Client-side filters, see lib/issue-list-filters.ts (web parity with
   // packages/views/issues/utils/filter.ts plus the due-date filter).
-  const filtered = useMemo(
+  const listFiltered = useMemo(
     () => filterIssueList(data ?? [], listFilters),
     [data, listFilters],
   );
+  // Title filter last, so list, board columns and hint count the same.
+  const titleFilter = useTitleFilteredIssues(wsId, listFiltered);
+  const filtered = titleFilter.issues;
 
   const sections = useMemo(() => groupIssuesByStatus(filtered, catalog.statuses), [filtered, catalog.statuses]);
 
@@ -256,6 +267,11 @@ export default function MyIssues() {
 
   const showEmptyState =
     !isLoading && !error && filtered.length === 0;
+  const allTitleHidden = allHiddenByTitle(
+    listFiltered.length,
+    filtered.length,
+    titleFilter.hidden,
+  );
   const { height: windowHeight } = useWindowDimensions();
   const controlsInList =
     !isLoading && !error && !showEmptyState && listControlsScroll(windowHeight, viewMode);
@@ -319,6 +335,13 @@ export default function MyIssues() {
             total={total}
           />
         ) : null}
+        {allTitleHidden ? null : (
+          <TitleFilterHint
+            hidden={titleFilter.hidden}
+            revealed={titleFilter.revealed}
+            onToggle={titleFilter.toggleReveal}
+          />
+        )}
         <SortedByRow sort={sort} onPress={() => openFilter("sort")} />
     </>
   );
@@ -366,6 +389,8 @@ export default function MyIssues() {
             <Text>{t("common:actions.retry")}</Text>
           </Button>
         </View>
+      ) : allTitleHidden ? (
+        <TitleFilterAllHidden onShow={titleFilter.toggleReveal} />
       ) : showEmptyState ? (
         <EmptyState
           message={

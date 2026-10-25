@@ -7,6 +7,8 @@ package com.recordingbeats.rbnotify
  *  - Already seen (by item id) → nothing, whatever the source.
  *  - Ping rule says no → remember as seen, nothing shown.
  *  - Issue whose chat is open in the foreground → seen, nothing shown (§8.4).
+ *  - Issue title hidden by the title filter with "also mute push"
+ *    (W7, TitleMute) → seen, nothing shown, not counted; stays in the inbox.
  *  - Reconciled entries older than 24 h → only counted in the summary
  *    (no flood after a long silence).
  *  - Otherwise → notify in the rule's channel.
@@ -28,11 +30,13 @@ object InboxDecider {
     nowMs: Long,
     fromReconcile: Boolean,
     foregroundIssueId: String?,
+    titleMuted: Boolean = false,
   ): Action {
     if (alreadySeen) return Action.Ignore
     val result = PingRule.evaluate(entry.pingItem(), settings, localMinutes)
     if (!result.ping || result.channel == null || result.category == null) return Action.Ignore
     if (entry.issueId != null && entry.issueId == foregroundIssueId) return Action.Ignore
+    if (titleMuted) return Action.Ignore
     val created = entry.createdAtMs
     if (fromReconcile && created != null && nowMs - created > CATCH_UP_MAX_AGE_MS) {
       return Action.SummaryOnly

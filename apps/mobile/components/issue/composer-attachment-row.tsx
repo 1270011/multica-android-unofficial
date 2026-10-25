@@ -30,6 +30,11 @@ import { ActivityIndicator, Linking, Pressable, ScrollView, View } from "react-n
 import { Ionicons } from "@/components/ui/ionicons";
 import { resolveAttachmentUrl } from "@/lib/attachment-url";
 import { useLightbox } from "@/lib/markdown/lightbox-provider";
+import {
+  CHIP_HEIGHT,
+  CHIP_ROW_PAD_Y,
+  chipRemoveTarget,
+} from "@/lib/composer-chip-target";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { THEME } from "@/lib/theme";
 import { Text } from "@/components/ui/text";
@@ -99,7 +104,16 @@ export function ComposerAttachmentRow({
     <ScrollView
       horizontal
       showsHorizontalScrollIndicator={false}
-      contentContainerStyle={{ gap: 6, paddingHorizontal: 2, paddingVertical: 2 }}
+      // The row is as tall as a 48 dp target, so the ✕ boxes below fit
+      // without being clipped by the ScrollView (F4). The extra
+      // right padding holds the last chip's box.
+      contentContainerStyle={{
+        gap: 6,
+        paddingLeft: 2,
+        paddingRight: 8,
+        paddingVertical: CHIP_ROW_PAD_Y,
+        alignItems: "center",
+      }}
       keyboardShouldPersistTaps="handled"
     >
       {mentions.map((m) => (
@@ -150,18 +164,23 @@ function MentionChipView({
   const label = mention.type === "issue" ? mention.name : `@${mention.name}`;
 
   return (
-    <View className="flex-row items-center gap-1 h-7 px-2 rounded-full bg-primary/10">
+    <View
+      className="flex-row items-center gap-1 px-2 rounded-full bg-primary/10"
+      style={{ height: CHIP_HEIGHT }}
+    >
       <Ionicons name={iconName} size={12} color={theme.primary} />
       <Text className="text-xs font-medium text-foreground">{label}</Text>
+      <View className="h-4 w-4 items-center justify-center">
+        <Ionicons name="close" size={12} color={theme.mutedForeground} />
+      </View>
+      {/* 48 dp ✕ target laid over the glyph, last child so it is topmost
+          (F4, same as the reply chip). */}
       <Pressable
         onPress={() => onRemove(mention.type, mention.id)}
-        hitSlop={8}
+        style={chipRemoveTarget()}
         accessibilityRole="button"
         accessibilityLabel={t("a11y.remove_mention", { name: mention.name })}
-        className="h-4 w-4 items-center justify-center"
-      >
-        <Ionicons name="close" size={12} color={theme.mutedForeground} />
-      </Pressable>
+      />
     </View>
   );
 }
@@ -226,7 +245,8 @@ function AttachmentChipView({ item, onRemove, onRetry }: AttachmentChipProps) {
           ? t("a11y.retry_upload", { name: item.filename })
           : t("a11y.open_file", { name: item.filename })
       }
-      className="flex-row items-center gap-1 h-7 px-2 rounded-full bg-secondary active:opacity-80"
+      className="flex-row items-center gap-1 px-2 rounded-full bg-secondary active:opacity-80"
+      style={{ height: CHIP_HEIGHT }}
     >
       {item.status === "uploading" ? (
         <ActivityIndicator size="small" color={theme.mutedForeground} />
@@ -247,15 +267,15 @@ function AttachmentChipView({ item, onRemove, onRetry }: AttachmentChipProps) {
       >
         {item.filename}
       </Text>
+      <View className="h-4 w-4 items-center justify-center">
+        <Ionicons name="close" size={12} color={theme.mutedForeground} />
+      </View>
       <Pressable
         onPress={() => onRemove(item.localId)}
-        hitSlop={8}
+        style={chipRemoveTarget()}
         accessibilityRole="button"
         accessibilityLabel={t("a11y.remove_file", { name: item.filename })}
-        className="h-4 w-4 items-center justify-center"
-      >
-        <Ionicons name="close" size={12} color={theme.mutedForeground} />
-      </Pressable>
+      />
     </Pressable>
   );
 }

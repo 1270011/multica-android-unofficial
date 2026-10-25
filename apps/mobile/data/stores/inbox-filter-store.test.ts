@@ -56,7 +56,7 @@ describe("inbox filter store", () => {
   });
 
   it("builds SecureStore-safe keys", () => {
-    expect(inboxFilterStorageKey("3f22d6b5-1229-4d97")).toBe("rb.inbox_filters.3f22d6b5-1229-4d97");
+    expect(inboxFilterStorageKey("5e7a91c0-4b2d-4d97")).toBe("rb.inbox_filters.5e7a91c0-4b2d-4d97");
     expect(inboxFilterStorageKey("a/b c")).toMatch(/^[A-Za-z0-9._-]+$/);
   });
 });

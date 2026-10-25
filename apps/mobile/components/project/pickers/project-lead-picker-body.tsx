@@ -9,6 +9,10 @@
  * UITableViewCellStyleValue1 pattern (used throughout Settings); at this
  * row count (~10–30) inline tag beats SectionList headers (which would
  * eat ~8% of the sheet height).
+ *
+ * People and agents hidden in Settings › View are left out
+ * unless they are the lead; a search lists them dimmed under "Hidden"
+ * (`useVisibleActors`).
  */
 import { useMemo } from "react";
 import { FlatList, Pressable, View } from "react-native";
@@ -25,6 +29,10 @@ import { useWorkspaceStore } from "@/data/workspace-store";
 import { useScrollToTopOnChange } from "@/lib/use-scroll-to-top-on-change";
 import { THEME } from "@/lib/theme";
 import { useT } from "@/lib/i18n";
+import { cn } from "@/lib/utils";
+import { useVisibleActors } from "@/lib/use-visible-actors";
+import { type PickerActorRef, withHiddenNote } from "@/lib/visible-actors";
+import { PickerHiddenSection } from "@/components/issue/pickers/picker-hidden-section";
 
 const AVATAR_SIZE = 36;
 
@@ -41,12 +49,19 @@ interface Props {
 
 type Row =
   | { kind: "unassigned" }
-  | { kind: "member"; member: MemberWithUser }
-  | { kind: "agent"; agent: Agent };
+  | { kind: "hidden_section" }
+  | { kind: "member"; member: MemberWithUser; hidden?: boolean }
+  | { kind: "agent"; agent: Agent; hidden?: boolean };
+
+function actorRef(row: Row): PickerActorRef | null {
+  if (row.kind === "member") return { type: "member", id: row.member.user_id };
+  if (row.kind === "agent") return { type: "agent", id: row.agent.id };
+  return null;
+}
 
 function isRowSelected(value: LeadValue | null, row: Row): boolean {
   if (row.kind === "unassigned") return value === null;
-  if (value === null) return false;
+  if (value === null || row.kind === "hidden_section") return false;
   if (row.kind === "member")
     return value.type === "member" && value.id === row.member.user_id;
   return value.type === "agent" && value.id === row.agent.id;
@@ -57,6 +72,7 @@ export function ProjectLeadPickerBody({ value, query, onChange }: Props) {
   const { t } = useT("issues");
   const { data: members = [] } = useQuery(memberListOptions(wsId));
   const { data: agents = [] } = useQuery(agentListOptions(wsId));
+  const visibleActors = useVisibleActors(wsId);
   const listRef = useScrollToTopOnChange(query);
   const { colorScheme } = useColorScheme();
   const checkColor =
@@ -66,16 +82,36 @@ export function ProjectLeadPickerBody({ value, query, onChange }: Props) {
     const q = query.trim().toLowerCase();
     const matchName = (n: string) => !q || n.toLowerCase().includes(q);
 
-    const memberRows: Row[] = [...members]
-      .filter((m) => matchName(m.name))
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((m) => ({ kind: "member" as const, member: m }));
-    const agentRows: Row[] = [...agents]
-      .filter((a) => matchName(a.name))
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((a) => ({ kind: "agent" as const, agent: a }));
+    const opts = { selected: value ? [value] : [], query };
+    const people = visibleActors.split(
+      [...members]
+        .filter((m) => matchName(m.name))
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((m): Row => ({ kind: "member", member: m })),
+      actorRef,
+      opts,
+    );
+    const bots = visibleActors.split(
+      [...agents]
+        .filter((a) => matchName(a.name))
+        .sort((a, b) => a.name.localeCompare(b.name))
+        .map((a): Row => ({ kind: "agent", agent: a })),
+      actorRef,
+      opts,
+    );
+    const memberRows = people.visible;
+    const agentRows = bots.visible;
 
-    if (q) return [...memberRows, ...agentRows];
+    if (q) {
+      const dimmed = [...people.hidden, ...bots.hidden].map(
+        (r): Row => ({ ...r, hidden: true }) as Row,
+      );
+      return [
+        ...memberRows,
+        ...agentRows,
+        ...(dimmed.length > 0 ? [{ kind: "hidden_section" } as Row, ...dimmed] : []),
+      ];
+    }
 
     const all = [...memberRows, ...agentRows];
     const selectedRow = all.find((r) => isRowSelected(value, r));
@@ -85,9 +121,10 @@ export function ProjectLeadPickerBody({ value, query, onChange }: Props) {
       ...memberRows.filter((r) => !isRowSelected(value, r)),
       ...agentRows.filter((r) => !isRowSelected(value, r)),
     ];
-  }, [members, agents, query, value]);
+  }, [members, agents, query, value, visibleActors]);
 
   const select = (row: Row) => {
+    if (row.kind === "hidden_section") return;
     if (row.kind === "unassigned") onChange(null);
     else if (row.kind === "member")
       onChange({ type: "member", id: row.member.user_id });
@@ -104,13 +141,23 @@ export function ProjectLeadPickerBody({ value, query, onChange }: Props) {
       contentInsetAdjustmentBehavior="automatic"
       keyExtractor={(row) => {
         if (row.kind === "unassigned") return "unassigned";
+        if (row.kind === "hidden_section") return "hidden_section";
         if (row.kind === "member") return `m:${row.member.user_id}`;
         return `a:${row.agent.id}`;
       }}
-      renderItem={({ item }) => (
+      renderItem={({ item }) => {
+        if (item.kind === "hidden_section") {
+          return <PickerHiddenSection label={t("picker.hidden_section")} />;
+        }
+        const dimmed = item.kind !== "unassigned" && !!item.hidden;
+        return (
         <Pressable
           onPress={() => select(item)}
-          className="flex-row items-center gap-3 px-4 py-3 active:bg-secondary"
+          accessibilityHint={dimmed ? t("picker.hidden_note") : undefined}
+          className={cn(
+            "flex-row items-center gap-3 px-4 py-3 active:bg-secondary",
+            dimmed && "opacity-50",
+          )}
         >
           {item.kind === "unassigned" ? (
             <View
@@ -151,14 +198,19 @@ export function ProjectLeadPickerBody({ value, query, onChange }: Props) {
           {/* Inline type tag — Apple UITableViewCellStyleValue1. */}
           {item.kind === "agent" ? (
             <Text className="text-sm text-muted-foreground">
-              {t("picker.agent")}
+              {withHiddenNote(t("picker.agent"), dimmed, t)}
+            </Text>
+          ) : dimmed ? (
+            <Text className="text-sm text-muted-foreground">
+              {t("picker.hidden_note")}
             </Text>
           ) : null}
           {isRowSelected(value, item) ? (
             <Ionicons name="checkmark" size={20} color={checkColor} />
           ) : null}
         </Pressable>
-      )}
+        );
+      }}
       ListEmptyComponent={
         <View className="px-3 py-8 items-center">
           <Text className="text-sm text-muted-foreground text-center">

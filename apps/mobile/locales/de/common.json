@@ -56,5 +56,22 @@
     "days_ago_other": "vor {{count}} Tagen",
     "weeks_ago_one": "vor {{count}} Woche",
     "weeks_ago_other": "vor {{count}} Wochen"
+  },
+  "table": {
+    "title": "Tabelle",
+    "rows_one": "{{count}} Zeile",
+    "rows_other": "{{count}} Zeilen",
+    "cols_one": "{{count}} Spalte",
+    "cols_other": "{{count}} Spalten",
+    "row": "Zeile {{n}}",
+    "column": "Spalte {{n}}",
+    "full_title": "Tabelle ({{rows}}, {{cols}})",
+    "open_button": "Als Tabelle öffnen",
+    "open_full_a11y": "Tabelle in Vollansicht öffnen",
+    "open_nth_a11y": "Tabelle {{n}} öffnen",
+    "row_of": "Zeile {{n}} von {{total}}",
+    "open_link_a11y": "Link öffnen: {{link}}",
+    "copied": "Tabelle als Markdown kopiert",
+    "gone": "Diese Tabelle ist nicht mehr geladen. Öffne sie noch einmal aus der Nachricht."
   }
 }

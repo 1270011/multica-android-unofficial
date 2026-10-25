@@ -41,6 +41,9 @@ interface NewIssueDraftState {
   setDueDate: (next: string | null) => void;
   setProject: (next: Project | null) => void;
   reset: () => void;
+  /** Reset, then preselect (e.g. `?assignee=agent:<id>` from the agent
+   *  detail). One write, so the mount reset cannot wipe it. */
+  start: (preset?: { assignee?: AssigneeValue }) => void;
 }
 
 const INITIAL: Pick<
@@ -62,6 +65,8 @@ export const useNewIssueDraftStore = create<NewIssueDraftState>((set) => ({
   setDueDate: (next) => set({ dueDate: next }),
   setProject: (next) => set({ project: next }),
   reset: () => set({ ...INITIAL }),
+  start: (preset) =>
+    set({ ...INITIAL, assignee: preset?.assignee ?? INITIAL.assignee }),
 }));
 
 /**

@@ -2,7 +2,8 @@
  * Project issues use concrete status sections, like the other issue lists.
  * Filters (status, priority, label, due date; no project filter on a
  * project) use the shared issue-list sheet with `scope=project`, kept per
- * workspace across restarts.
+ * workspace across restarts. The title filter (W5
+ * P8) hides matching titles last, with the hint row below the chips.
  */
 import { useMemo } from "react";
 import { View, useWindowDimensions } from "react-native";
@@ -35,6 +36,9 @@ import { useT } from "@/lib/i18n";
 import { useListTotal } from "@/data/queries/list-total";
 import { ListOffline } from "@/components/ui/list-offline";
 import { listState } from "@/lib/list-state";
+import { TitleFilterAllHidden, TitleFilterHint } from "@/components/issue/title-filter-hint";
+import { useTitleFilteredIssues } from "@/lib/use-title-filter";
+import { allHiddenByTitle } from "@/lib/issue-title-filter";
 
 interface Props {
   projectId: string;
@@ -49,9 +53,16 @@ export function ProjectRelatedIssues({ projectId }: Props) {
   const total = useListTotal(projectIssuesOptions(wsId, projectId).queryKey);
 
   const listFilters = withoutProjectFilter(useIssueListFilters("project", wsId));
-  const filtered = useMemo(
+  const listFiltered = useMemo(
     () => filterIssueList(data ?? [], listFilters),
     [data, listFilters],
+  );
+  const titleFilter = useTitleFilteredIssues(wsId, listFiltered);
+  const filtered = titleFilter.issues;
+  const allTitleHidden = allHiddenByTitle(
+    listFiltered.length,
+    filtered.length,
+    titleFilter.hidden,
   );
   const activeFilterCount = issueListFilterCount(listFilters);
   const hasActiveFilters = activeFilterCount > 0;
@@ -122,8 +133,24 @@ export function ProjectRelatedIssues({ projectId }: Props) {
           total={total}
         />
       ) : null}
+      {allTitleHidden ? null : (
+        <TitleFilterHint
+          hidden={titleFilter.hidden}
+          revealed={titleFilter.revealed}
+          onToggle={titleFilter.toggleReveal}
+        />
+      )}
     </>
   );
+
+  if (allTitleHidden) {
+    return (
+      <View>
+        {toolbar}
+        <TitleFilterAllHidden onShow={titleFilter.toggleReveal} />
+      </View>
+    );
+  }
 
   // No match: the same empty state for list and board.
   if (filtered.length === 0) {

@@ -43,7 +43,10 @@
     "autopilot_runs": "运行记录",
     "autopilot_runs_of": "运行记录：{{title}}",
     "wakeup_runs": "唤醒运行记录",
-    "wakeup_runs_of": "运行：{{agent}}"
+    "wakeup_runs_of": "运行：{{agent}}",
+    "hidden_actors": "隐藏成员和智能体",
+    "title_filter": "隐藏任务",
+    "mention_sort": "@ 建议排序"
   },
   "ai_team": {
     "segment_label": "视图",

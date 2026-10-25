@@ -46,6 +46,9 @@ vi.mock("./stores/my-issues-view-store", () => ({
 vi.mock("./stores/active-issue-view-store", () => ({
   useActiveIssueViewStore: { getState: () => ({ reset: vi.fn() }) },
 }));
+vi.mock("./stores/view-prefs-store", () => ({
+  useViewPrefsStore: { getState: () => ({ reset: vi.fn() }) },
+}));
 vi.mock("@/lib/filter-storage", () => ({ clearAllFilterStorage: vi.fn(async () => {}) }));
 
 import { handOverSession } from "@/lib/notify/session";

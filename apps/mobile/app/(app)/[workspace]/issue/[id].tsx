@@ -53,10 +53,10 @@ import {
   selectDetailPane,
 } from "@/lib/issue-detail-layout";
 import { twoPaneFor, useBreakpoint } from "@/lib/breakpoints";
+import { PaneWidthProvider } from "@/lib/markdown";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import { useViewedIssuesStore } from "@/data/viewed-issues-store";
 import { useCommentSelectStore } from "@/data/comment-select-store";
-import { useReplyTargetStore } from "@/data/stores/reply-target-store";
 import { useEditTargetStore } from "@/data/stores/edit-target-store";
 import { useFailedCommentsStore } from "@/data/stores/failed-comments-store";
 import {
@@ -114,12 +114,12 @@ export default function IssueDetail() {
 
   // Screen-scoped composer state — clear on unmount so re-entering the
   // issue starts from a clean slate (no stale text-selection comment id,
-  // no stale "Replying to X" target). Both stores are singletons used by
-  // the long-press action sheet.
+  // no stale edit). Both stores are singletons used by the long-press
+  // action sheet. The reply target is part of the draft and stays
+  //.
   useEffect(() => {
     return () => {
       useCommentSelectStore.getState().clear();
-      useReplyTargetStore.getState().clear();
       useEditTargetStore.getState().clear();
     };
   }, []);
@@ -171,6 +171,11 @@ export default function IssueDetail() {
   const { width, height } = useBreakpoint();
   const [contentWidth, setContentWidth] = useState<number | null>(null);
   const twoPane = twoPaneFor(contentWidth ?? width, width, height);
+  // Width of the pane with the chat / activity; tables in it lay out from
+  // this.
+  const screenWidth = contentWidth ?? width;
+  const leftWidth = leftPaneWidth(screenWidth);
+  const paneWidth = twoPane ? screenWidth - leftWidth : screenWidth;
   // Pane + T5 read permission of the embedded chat (lib/issue-detail-layout.ts).
   const [paneState, selectPane] = useReducer(selectDetailPane, INITIAL_DETAIL_PANE_STATE);
 
@@ -357,62 +362,66 @@ export default function IssueDetail() {
         <View className="flex-1 flex-row" testID="issue-two-pane">
           <IssueSummaryPane
             issue={issue}
-            width={leftPaneWidth(contentWidth ?? width)}
+            width={leftWidth}
             focusWakeups={section === "wakeups"}
           />
-          <View className="flex-1">
-            <SegmentedPills
-              items={[
-                { value: "chat" as const, label: t("chat.title") },
-                { value: "activity" as const, label: t("detail.activity") },
-              ]}
-              value={paneState.pane}
-              onChange={selectPane}
-            />
-            {paneState.pane === "chat" ? (
-              <View className="flex-1" testID="issue-pane-chat">
-                <IssueChat
-                  id={id}
-                  workspace={wsSlug}
-                  comment={highlight}
-                  h={h}
-                  embedded
-                  readAllowed={paneState.chatReadAllowed}
-                />
-              </View>
-            ) : (
-              <View className="flex-1" testID="issue-pane-activity">
-                <TimelineList
-                  issue={issue}
-                  entries={entries}
-                  timelineLoading={timeline.isLoading}
-                  refreshing={detail.isRefetching || timeline.isRefetching}
-                  onRefresh={onRefresh}
-                  highlightCommentId={highlight}
-                  highlightNonce={h}
-                  onOpenChat={() => selectPane("chat")}
-                  hideIssueHead
-                />
-                <InlineCommentComposer issueId={id} />
-              </View>
-            )}
-          </View>
+          <PaneWidthProvider value={paneWidth}>
+            <View className="flex-1">
+              <SegmentedPills
+                items={[
+                  { value: "chat" as const, label: t("chat.title") },
+                  { value: "activity" as const, label: t("detail.activity") },
+                ]}
+                value={paneState.pane}
+                onChange={selectPane}
+              />
+              {paneState.pane === "chat" ? (
+                <View className="flex-1" testID="issue-pane-chat">
+                  <IssueChat
+                    id={id}
+                    workspace={wsSlug}
+                    comment={highlight}
+                    h={h}
+                    embedded
+                    readAllowed={paneState.chatReadAllowed}
+                  />
+                </View>
+              ) : (
+                <View className="flex-1" testID="issue-pane-activity">
+                  <TimelineList
+                    issue={issue}
+                    entries={entries}
+                    timelineLoading={timeline.isLoading}
+                    refreshing={detail.isRefetching || timeline.isRefetching}
+                    onRefresh={onRefresh}
+                    highlightCommentId={highlight}
+                    highlightNonce={h}
+                    onOpenChat={() => selectPane("chat")}
+                    hideIssueHead
+                  />
+                  <InlineCommentComposer issueId={id} entries={entries} anchorCommentId={highlight} />
+                </View>
+              )}
+            </View>
+          </PaneWidthProvider>
         </View>
       ) : (
-        <View className="flex-1">
-          <TimelineList
-            issue={issue}
-            entries={entries}
-            timelineLoading={timeline.isLoading}
-            refreshing={detail.isRefetching || timeline.isRefetching}
-            onRefresh={onRefresh}
-            highlightCommentId={highlight}
-            highlightNonce={h}
-            onOpenChat={openChat}
-            focusWakeups={section === "wakeups" && !highlight}
-          />
-          <InlineCommentComposer issueId={id} />
-        </View>
+        <PaneWidthProvider value={paneWidth}>
+          <View className="flex-1">
+            <TimelineList
+              issue={issue}
+              entries={entries}
+              timelineLoading={timeline.isLoading}
+              refreshing={detail.isRefetching || timeline.isRefetching}
+              onRefresh={onRefresh}
+              highlightCommentId={highlight}
+              highlightNonce={h}
+              onOpenChat={openChat}
+              focusWakeups={section === "wakeups" && !highlight}
+            />
+            <InlineCommentComposer issueId={id} entries={entries} anchorCommentId={highlight} />
+          </View>
+        </PaneWidthProvider>
       )}
     </View>
   );

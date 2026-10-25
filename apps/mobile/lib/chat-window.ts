@@ -36,6 +36,17 @@
  * (`WindowGrowthGate`); the held-back block comes once the cover is gone
  * (end) or the reader drags (landing), so the landing is not pushed away by
  * rows prepended under it.
+ *
+ * A target further up than one block opens the window around itself
+ *: `CHAT_WINDOW_LEAD` rows above, `CHAT_LANDING_BELOW` rows from
+ * it down, the rest below is cut off (`chatWindowRange`). Growing toward it
+ * block by block took 1–4 s on a long issue (target ~460 rows up) and each
+ * prepend under `maintainVisibleContentPosition` left the visible area blank
+ * for up to 1.3 s. Now the landing gets a cover like a target in the first
+ * window, and nothing is prepended under it. The rows below come later, one
+ * block per `onEndReached`; appending below the reader moves nothing. Until
+ * the window reaches the last row, it does not count as the end (no footer,
+ * no "read", no bottom-follow), and a jump to the end opens a fresh suffix.
  */
 
 import type { ChatItem } from "@/lib/issue-chat";
@@ -50,6 +61,9 @@ export const CHAT_WINDOW_STEP = 75;
 /** Idle fill while a screen reader is on: small blocks, spaced out. */
 export const CHAT_IDLE_STEP = 50;
 export const CHAT_IDLE_MS = 400;
+/** Rows from a far-up landing target down in its first window:
+ *  more than a screen even with short rows, few enough for a fast commit. */
+export const CHAT_LANDING_BELOW = 15;
 
 export interface ChatWindowOptions {
   focusId?: string | null;
@@ -58,6 +72,23 @@ export interface ChatWindowOptions {
   keepFromId?: string | null;
   /** Window length to keep when `keepFromId` is no longer in the rows. */
   keepFromEnd?: number | null;
+  /** Last row of a window cut off below; `null` = to the end. */
+  keepToId?: string | null;
+}
+
+export interface ChatWindowRange {
+  start: number;
+  /** Exclusive; `items.length` = the window reaches the end. */
+  end: number;
+}
+
+/** Index of a landing target further up than one block above the first
+ *  window, else `-1`. */
+function farTarget(items: readonly Pick<ChatItem, "id">[], focusId: string | null | undefined, size: number): number {
+  if (!focusId) return -1;
+  const start = items.length - size;
+  const focus = items.findIndex((i) => i.id === focusId);
+  return focus >= 0 && focus < start - CHAT_WINDOW_STEP ? focus : -1;
 }
 
 /** Index of the first row to render. */
@@ -85,19 +116,52 @@ export function chatWindowStart(
   return start;
 }
 
+/**
+ * Rows to render: `[start, end)`. First render (no `keepFromId`) with a far
+ * target: around the target. Otherwise the suffix from `chatWindowStart`,
+ * cut below at `keepToId` while that row exists.
+ */
+export function chatWindowRange(
+  items: readonly Pick<ChatItem, "id">[],
+  opts: ChatWindowOptions,
+): ChatWindowRange {
+  const size = opts.size ?? CHAT_WINDOW_SIZE;
+  if (!opts.keepFromId) {
+    const far = farTarget(items, opts.focusId, size);
+    if (far >= 0) {
+      return {
+        start: Math.max(0, far - CHAT_WINDOW_LEAD),
+        end: Math.min(items.length, far + CHAT_LANDING_BELOW),
+      };
+    }
+  }
+  const start = chatWindowStart(items, opts);
+  let end = items.length;
+  if (opts.keepToId) {
+    const last = items.findIndex((i) => i.id === opts.keepToId);
+    if (last >= start) end = last + 1;
+  }
+  return { start, end };
+}
+
 /** Rows to hand to the list: the window, or `items` itself (same reference)
  *  when nothing is cut, so the list does not see a new array for nothing. */
 export function chatWindow<T extends Pick<ChatItem, "id">>(
   items: T[],
   opts: ChatWindowOptions,
 ): T[] {
-  const start = chatWindowStart(items, opts);
-  return start === 0 ? items : items.slice(start);
+  const { start, end } = chatWindowRange(items, opts);
+  return start === 0 && end === items.length ? items : items.slice(start, end);
 }
 
 /** Start after one more block above `start` (0 = everything rendered). */
 export function grownWindowStart(start: number, step = CHAT_WINDOW_STEP): number {
   return Math.max(0, start - step);
+}
+
+/** End after one more block below `end` (`length` = up to the last row). */
+export function grownWindowEnd(end: number, length: number, step = CHAT_WINDOW_STEP): number {
+  return Math.min(length, end + step);
 }
 
 /**

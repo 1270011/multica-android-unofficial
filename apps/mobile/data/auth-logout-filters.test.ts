@@ -40,6 +40,7 @@ import { useAuthStore } from "./auth-store";
 import { useInboxFilterStore } from "./stores/inbox-filter-store";
 import { useIssueListFilterStore } from "./stores/issue-list-filter-store";
 import { useMyIssuesViewStore } from "./stores/my-issues-view-store";
+import { useViewPrefsStore } from "./stores/view-prefs-store";
 
 // The next user on the device must not inherit filters.
 describe("logout forgets remembered filters", () => {
@@ -61,6 +62,31 @@ describe("logout forgets remembered filters", () => {
     // A new session re-reads storage and finds nothing.
     await useIssueListFilterStore.getState().hydrate("my", "ws-b");
     expect(useIssueListFilterStore.getState().filters["my:ws-b"]).toBeUndefined();
+  });
+});
+
+// P1: hidden actors and the title filter are workspace
+// data and go on logout; the @-sort mode is a device preference and stays.
+describe("logout forgets view prefs per workspace", () => {
+  it("clears hidden actors and title filters, keeps the sort mode", async () => {
+    const view = useViewPrefsStore.getState();
+    view.setActorHidden("ws-a", "agents", "a1", true);
+    view.setTitleFilter("ws-b", { enabled: true });
+    view.setMentionSort("name");
+    await new Promise((r) => setTimeout(r, 0));
+    expect([...storage.keys()].some((k) => k.startsWith("rb.hidden_actors."))).toBe(true);
+    expect([...storage.keys()].some((k) => k.startsWith("rb.issue_title_filter."))).toBe(true);
+
+    await useAuthStore.getState().logout();
+
+    expect(useViewPrefsStore.getState().hiddenByWorkspace).toEqual({});
+    expect(useViewPrefsStore.getState().titleFilterByWorkspace).toEqual({});
+    expect([...storage.keys()]).toEqual(["rb.view.mention_sort"]);
+    expect(useViewPrefsStore.getState().mentionSort).toBe("name");
+
+    await useViewPrefsStore.getState().hydrate("ws-a");
+    expect(useViewPrefsStore.getState().hiddenByWorkspace["ws-a"]?.agents).toEqual([]);
+    storage.delete("rb.view.mention_sort");
   });
 });
 

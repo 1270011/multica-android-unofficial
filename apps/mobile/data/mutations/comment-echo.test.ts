@@ -18,6 +18,8 @@ import {
   mergeLocalComments,
   type LocalComment,
 } from "@/lib/pending-comments";
+import { MemoryKv } from "@/data/timeline-cache/memory-kv";
+import { readMentionUsage, registerMentionUsageStore } from "@/lib/mention-usage";
 import { createCommentMutationKey, discardFailedComment, useCreateComment } from "./issues";
 
 const state = vi.hoisted(() => ({
@@ -261,5 +263,49 @@ describe("issue chat – the own comment shows exactly once", () => {
     await b;
     wsEcho(two);
     expect(hello()).toEqual(["sent:real-1", "sent:real-2"]);
+  });
+});
+
+describe("@-mention frequency counts only sent comments (A6.5)", () => {
+  const mentionText = "hi [@B](mention://agent/b) [@B](mention://agent/b) [@all](mention://all/all)";
+
+  beforeEach(() => {
+    state.qc = new QueryClient({ defaultOptions: { mutations: { retry: false } } });
+    state.qc.mount();
+    createComment.mockReset();
+    listTimeline.mockReset().mockResolvedValue([]);
+    useFailedCommentsStore.setState({ failed: {} });
+    onlineManager.setOnline(true);
+    registerMentionUsageStore(new MemoryKv());
+  });
+
+  afterEach(() => {
+    state.qc.unmount();
+  });
+
+  it("a successful send counts each target once", async () => {
+    createComment.mockResolvedValue({ ...realComment(), content: mentionText } as Comment);
+    await useCreateComment(issueId).mutate({ content: mentionText });
+    expect(readMentionUsage(wsId)).toEqual({ "agent:b": { n: 1, last: expect.any(Number) } });
+  });
+
+  it("a failed send does not count", async () => {
+    createComment.mockRejectedValue(
+      Object.assign(new Error("content too long"), { name: "ApiError", status: 422 }),
+    );
+    await useCreateComment(issueId).mutate({ content: mentionText });
+    expect(useFailedCommentsStore.getState().failed).not.toEqual({});
+    expect(readMentionUsage(wsId)).toEqual({});
+  });
+
+  it("with all actor lists cached, entries of deleted actors go on the next send", async () => {
+    registerMentionUsageStore(new MemoryKv());
+    state.qc.setQueryData(["members", wsId], [{ user_id: "u-c" }]);
+    state.qc.setQueryData(["agents", wsId], [{ id: "b" }]);
+    state.qc.setQueryData(["squads", wsId], []);
+    createComment.mockResolvedValue({ ...realComment(), content: "x" } as Comment);
+    await useCreateComment(issueId).mutate({ content: "[@Gone](mention://agent/gone)" });
+    await useCreateComment(issueId).mutate({ content: "[@C](mention://member/u-c)" });
+    expect(Object.keys(readMentionUsage(wsId))).toEqual(["member:u-c"]);
   });
 });

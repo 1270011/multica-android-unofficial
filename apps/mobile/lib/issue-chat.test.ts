@@ -3,6 +3,7 @@ import type { InboxItem, TimelineEntry } from "@multica/core/types";
 import {
   activeForIssue,
   buildChatItems,
+  createChatItemsBuilder,
   canMarkDone,
   firstLine,
   isIssueId,
@@ -134,6 +135,59 @@ describe("buildChatItems", () => {
     });
     const r1 = items.find((i) => i.id === "r1");
     expect(r1?.kind === "message" && r1.groupStart).toBe(true);
+  });
+
+  it("puts the thread reply button on the last shown message of each thread", () => {
+    const items = buildChatItems(
+      [
+        comment("a", "2026-10-16T08:00:00Z"),
+        comment("b", "2026-10-16T08:01:00Z", { actor_type: "member", actor_id: ME }),
+        comment("a1", "2026-10-16T08:02:00Z", { parent_id: "a", actor_type: "member", actor_id: ME }),
+        comment("a2", "2026-10-16T08:03:00Z", { parent_id: "a1" }),
+        comment("c", "2026-10-16T08:04:00Z"),
+        // Deleted last reply: the button moves to the last shown one.
+        comment("c1", "2026-10-16T08:05:00Z", { parent_id: "c" }),
+        comment("c2", "2026-10-16T08:06:00Z", { parent_id: "c", deleted_at: "2026-10-16T08:07:00Z" }),
+        // Deleted root: no button (its placeholder is gone from the chat).
+        comment("d", "2026-10-16T08:08:00Z", { deleted_at: "2026-10-16T08:09:00Z", content: "" }),
+        comment("d1", "2026-10-16T08:10:00Z", { parent_id: "d" }),
+      ],
+      { userId: ME, dayKey },
+    );
+    const targets = items.flatMap((i) => (i.kind === "message" ? [[i.id, i.replyRootId]] : []));
+    expect(targets).toEqual([
+      ["a", null],
+      ["b", "b"],
+      ["a1", null],
+      ["a2", "a"],
+      ["c", null],
+      ["c1", "c"],
+      ["d1", null],
+    ]);
+  });
+
+  it("has no reply button for a root that is still sending", () => {
+    const pending = comment("optimistic-1-1", "2026-10-16T08:00:00Z", { actor_type: "member", actor_id: ME });
+    const items = buildChatItems([pending], { userId: ME, dayKey });
+    const row = items.find((i) => i.kind === "message");
+    expect(row?.kind === "message" && row.replyRootId).toBe(null);
+  });
+
+  it("moves the reply button to a new reply and renews only the two rows", () => {
+    const build = createChatItemsBuilder();
+    const base = [comment("a", "2026-10-16T08:00:00Z"), comment("b", "2026-10-16T08:30:00Z")];
+    const first = build(base, { userId: ME, dayKey });
+    const next = build([...base, comment("a1", "2026-10-16T08:40:00Z", { parent_id: "a" })], {
+      userId: ME,
+      dayKey,
+    });
+    const row = (items: ChatItem[], id: string) => items.find((i) => i.id === id);
+    const a = row(next, "a");
+    const a1 = row(next, "a1");
+    expect(a?.kind === "message" && a.replyRootId).toBe(null);
+    expect(a1?.kind === "message" && a1.replyRootId).toBe("a");
+    expect(row(next, "b")).toBe(row(first, "b"));
+    expect(a).not.toBe(row(first, "a"));
   });
 
   it("keeps an orphan reply as a plain message", () => {

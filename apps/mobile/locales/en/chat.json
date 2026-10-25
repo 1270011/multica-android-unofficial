@@ -195,5 +195,13 @@
     "clear_confirm_message_other": "{{count}} waiting messages will not be sent.",
     "fallback": "Waiting message",
     "failed": "The queue could not be updated."
+  },
+  "agent_handover": {
+    "latest": "Latest chat with {{name}}",
+    "new_chat": "New chat",
+    "new_chat_a11y": "Start a new chat with {{name}}"
+  },
+  "agent_chat": {
+    "back_a11y": "Back to the agent"
   }
 }

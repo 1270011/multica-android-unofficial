@@ -82,7 +82,9 @@
     "not_with_nobody": "不能与“无人”同时使用",
     "section_reset": "筛选无法应用，已重置",
     "back": "返回",
-    "no_matches": "无匹配结果"
+    "no_matches": "无匹配结果",
+    "hidden_section": "已隐藏",
+    "hidden_note": "已隐藏"
   },
   "list": {
     "empty": "没有符合筛选条件的任务",
@@ -250,6 +252,7 @@
     "people": "成员",
     "agents": "智能体",
     "squads": "小队",
+    "frequent": "常用",
     "issues": "任务",
     "everyone": "所有人（@all）",
     "unknown": "未知",
@@ -265,10 +268,23 @@
     "search_issues": "搜索事项",
     "type_to_search": "输入以搜索。",
     "no_labels_hint": "在上方输入名称即可创建。颜色和描述请在网页端“设置 → 标签”中管理。",
-    "no_labels_hint_web": "标签请在网页端“设置 → 标签”中创建。"
+    "no_labels_hint_web": "标签请在网页端“设置 → 标签”中创建。",
+    "selected_count": "已选 {{count}} 个",
+    "done_count": "完成（{{count}}）",
+    "done": "完成",
+    "done_a11y": "完成，已选 {{count}} 个",
+    "remove_chip_a11y": "移除 {{name}}",
+    "added_a11y": "已添加 {{name}}，已选 {{count}} 个",
+    "removed_a11y": "已移除 {{name}}，已选 {{count}} 个",
+    "selection_a11y": "已选择",
+    "hidden_section": "已隐藏",
+    "hidden_note": "已隐藏"
   },
   "comments": {
     "reply": "回复",
+    "reply_to": "回复 {{name}}",
+    "suggest_reply": "回复 {{name}}",
+    "suggest_reply_hint": "回复这条评论；发送后将启动 {{name}}",
     "react": "回应...",
     "copy": "复制",
     "select_text": "选择文本",
@@ -285,7 +301,21 @@
     "composer_pill": "添加评论，输入 @ 提及...",
     "editing": "编辑评论",
     "cancel_edit": "取消编辑",
-    "edit_failed": "无法保存编辑。"
+    "edit_failed": "无法保存编辑。",
+    "trigger": {
+      "will_start": "将启动：{{name}}",
+      "wont_start": "不启动：{{name}}",
+      "row_label": "此评论将启动的智能体",
+      "hint_deselect": "双击以不启动 {{name}}",
+      "hint_select": "双击以重新启动 {{name}}",
+      "reason": {
+        "issue_assignee": "负责人",
+        "mention_agent": "被提及",
+        "mention_squad_leader": "小队负责人",
+        "thread_parent": "回复智能体",
+        "conversation_continuation": "继续对话"
+      }
+    }
   },
   "suggestions": {
     "everyone": "所有人",
@@ -1006,5 +1036,15 @@
       "error_offline": "无网络连接，更改未保存。",
       "error_failed": "无法更改视图，请重试。"
     }
+  },
+  "title_filter": {
+    "hint_one": "已按标题过滤隐藏 {{count}} 个",
+    "hint_other": "已按标题过滤隐藏 {{count}} 个",
+    "hint_revealed": "标题过滤已暂时关闭",
+    "show": "显示",
+    "hide": "隐藏",
+    "all_hidden": "此处所有事项均已被标题过滤隐藏",
+    "settings": "标题过滤设置",
+    "settings_a11y": "长按打开标题过滤设置"
   }
 }

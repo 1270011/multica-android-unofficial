@@ -1,5 +1,6 @@
 /**
- * Cross-screen channel between the chat tab (`(tabs)/chat.tsx`) and the
+ * Cross-screen channel between the chat screen (`components/chat/chat-screen.tsx`,
+ * rendered by the chat tab and the agent chat route) and the
  * `chat-sessions` formSheet route. The formSheet can't push selections back
  * up the React tree (different routes), so we hand off through a small
  * store with two slots:
@@ -11,6 +12,9 @@
  *     the chat tab `useEffect`s on it, applies it, then `consume()`s.
  *     One-shot (consumed after read) — avoids re-firing on every render
  *     or after a soft navigation back.
+ *   - `owner` — which chat screen the two slots belong to. The tab stays
+ *     mounted under the agent chat route; the screen focused
+ *     last claims the store, the other one neither mirrors nor consumes.
  *
  * Workspace lifecycle: this store holds workspace-scoped state
  * (`activeSessionId` belongs to the workspace whose chat tab seeded it).
@@ -28,12 +32,15 @@ interface ChatSessionPickerState {
   selectRequest: { id: string | null; nonce: number } | null;
   requestSelect: (id: string | null) => void;
   consumeSelect: () => void;
+  owner: string | null;
+  claim: (owner: string) => void;
   reset: () => void;
 }
 
 const INITIAL = {
   activeSessionId: null,
   selectRequest: null,
+  owner: null,
 } as const;
 
 export const useChatSessionPickerStore = create<ChatSessionPickerState>(
@@ -43,7 +50,10 @@ export const useChatSessionPickerStore = create<ChatSessionPickerState>(
     requestSelect: (id) =>
       set({ selectRequest: { id, nonce: (get().selectRequest?.nonce ?? 0) + 1 } }),
     consumeSelect: () => set({ selectRequest: null }),
-    reset: () => set({ ...INITIAL }),
+    claim: (owner) => set({ owner }),
+    // The owner is a screen instance, not workspace data: keep it, else the
+    // focused screen would lose the store until it is focused again.
+    reset: () => set({ activeSessionId: null, selectRequest: null }),
   }),
 );
 

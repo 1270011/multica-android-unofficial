@@ -43,7 +43,10 @@
     "autopilot_runs": "Läufe",
     "autopilot_runs_of": "Läufe: {{title}}",
     "wakeup_runs": "Läufe des Wakeups",
-    "wakeup_runs_of": "Läufe: {{agent}}"
+    "wakeup_runs_of": "Läufe: {{agent}}",
+    "hidden_actors": "Personen & Agenten ausblenden",
+    "title_filter": "Issues ausblenden",
+    "mention_sort": "@-Auswahl sortieren"
   },
   "ai_team": {
     "segment_label": "Ansicht",

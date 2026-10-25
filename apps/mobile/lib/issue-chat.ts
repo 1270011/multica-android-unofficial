@@ -17,6 +17,9 @@
  *     and are emphasised.
  *   - Messages by the same author within `GROUP_WINDOW_MS` share one header.
  *   - A day separator precedes the first row of every calendar day.
+ *   - The last shown message of every thread carries `replyRootId`: the
+ *     bubble shows the "Reply" button under it, which replies to the thread
+ *     root (W1-1).
  *   - The unread divider sits before the comment the oldest unread inbox
  *     entry of this issue points at (or, without a comment anchor, before
  *     the first comment created at or after that entry minus a small skew).
@@ -26,6 +29,7 @@ import { isDeletedComment } from "@multica/core/issues/comment-deletion";
 import { replaceEqualDeep } from "@tanstack/react-query";
 import { sanitizeTimeline } from "@/data/timeline-cache/core";
 import { isOptimisticCommentId } from "@/lib/pending-comments";
+import { canReplyToThread } from "@/lib/thread-reply";
 
 /** Same author within this window → one bubble group (UX §8.2). */
 export const GROUP_WINDOW_MS = 5 * 60 * 1000;
@@ -61,6 +65,10 @@ export type ChatItem =
       mentionsMe: boolean;
       /** Belongs to a resolved thread (root or reply): rendered dimmed. */
       resolved: boolean;
+      /** Last shown message of its thread: the root id the "Reply" button
+       *  under it replies to. Null for other messages and for
+       *  threads whose root is pending, failed or deleted. */
+      replyRootId: string | null;
     }
   | { kind: "system"; id: string; entry: TimelineEntry; emphasis: boolean }
   | { kind: "system-group"; id: string; entries: TimelineEntry[] };
@@ -285,6 +293,17 @@ function build(
     return cur.id === entry.id ? null : cur;
   };
 
+  // Thread root (or the comment itself) per comment, and the last shown
+  // comment of every thread: that bubble carries the "Reply" button.
+  const threadOf = new Map<TimelineEntry, TimelineEntry>();
+  const lastOfThread = new Map<string, TimelineEntry>();
+  for (const e of sorted) {
+    if (e.type !== "comment") continue;
+    const threadRoot = rootOf(e) ?? e;
+    threadOf.set(e, threadRoot);
+    if (!isDeletedComment(e)) lastOfThread.set(threadRoot.id, e);
+  }
+
   const previewOf = (root: TimelineEntry): string => {
     const f = factsOf(root);
     f.preview ??= firstLine(root.content);
@@ -362,7 +381,12 @@ function build(
       lastMessage = null;
     }
 
-    const root = rootOf(entry);
+    const threadRoot = threadOf.get(entry) ?? entry;
+    const root = threadRoot === entry ? null : threadRoot;
+    const replyRootId =
+      lastOfThread.get(threadRoot.id) === entry && canReplyToThread(threadRoot)
+        ? threadRoot.id
+        : null;
     const groupStart =
       !lastMessage ||
       !sameAuthor(lastMessage, entry) ||
@@ -380,6 +404,7 @@ function build(
       old.own === own &&
       old.groupStart === groupStart &&
       old.resolved === resolved &&
+      old.replyRootId === replyRootId &&
       (root
         ? !!old.replyTo &&
           old.replyTo.rootId === root.id &&
@@ -413,6 +438,7 @@ function build(
             ? old.mentionsMe
             : mentionsUser(entry.content, userId),
         resolved,
+        replyRootId,
       };
       cache.rows.set(entry, row);
       out.push(row);

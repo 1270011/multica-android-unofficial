@@ -1,7 +1,8 @@
 /**
  * Agent detail, read-only: overview (status, runtime,
  * capacity, description) and the latest runs. Runs that belong to an issue
- * open that issue. Editing the agent (instructions, skills, runtime, access)
+ * open that issue. Below the header, "Chat" and "New issue" start work with
+ * this agent. Editing the agent (instructions, skills, runtime, access)
  * stays on the web.
  */
 import { Pressable, ScrollView, View } from "react-native";
@@ -12,6 +13,7 @@ import { ActorAvatar } from "@/components/ui/actor-avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { RunRow } from "@/components/issue/run-row";
 import { AgentHangStatusLine } from "@/components/agents/agent-hang-notice";
+import { AgentActionRow } from "@/components/agents/agent-action-row";
 import {
   useAgentStatusText,
   useRuntimeText,
@@ -84,6 +86,7 @@ export default function AgentDetail() {
           <Text className={cn("text-sm", status.className)}>{status.text}</Text>
         </View>
       </View>
+      <AgentActionRow agent={agent} />
       {/* "Warum hängt mein Agent?": only when something needs attention. */}
       <AgentHangStatusLine agentId={agent.id} className="mx-4 mt-3" />
 

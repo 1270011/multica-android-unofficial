@@ -42,7 +42,14 @@ import { ActorAvatar } from "@/components/ui/actor-avatar";
 import { useActorLookup } from "@/data/use-actor-name";
 import { timeAgo } from "@/lib/time-ago";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Markdown } from "@/lib/markdown";
+import {
+  Markdown,
+  MarkdownLongPressProvider,
+  MarkdownWidthProvider,
+  commentCardContentWidth,
+  usePaneWidth,
+  useTableA11yActions,
+} from "@/lib/markdown";
 import { CommentAttachmentList } from "@/components/issue/comment-attachment-list";
 import {
   discardFailedComment,
@@ -62,6 +69,8 @@ import { useT } from "@/lib/i18n";
 import { ReactionBar } from "./reaction-bar";
 import { useCommentLongPress } from "./comment-context-menu";
 import { useCommentSelectStore } from "@/data/comment-select-store";
+import { canReplyToThread } from "@/lib/thread-reply";
+import { ThreadReplyButton } from "./thread-reply-button";
 
 interface Props {
   entry: TimelineEntry;
@@ -133,6 +142,10 @@ export function CommentCard({
   }, [resolved, highlightedCommentId, entry.id, replies]);
 
   const visibleReplies = replies.filter((reply) => !isDeletedComment(reply));
+  const { getName } = useActorLookup();
+  const rootName =
+    entry.actor_name ||
+    getName(entry.actor_type as "member" | "agent" | null | undefined, entry.actor_id);
   // A deleted reply renders nothing, so a notification pointing at one has no
   // row to flash. Flash the comment just above where it was instead — the
   // expansion above still keys off the original id, which is in this thread
@@ -207,6 +220,17 @@ export function CommentCard({
               />
             </View>
           ))}
+          {/* "Reply" under every thread: replies to the root, so
+           *  the server starts the thread's agent without an @. */}
+          {canReplyToThread(entry) ? (
+            <ThreadReplyButton
+              issueId={issueId}
+              rootId={entry.id}
+              rootContent={entry.content}
+              actorName={rootName}
+              className="-ml-2 -my-2"
+            />
+          ) : null}
         </View>
         <RootHighlightOverlay active={highlightId === entry.id} />
       </View>
@@ -489,6 +513,7 @@ function CommentBody({
       content: failed.content,
       parentId: failed.parentId,
       attachmentIds: failed.attachmentIds,
+      suppressAgentIds: failed.suppressAgentIds,
       sentAt: failed.sentAt,
       knownIds: failed.knownIds,
     });
@@ -519,6 +544,10 @@ function CommentBody({
   // translucent primary-tint background as the mode cue (no Done pill).
   // Exit: scroll the timeline, leave the issue, or long-press another body.
   const longPress = useCommentLongPress(entry, issueId, issueIdentifier);
+  // Tables pick grid or cards from this width (no measure pass).
+  const markdownWidth = commentCardContentWidth(usePaneWidth());
+  // TalkBack: "Tabelle in Vollansicht öffnen" per table.
+  const tableActions = useTableA11yActions(entry.content);
 
   useEffect(() => {
     if (isSelecting) return;
@@ -555,11 +584,17 @@ function CommentBody({
         </Text>
       </View>
       {entry.content ? (
-        <Markdown
-          content={entry.content}
-          attachments={attachments}
-          selectable={isSelecting}
-        />
+        <MarkdownWidthProvider value={markdownWidth}>
+          <MarkdownLongPressProvider
+            value={isSelecting || pending ? undefined : longPress.onLongPress}
+          >
+            <Markdown
+              content={entry.content}
+              attachments={attachments}
+              selectable={isSelecting}
+            />
+          </MarkdownLongPressProvider>
+        </MarkdownWidthProvider>
       ) : null}
       <CommentAttachmentList
         attachments={entry.attachments}
@@ -586,7 +621,21 @@ function CommentBody({
   if (isSelecting || pending) return body;
 
   return (
-    <Pressable onLongPress={longPress.onLongPress} delayLongPress={500}>
+    <Pressable
+      onLongPress={longPress.onLongPress}
+      delayLongPress={500}
+      // A custom action list replaces RN's implicit ones, so the long-press
+      // (comment menu) is listed again next to the table actions.
+      accessibilityActions={
+        tableActions.actions.length > 0
+          ? [{ name: "longpress" }, ...tableActions.actions]
+          : undefined
+      }
+      onAccessibilityAction={(e) => {
+        if (tableActions.onAction(e.nativeEvent.actionName)) return;
+        if (e.nativeEvent.actionName === "longpress") longPress.onLongPress();
+      }}
+    >
       {body}
     </Pressable>
   );

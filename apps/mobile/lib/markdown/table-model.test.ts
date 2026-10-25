@@ -3,9 +3,6 @@ import { splitMarkdown } from "./split-markdown";
 import {
   cellText,
   decodeEntities,
-  estimateColumnWidths,
-  TABLE_COL_MAX,
-  TABLE_COL_MIN,
   type TableModel,
 } from "./table-model";
 
@@ -86,30 +83,6 @@ describe("splitMarkdown – tables", () => {
       expect.objectContaining({ type: "table" }),
       { type: "prose", content: "Text" },
     ]);
-  });
-});
-
-describe("estimateColumnWidths", () => {
-  it("clamps every column to [min, max]", () => {
-    const t = tableOf(
-      `| a | ${"x".repeat(200)} |\n|---|---|\n| 1 | 2 |\n`,
-    );
-    expect(estimateColumnWidths(t)).toEqual([TABLE_COL_MIN, TABLE_COL_MAX]);
-  });
-
-  it("makes the 4-column table wider than a phone column", () => {
-    const widths = estimateColumnWidths(tableOf(WIDE_TABLE));
-    expect(widths).toHaveLength(4);
-    // 360 dp screen minus chat padding: the table must scroll, not clip.
-    expect(widths.reduce((a, b) => a + b, 0)).toBeGreaterThan(330);
-    // The code path column is the widest one.
-    expect(Math.max(...widths)).toBe(widths[2]);
-  });
-
-  it("uses the longest line of a multi-line cell", () => {
-    const t = tableOf("| h |\n|---|\n| aaaaaaaaaaaaaaaa<br>b |\n");
-    const [w] = estimateColumnWidths(t);
-    expect(w).toBeGreaterThan(TABLE_COL_MIN);
   });
 });
 

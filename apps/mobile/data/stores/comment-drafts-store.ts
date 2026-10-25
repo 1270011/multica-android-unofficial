@@ -8,19 +8,27 @@
  * `editId` marks a draft that edits a comment: the composer pre-fills the
  * comment once per edit target and keeps the user's changes after that.
  * `attachments` keeps picked files (and uploads still running) across the
- * same remounts; uploads finishing after a remount land here too.
+ * same remounts (J3b); uploads finishing after a remount land here too.
+ * `replyTo` is the composer's reply target (W1-2): it belongs to
+ * the draft, so it survives everything the draft survives (keyboard, a
+ * remount, leaving the screen, switching tab or app) and only goes away on
+ * send, on the chip's ✕, when an edit takes over the draft, or on logout.
  */
 import { create } from "zustand";
 import type { ComposerAttachmentItem } from "@/components/issue/composer-attachment-row";
+import type { ReplyTarget } from "@/data/stores/reply-target-store";
 
 export interface CommentDraft {
   text: string;
   /** Comment being edited; absent for a new comment or reply. */
   editId?: string;
   attachments?: ComposerAttachmentItem[];
+  /** Comment this draft replies to; absent for a top-level comment. */
+  replyTo?: ReplyTarget;
 }
 
-const isEmpty = (d: CommentDraft) => d.text === "" && !d.editId && !d.attachments?.length;
+const isEmpty = (d: CommentDraft) =>
+  d.text === "" && !d.editId && !d.attachments?.length && !d.replyTo;
 
 interface CommentDraftsState {
   drafts: Record<string, CommentDraft>;
@@ -32,6 +40,8 @@ interface CommentDraftsState {
     issueId: string,
     update: (prev: ComposerAttachmentItem[]) => ComposerAttachmentItem[],
   ) => void;
+  /** Set or (with `null`) drop the reply target; the text stays. */
+  setReplyTo: (issueId: string, replyTo: ReplyTarget | null) => void;
   clear: (issueId: string) => void;
 }
 
@@ -53,6 +63,18 @@ export const useCommentDraftsStore = create<CommentDraftsState>((set, get) => ({
     const attachments = update(prev);
     if (attachments === prev) return;
     const next = { ...current, text: current?.text ?? "", attachments };
+    if (isEmpty(next)) {
+      get().clear(issueId);
+      return;
+    }
+    set({ drafts: { ...get().drafts, [issueId]: next } });
+  },
+  setReplyTo: (issueId, replyTo) => {
+    const current = get().drafts[issueId];
+    if ((current?.replyTo ?? null) === replyTo) return;
+    const next: CommentDraft = { ...current, text: current?.text ?? "" };
+    if (replyTo) next.replyTo = replyTo;
+    else delete next.replyTo;
     if (isEmpty(next)) {
       get().clear(issueId);
       return;

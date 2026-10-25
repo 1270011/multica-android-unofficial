@@ -52,5 +52,22 @@
     "hours_ago_other": "{{count}}h ago",
     "days_ago_other": "{{count}}d ago",
     "weeks_ago_other": "{{count}}w ago"
+  },
+  "table": {
+    "title": "Table",
+    "rows_one": "{{count}} row",
+    "rows_other": "{{count}} rows",
+    "cols_one": "{{count}} column",
+    "cols_other": "{{count}} columns",
+    "row": "Row {{n}}",
+    "column": "Column {{n}}",
+    "full_title": "Table ({{rows}}, {{cols}})",
+    "open_button": "Open as table",
+    "open_full_a11y": "Open table in full view",
+    "open_nth_a11y": "Open table {{n}}",
+    "row_of": "Row {{n}} of {{total}}",
+    "open_link_a11y": "Open link: {{link}}",
+    "copied": "Table copied as Markdown",
+    "gone": "This table is no longer loaded. Open it again from the message."
   }
 }

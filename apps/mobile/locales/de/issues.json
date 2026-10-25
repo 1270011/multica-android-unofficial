@@ -82,7 +82,9 @@
     "not_with_nobody": "Nicht zusammen mit ‚Niemand‘",
     "section_reset": "Filter konnte nicht angewendet werden und wurde zurückgesetzt",
     "back": "Zurück",
-    "no_matches": "Keine Treffer"
+    "no_matches": "Keine Treffer",
+    "hidden_section": "Ausgeblendet",
+    "hidden_note": "ausgeblendet"
   },
   "list": {
     "empty": "Keine Issues passen zu deinen Filtern",
@@ -253,6 +255,7 @@
     "people": "Personen",
     "agents": "Agenten",
     "squads": "Squads",
+    "frequent": "Häufig",
     "issues": "Issues",
     "everyone": "Alle (@all)",
     "unknown": "Unbekannt",
@@ -268,10 +271,23 @@
     "search_issues": "Issues suchen",
     "type_to_search": "Suchbegriff eingeben.",
     "no_labels_hint": "Oben einen Namen eingeben, um eines anzulegen. Farben und Beschreibungen verwaltest du im Web unter Einstellungen → Labels.",
-    "no_labels_hint_web": "Labels legst du im Web unter Einstellungen → Labels an."
+    "no_labels_hint_web": "Labels legst du im Web unter Einstellungen → Labels an.",
+    "selected_count": "{{count}} gewählt",
+    "done_count": "Fertig ({{count}})",
+    "done": "Fertig",
+    "done_a11y": "Fertig, {{count}} gewählt",
+    "remove_chip_a11y": "{{name}} entfernen",
+    "added_a11y": "{{name}} hinzugefügt, {{count}} gewählt",
+    "removed_a11y": "{{name}} entfernt, {{count}} gewählt",
+    "selection_a11y": "Ausgewählt",
+    "hidden_section": "Ausgeblendet",
+    "hidden_note": "ausgeblendet"
   },
   "comments": {
     "reply": "Antworten",
+    "reply_to": "Antworten an {{name}}",
+    "suggest_reply": "Antwort an {{name}}",
+    "suggest_reply_hint": "Antwortet auf diesen Kommentar; Senden startet {{name}}",
     "react": "Reagieren …",
     "copy": "Kopieren",
     "select_text": "Text auswählen",
@@ -288,7 +304,21 @@
     "composer_pill": "Kommentar hinzufügen, @ zum Erwähnen …",
     "editing": "Kommentar bearbeiten",
     "cancel_edit": "Bearbeiten abbrechen",
-    "edit_failed": "Änderung konnte nicht gespeichert werden."
+    "edit_failed": "Änderung konnte nicht gespeichert werden.",
+    "trigger": {
+      "will_start": "Startet: {{name}}",
+      "wont_start": "Startet nicht: {{name}}",
+      "row_label": "Agents, die dieser Kommentar startet",
+      "hint_deselect": "Doppeltippen, damit {{name}} nicht startet",
+      "hint_select": "Doppeltippen, damit {{name}} wieder startet",
+      "reason": {
+        "issue_assignee": "zuständig",
+        "mention_agent": "erwähnt",
+        "mention_squad_leader": "Squad-Leitung",
+        "thread_parent": "Antwort an Agent",
+        "conversation_continuation": "setzt Gespräch fort"
+      }
+    }
   },
   "suggestions": {
     "everyone": "Alle",
@@ -1030,5 +1060,15 @@
       "error_offline": "Keine Verbindung. Die Änderung wurde nicht gespeichert.",
       "error_failed": "Die Ansicht konnte nicht geändert werden. Versuche es noch einmal."
     }
+  },
+  "title_filter": {
+    "hint_one": "{{count}} per Titel-Filter ausgeblendet",
+    "hint_other": "{{count}} per Titel-Filter ausgeblendet",
+    "hint_revealed": "Titel-Filter vorübergehend aus",
+    "show": "Anzeigen",
+    "hide": "Ausblenden",
+    "all_hidden": "Alle Issues hier sind per Titel-Filter ausgeblendet",
+    "settings": "Einstellungen Titel-Filter",
+    "settings_a11y": "Langes Drücken öffnet die Einstellungen des Titel-Filters"
   }
 }

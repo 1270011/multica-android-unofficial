@@ -70,6 +70,7 @@ import {
   settleOptimisticComment,
   type LocalComment,
 } from "@/lib/pending-comments";
+import { noteSentMessage } from "@/lib/use-mention-usage";
 
 export type ToggleCommentReactionVars = {
   commentId: string;
@@ -97,6 +98,9 @@ export type CreateCommentVars = {
    *  too. Mirrors web's `CommentInput.handleSubmit` `activeIds` derivation
    *  (`packages/views/issues/components/comment-input.tsx:76-78`). */
   attachmentIds?: string[];
+  /** Agents deselected in the composer's trigger preview: the server does
+   *  not start them for this comment. */
+  suppressAgentIds?: string[];
   /** Manual "Retry" of a failed send: an earlier POST from this time on may
    *  have reached the server, so look for it before posting. */
   sentAt?: string;
@@ -145,6 +149,7 @@ export function useCreateComment(issueId: string) {
           api.createComment(issueId, vars.content, {
             parentId: vars.parentId,
             attachmentIds: vars.attachmentIds,
+            suppressAgentIds: vars.suppressAgentIds,
           }),
         listTimeline: () => api.listTimeline(issueId),
         sessionEpochChanged,
@@ -203,6 +208,7 @@ export function useCreateComment(issueId: string) {
           content: vars.content,
           parentId: vars.parentId,
           attachmentIds: vars.attachmentIds,
+          suppressAgentIds: vars.suppressAgentIds,
           sentAt: commentSendStates.get(vars)?.since ?? undefined,
           knownIds: ctx.local?.knownIds,
           error: err instanceof Error ? err.message : "Send failed",
@@ -214,7 +220,9 @@ export function useCreateComment(issueId: string) {
     // render against. The synthetic row is swapped for the server row right
     // away (it runs before the mutation leaves "pending", so no frame shows
     // neither or both); the refetch then brings the authoritative list.
-    onSuccess: (result, _vars, ctx) => {
+    onSuccess: (result, vars, ctx) => {
+      // @-suggestions by frequency: only sent comments count.
+      noteSentMessage(qc, wsId, vars.content);
       if (wsId && result.kind === "posted") {
         onIssueAuxiliaryRevision(qc, wsId, issueId, result.comment.issue_revision);
       }

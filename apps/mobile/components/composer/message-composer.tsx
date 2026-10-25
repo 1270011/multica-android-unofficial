@@ -44,7 +44,14 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Alert, Keyboard, Pressable, TextInput, View } from "react-native";
+import {
+  Alert,
+  Keyboard,
+  Pressable,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from "react-native";
 import { KeyboardStickyView } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Ionicons } from "@/components/ui/ionicons";
@@ -56,6 +63,7 @@ import { api, MAX_FILE_SIZE } from "@/data/api";
 import { useMentionDraftStore } from "@/data/stores/mention-draft-store";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { stripMarkdown } from "@/lib/strip-markdown";
+import { touchTargetOverlay } from "@/lib/touch-target";
 import { THEME } from "@/lib/theme";
 import { continuousCorners } from "@/lib/radius";
 import { Text } from "@/components/ui/text";
@@ -67,6 +75,7 @@ import {
 } from "@/components/issue/composer-attachment-row";
 import { useT } from "@/lib/i18n";
 import { composerActions } from "@/lib/composer-actions";
+import { composeMessageContent } from "@/lib/compose-message-content";
 
 export interface MessageComposerReplyTarget {
   actorName: string;
@@ -122,6 +131,13 @@ interface Props {
   editTarget?: { preview: string } | null;
   onCancelEdit?: () => void;
 
+  /** Optional row above the input while composing, e.g. the comment
+   *  trigger chips "Starts: X". Hidden when collapsed. */
+  accessory?: ReactNode;
+  /** Optional row shown collapsed and expanded, below the reply chip, e.g.
+   *  the "Reply to <agent>" suggestion. */
+  suggestion?: ReactNode;
+
   /** Composer enters "auto-expanded + focused" mode when this changes to
    *  a truthy stable key. Comment uses it to react to long-press → reply
    *  flow. Chat doesn't pass it. */
@@ -156,25 +172,6 @@ function makeLocalId(): string {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 }
 
-/** Serialises mention chips into the markdown link form the backend
- *  regex parser recognises. The string lands at the START of the
- *  outgoing content; mobile can't position mentions inline because the
- *  TextInput is plain. Acceptable semantic difference vs web/desktop's
- *  rich editor (web supports anywhere-in-text). */
-function serializeMentions(chips: MentionChip[]): string {
-  return chips
-    .map((m) => {
-      const label =
-        m.type === "issue"
-          ? m.name
-          : m.type === "all"
-            ? "@all"
-            : `@${m.name}`;
-      return `[${label}](mention://${m.type}/${m.id})`;
-    })
-    .join(" ");
-}
-
 export function MessageComposer({
   onSubmit,
   mentionPickerPath,
@@ -190,6 +187,8 @@ export function MessageComposer({
   onClearReplyTarget,
   editTarget = null,
   onCancelEdit,
+  accessory,
+  suggestion,
   expandTrigger,
   isSending = false,
   renderStop,
@@ -204,6 +203,7 @@ export function MessageComposer({
   const resolvedPlaceholder = placeholder ?? t("composer.default_placeholder");
   const resolvedPillLabel = pillLabel ?? t("composer.default_placeholder");
   const insets = useSafeAreaInsets();
+  const { fontScale } = useWindowDimensions();
   const inputRef = useRef<TextInput>(null);
   const [expanded, setExpanded] = useState(false);
   const [internalText, setInternalText] = useState("");
@@ -252,7 +252,9 @@ export function MessageComposer({
 
   // Auto-expand + focus when an `expandTrigger` changes. Comment uses
   // this to react to the long-press → reply flow setting a reply target.
-  const triggerSeen = useRef<string | null>(null);
+  // A trigger already present at mount (a reply target kept in the draft)
+  // doesn't pop the keyboard on return; the chip shows it.
+  const triggerSeen = useRef<string | null>(expandTrigger ?? null);
   if (
     expandTrigger &&
     triggerSeen.current !== expandTrigger &&
@@ -286,12 +288,10 @@ export function MessageComposer({
     if (disabled) return;
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => {});
     setExpanded(true);
-    // Tapping the pill = "I want to write a new message". Drop any
-    // lingering reply target so a stale chip from a prior long-press →
-    // dismiss-without-send cycle doesn't bleed into the fresh draft.
-    onClearReplyTarget?.();
+    // The reply target stays: it's visible on the chip and only ✕ or a
+    // send removes it (W1-2).
     requestAnimationFrame(() => inputRef.current?.focus());
-  }, [disabled, onClearReplyTarget]);
+  }, [disabled]);
 
   const handleSubmit = useCallback(async () => {
     if (!canSend) return;
@@ -299,13 +299,7 @@ export function MessageComposer({
     const mentionsSnap = mentions;
     const attachmentsSnap = attachments;
 
-    const mentionMd = serializeMentions(mentionsSnap);
-    const trimmed = textSnap.trim();
-    const content = mentionMd
-      ? trimmed
-        ? `${mentionMd} ${trimmed}`
-        : mentionMd
-      : trimmed;
+    const content = composeMessageContent(textSnap, mentionsSnap);
 
     const activeIds = attachmentsSnap
       .filter((a) => a.status === "completed")
@@ -486,34 +480,126 @@ export function MessageComposer({
     [attachments, startUpload, setAttachments],
   );
 
+  // The @-sheet's own search field takes focus from the input (Android
+  // shows it in the sheet body). That blur must not collapse the
+  // composer: the user is in the middle of adding mentions to it.
+  const blurForMentionPicker = useRef(false);
+  // Set while this composer's @-sheet is open, so only the composer that
+  // opened it takes the focus back (the chat tab stays mounted under the
+  // agent chat route).
+  const pickerOpen = useRef(false);
   const onAtPress = useCallback(() => {
     Haptics.selectionAsync().catch(() => {});
+    // Only a focused input blurs; otherwise the flag would eat a later,
+    // real blur.
+    blurForMentionPicker.current = inputRef.current?.isFocused() ?? false;
+    pickerOpen.current = true;
     router.push(mentionPickerPath);
   }, [mentionPickerPath]);
+
+  // Back from the sheet the input gets the focus again. The sheet's search
+  // field had it, and the keyboard stayed up without a focused field, so
+  // typed text went nowhere (F1). Retried once: while the sheet
+  // is still sliding out its field can keep the focus for a moment.
+  const pickerCloses = useMentionDraftStore((s) => s.pickerCloses);
+  useEffect(() => {
+    if (!pickerOpen.current) return;
+    pickerOpen.current = false;
+    blurForMentionPicker.current = false;
+    const focusInput = () => {
+      if (!inputRef.current?.isFocused()) inputRef.current?.focus();
+    };
+    const first = setTimeout(focusInput, 50);
+    const retry = setTimeout(focusInput, 350);
+    return () => {
+      clearTimeout(first);
+      clearTimeout(retry);
+    };
+  }, [pickerCloses]);
 
   /** Auto-collapse to pill when input loses focus AND nothing's worth
    *  keeping the composer expanded for. Deferred one tick so a toolbar
    *  IconButton tap (which briefly resigns first responder) doesn't
    *  trigger a collapse before its onPress runs. */
   const onBlur = useCallback(() => {
+    if (blurForMentionPicker.current) {
+      blurForMentionPicker.current = false;
+      return;
+    }
     setTimeout(() => {
       const empty =
         text.trim().length === 0 &&
         attachments.length === 0 &&
         mentions.length === 0;
       if (empty && !inputRef.current?.isFocused()) {
+        // Collapse to the pill; a reply target stays on its chip above it.
         setExpanded(false);
-        onClearReplyTarget?.();
         onCancelEdit?.();
       }
     }, 80);
-  }, [text, attachments.length, mentions.length, onClearReplyTarget, onCancelEdit]);
+  }, [text, attachments.length, mentions.length, onCancelEdit]);
+
+  // "Replying to X" stays visible in both states, collapsed too, so a
+  // kept reply target is never hidden behind the pill.
+  // The chip row is one text-xs line (16 dp line height, grows with the
+  // font scale); the ✕ glyph is centred in it.
+  const replyRowShift = (Math.max(16, 16 * fontScale) - 16) / 2;
+  const replyChip =
+    replyTarget && !editTarget ? (
+      <View className="px-3 py-1.5 rounded-md bg-secondary/60 gap-0.5">
+        <View className="flex-row items-center gap-2">
+          <Ionicons
+            name="return-up-back"
+            size={14}
+            color={theme.mutedForeground}
+          />
+          <Text
+            className="flex-1 text-xs font-medium text-muted-foreground"
+            numberOfLines={1}
+          >
+            {t("composer.replying_to", { name: replyTarget.actorName })}
+          </Text>
+          <Ionicons
+            name="close-circle"
+            size={16}
+            color={theme.mutedForeground}
+          />
+        </View>
+        {replyTarget.preview ? (
+          <Text
+            className="text-xs text-muted-foreground pl-5"
+            numberOfLines={2}
+          >
+            {stripMarkdown(replyTarget.preview)}
+          </Text>
+        ) : null}
+        {/* The ✕ target: a transparent 48 dp box over the 16 dp glyph,
+            last child so the preview line can't take its touches, with
+            real bounds for TalkBack (hitSlop alone reports 16 dp). It may
+            reach 14 dp up (py-1.5 + the composer's pt-2) before the
+            composer edge clips it. */}
+        <Pressable
+          onPress={onClearReplyTarget}
+          style={touchTargetOverlay({
+            glyphSize: 16,
+            glyphTop: 6 + replyRowShift,
+            glyphRight: 12,
+            maxReachUp: 14 + replyRowShift,
+          })}
+          testID="cancel-reply"
+          accessibilityRole="button"
+          accessibilityLabel={t("composer.cancel_reply")}
+        />
+      </View>
+    ) : null;
 
   const pillContent = (
     <View
-      className="border-t border-border bg-background px-3 pt-2"
+      className="border-t border-border bg-background px-3 pt-2 gap-2"
       style={{ paddingBottom: (manageKeyboard ? insets.bottom : 0) + 8 }}
     >
+      {replyChip}
+      {suggestion}
       <Pressable
         onPress={expand}
         disabled={disabled}
@@ -577,50 +663,17 @@ export function MessageComposer({
         </View>
       )}
 
-      {replyTarget && !editTarget && (
-        <View className="px-3 py-1.5 rounded-md bg-secondary/60 gap-0.5">
-          <View className="flex-row items-center gap-2">
-            <Ionicons
-              name="return-up-back"
-              size={14}
-              color={theme.mutedForeground}
-            />
-            <Text
-              className="flex-1 text-xs font-medium text-muted-foreground"
-              numberOfLines={1}
-            >
-              {t("composer.replying_to", { name: replyTarget.actorName })}
-            </Text>
-            <Pressable
-              onPress={onClearReplyTarget}
-              hitSlop={8}
-              accessibilityRole="button"
-              accessibilityLabel={t("composer.cancel_reply")}
-            >
-              <Ionicons
-                name="close-circle"
-                size={16}
-                color={theme.mutedForeground}
-              />
-            </Pressable>
-          </View>
-          {replyTarget.preview ? (
-            <Text
-              className="text-xs text-muted-foreground pl-5"
-              numberOfLines={2}
-            >
-              {stripMarkdown(replyTarget.preview)}
-            </Text>
-          ) : null}
-        </View>
-      )}
+      {replyChip}
+      {suggestion}
+
+      {accessory}
 
       <View
         className="rounded-2xl border border-border bg-secondary"
         style={continuousCorners}
       >
         {(mentions.length > 0 || attachments.length > 0) ? (
-          <View className="px-2 pt-2 pb-1">
+          <View className="px-2">
             <ComposerAttachmentRow
               mentions={mentions}
               attachments={attachments}

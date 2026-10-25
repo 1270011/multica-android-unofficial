@@ -57,6 +57,21 @@
       "unstable": "Connection unstable",
       "offline": "Offline",
       "archived": "Archived"
+    },
+    "hidden_note": "hidden",
+    "hidden_count_one": "{{count}} hidden",
+    "hidden_count_other": "{{count}} hidden",
+    "hidden_show": "Show",
+    "hidden_hide": "Hide",
+    "actions": {
+      "label": "Actions for {{name}}",
+      "chat": "Chat",
+      "chat_a11y": "Chat with {{name}}",
+      "new_issue": "New issue",
+      "new_issue_a11y": "New issue for {{name}}",
+      "blocked_archived": "Archived agent – no chat or assignment",
+      "blocked_no_runtime": "Bind a runtime first",
+      "blocked_no_access": "You don't have access to this agent"
     }
   },
   "actions": {

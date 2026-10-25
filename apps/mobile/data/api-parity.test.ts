@@ -257,3 +257,65 @@ describe("agents and squads", () => {
     expect(lastCall().url).toBe(`${BASE}/api/squads/q-1/members/status`);
   });
 });
+
+describe("comment trigger preview (W1-P3a)", () => {
+  const AGENT = "11111111-1111-4111-8111-111111111111";
+
+  it("posts content, parent_id and editing_comment_id like web previewCommentTriggers", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ agents: [] }));
+    await api.previewCommentTriggers("i-1", "hi", { parentId: "c-1", editingCommentId: "c-2" });
+    expect(lastCall()).toEqual({
+      url: `${BASE}/api/issues/i-1/comments/trigger-preview`,
+      method: "POST",
+      body: { content: "hi", parent_id: "c-1", editing_comment_id: "c-2" },
+    });
+  });
+
+  it("omits absent reply target and edit id", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ agents: [] }));
+    await api.previewCommentTriggers("i-1", "hi");
+    expect(lastCall().body).toEqual({ content: "hi" });
+  });
+
+  it("validates the answer: defaults, drops malformed blocked entries, keeps valid ones", async () => {
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({
+        agents: [{ id: AGENT, name: "Bot", source: "issue_assignee", reason: "assignee", extra: 1 }],
+        blocked: [{ target_type: "agent", status: "blocked" }, { target_type: "agent", target_id: AGENT, status: "blocked", reason_code: "private" }],
+      }),
+    );
+    const res = await api.previewCommentTriggers("i-1", "hi");
+    expect(res.agents).toHaveLength(1);
+    expect(res.agents[0]).toMatchObject({ id: AGENT, name: "Bot", source: "issue_assignee" });
+    expect(res.blocked).toEqual([
+      { target_type: "agent", target_id: AGENT, status: "blocked", reason_code: "private" },
+    ]);
+  });
+
+  it("falls back to an empty preview on a malformed body", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ agents: "nope" }));
+    const res = await api.previewCommentTriggers("i-1", "hi");
+    expect(res.agents).toEqual([]);
+  });
+
+  it("throws ApiError with the status when the endpoint is missing", async () => {
+    fetchMock.mockResolvedValueOnce(jsonResponse({ message: "not found" }, 404));
+    await expect(api.previewCommentTriggers("i-1", "hi")).rejects.toMatchObject({
+      name: "ApiError",
+      status: 404,
+    });
+  });
+
+  it("forwards the caller's abort signal", async () => {
+    const controller = new AbortController();
+    fetchMock.mockImplementationOnce(
+      (_url, init) =>
+        new Promise((_resolve, reject) =>
+          init.signal?.addEventListener("abort", () => reject(new DOMException("aborted", "AbortError"))),
+        ),
+    );
+    const pending = api.previewCommentTriggers("i-1", "hi", { signal: controller.signal });
+    controller.abort();
+    await expect(pending).rejects.toMatchObject({ name: "AbortError" });
+  });
+});

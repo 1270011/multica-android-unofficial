@@ -15,6 +15,11 @@
  * Lifecycle: composer's `useEffect` cleanup calls `clear()` so navigating
  * to another issue starts with an empty mention array. Send success also
  * clears.
+ *
+ * `pickerCloses` counts how often the @-sheet has closed (Done, Back or
+ * drag-down all unmount it). The composer that opened the sheet watches it
+ * to take the focus back: the sheet's own search field had it, and without
+ * a focused input the still-open keyboard typed into nothing (F1).
  */
 import { create } from "zustand";
 
@@ -43,6 +48,9 @@ interface State {
   toggle: (mention: MentionChipDraft) => void;
   remove: (type: MentionTargetType, id: string) => void;
   clear: () => void;
+  pickerCloses: number;
+  /** Called by the picker route when it unmounts. */
+  markPickerClosed: () => void;
 }
 
 export const useMentionDraftStore = create<State>((set) => ({
@@ -62,4 +70,6 @@ export const useMentionDraftStore = create<State>((set) => ({
       mentions: s.mentions.filter((m) => !sameMention(m, { type, id })),
     })),
   clear: () => set({ mentions: [] }),
+  pickerCloses: 0,
+  markPickerClosed: () => set((s) => ({ pickerCloses: s.pickerCloses + 1 })),
 }));

@@ -12,6 +12,7 @@ import {
   agentStatus,
   lastRunByAgent,
   runSource,
+  splitHiddenAgents,
   squadMemberRows,
   visibleAgents,
   runsSectionState,
@@ -97,6 +98,40 @@ describe("runSource / visibleAgents", () => {
       { name: "Gone", archived_at: "2026-10-01" },
     ]);
     expect(list.map((a) => a.name)).toEqual(["alpha", "Zed"]);
+  });
+});
+
+describe("splitHiddenAgents", () => {
+  const list = [{ id: "a" }, { id: "b" }, { id: "c" }];
+
+  it("moves hidden agents out of the list and keeps the order", () => {
+    const { shown, hidden } = splitHiddenAgents(list, ["c", "a", "gone"]);
+    expect(shown.map((a) => a.id)).toEqual(["b"]);
+    expect(hidden.map((a) => a.id)).toEqual(["a", "c"]);
+  });
+
+  it("nothing hidden: same rows, empty footer", () => {
+    const { shown, hidden } = splitHiddenAgents(list, []);
+    expect(shown.map((a) => a.id)).toEqual(["a", "b", "c"]);
+    expect(hidden).toEqual([]);
+  });
+
+  it.each([
+    ["de", de, "2 ausgeblendet", "Anzeigen"],
+    ["en", en, "2 hidden", "Show"],
+  ])("%s footer strings", (_, dict, count, show) => {
+    const { agent } = dict;
+    expect(agent.hidden_count_other.replace("{{count}}", "2")).toBe(count);
+    expect(agent.hidden_show).toBe(show);
+    expect(agent.hidden_hide).toBeTruthy();
+    expect(agent.hidden_note).toBeTruthy();
+  });
+
+  it("zh-Hans has the footer strings", () => {
+    const { agent } = zh;
+    for (const k of ["hidden_count_other", "hidden_show", "hidden_hide", "hidden_note"] as const) {
+      expect(agent[k], k).toBeTruthy();
+    }
   });
 });
 

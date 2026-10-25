@@ -14,6 +14,7 @@ describe("modalPresentation (header in the status bar)", () => {
   it("no workspace route sets presentation: \"modal\" directly any more", () => {
     const layout = readFileSync(join(__dirname, "../app/(app)/[workspace]/_layout.tsx"), "utf8");
     expect(layout).not.toMatch(/presentation:\s*"modal"/);
-    expect(layout.match(/\.\.\.MODAL_PRESENTATION/g)?.length).toBe(5);
+    // 5 header modals + the table full view.
+    expect(layout.match(/\.\.\.MODAL_PRESENTATION/g)?.length).toBe(6);
   });
 });

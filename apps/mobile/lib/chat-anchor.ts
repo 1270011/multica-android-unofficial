@@ -37,13 +37,16 @@ export function anchorHolds(anchoredAt: number | null, now: number): boolean {
 }
 
 /** Arguments for the first, estimate-based jump. Non-animated: an animated
- *  native scroll races the list's own offset corrections. */
-export function anchorScrollParams(index: number) {
+ *  native scroll races the list's own offset corrections. `inner` is the
+ *  landing spot inside the row (`AnchorMeasure.inner`); without it a far
+ *  correction jumped to the row's top and the table back from its full view
+ *  at 200 % stayed there, screens above its place. */
+export function anchorScrollParams(index: number, inner = 0) {
   return {
     index,
     animated: false,
     viewPosition: 0,
-    viewOffset: -ANCHOR_TOP_GAP_PX,
+    viewOffset: inner - ANCHOR_TOP_GAP_PX,
   } as const;
 }
 
@@ -62,13 +65,17 @@ export interface AnchorMeasure {
    *  Without it the end is rows + header only, so a landing near the end
    *  stopped one footer ("Runs") short of it. */
   scrollHeight?: number;
+  /** Landing spot inside the row, from its top (the table a
+   *  full view was opened from). 0 = the row's top; negative lands the
+   *  row's top further down the window (see `returnInner`). */
+  inner?: number;
 }
 
 /** Offset at which the row's top sits `ANCHOR_TOP_GAP_PX` below the window
  *  top, clamped to what the list can scroll to (a short last comment cannot
  *  reach the top of the window). */
 export function anchorTargetOffset(m: AnchorMeasure): number {
-  const wanted = m.itemTop + m.firstItemOffset - ANCHOR_TOP_GAP_PX;
+  const wanted = m.itemTop + (m.inner ?? 0) + m.firstItemOffset - ANCHOR_TOP_GAP_PX;
   const content = m.scrollHeight ?? m.contentHeight + m.firstItemOffset;
   const max = Math.max(0, content - m.windowHeight);
   return Math.min(Math.max(0, wanted), max);
@@ -81,7 +88,90 @@ export function anchorTargetOffset(m: AnchorMeasure): number {
 export function anchorIsEnd(m: AnchorMeasure): boolean {
   const content = m.scrollHeight ?? m.contentHeight + m.firstItemOffset;
   const max = Math.max(0, content - m.windowHeight);
-  return m.itemTop + m.firstItemOffset - ANCHOR_TOP_GAP_PX >= max - ANCHOR_TOLERANCE_PX;
+  return m.itemTop + (m.inner ?? 0) + m.firstItemOffset - ANCHOR_TOP_GAP_PX >= max - ANCHOR_TOLERANCE_PX;
+}
+
+/**
+ * Offset of a view inside its row, from window measurements:
+ * `viewTop` / `listTop` from `measureInWindow`, the row's top in the list
+ * content and the current scroll offset. Never negative, so a view that
+ * is not inside the row lands on the row's top.
+ */
+export function innerOffset(m: {
+  viewTop: number;
+  listTop: number;
+  itemTop: number;
+  firstItemOffset: number;
+  scrollOffset: number;
+}): number {
+  const rowTopOnScreen = m.itemTop + m.firstItemOffset - m.scrollOffset;
+  return Math.max(0, m.viewTop - m.listTop - rowTopOnScreen);
+}
+
+/** A table back from its full view keeps at least this much on screen. */
+export const RETURN_VISIBLE_PX = 48;
+
+/**
+ * Landing spot for the table a full view was opened from: the
+ * table's top goes back to where it stood on screen when it was opened
+ * (`savedTop`, window y then), so after a rotation the reader sees the
+ * same place again. Clamped so that some of the table stays visible when
+ * the layout changed; without a saved place its top lands at the gap.
+ * Returns the `inner` for `AnchorMeasure`.
+ */
+export function returnInner(m: {
+  /** Table top inside its row (`innerOffset`). */
+  inner: number;
+  /** Table height now. */
+  height: number;
+  savedTop: number | null;
+  listTop: number;
+  windowHeight: number;
+}): number {
+  if (m.savedTop === null) return m.inner;
+  const lo = Math.min(ANCHOR_TOP_GAP_PX, RETURN_VISIBLE_PX - m.height);
+  const hi = Math.max(lo, m.windowHeight - RETURN_VISIBLE_PX);
+  const pos = Math.min(Math.max(m.savedTop - m.listTop, lo), hi);
+  return m.inner - (pos - ANCHOR_TOP_GAP_PX);
+}
+
+/**
+ * Back from the full view after a rotation: the chat already
+ * stands where it stood when the table was opened if the bubble's row has
+ * the same place and height in the list layout as then. Then nothing is
+ * corrected; window measurements after the rotation can be off. Without a
+ * saved place (row not laid out then) the return lands as before.
+ */
+export function tableReturnKeeps(
+  saved: { top: number; height: number } | null,
+  now: { top: number; height: number } | null,
+): boolean {
+  if (!saved || !now) return false;
+  return (
+    Math.abs(saved.top - now.top) <= ANCHOR_TOLERANCE_PX &&
+    Math.abs(saved.height - now.height) <= ANCHOR_TOLERANCE_PX
+  );
+}
+
+/**
+ * Back from the full view after a rotation, the bubble's row has its old
+ * height but stands elsewhere: the `inner` that puts the row's
+ * top back to its saved place in the viewport, from the list layout alone.
+ * Null when the height changed (rewrapped bubble: the table inside moved,
+ * `returnInner` measures it) or a place is unknown.
+ */
+export function tableReturnRowInner(
+  saved: { top: number; height: number } | null,
+  now: { top: number; height: number } | null,
+): number | null {
+  if (!saved || !now || Math.abs(saved.height - now.height) > ANCHOR_TOLERANCE_PX) return null;
+  return ANCHOR_TOP_GAP_PX - saved.top;
+}
+
+/** The list stands within one window of the landing offset: a plain
+ *  `scrollToOffset` to it is exact, the rows there are rendered. */
+export function anchorIsNear(m: AnchorMeasure): boolean {
+  return Math.abs(anchorTargetOffset(m) - m.scrollOffset) < m.windowHeight;
 }
 
 /** True when the list needs another jump to bring the row's top into place. */

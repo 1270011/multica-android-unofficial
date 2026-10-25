@@ -49,6 +49,9 @@ class OperatorConnectionService : Service(), InboxSocket.Listener {
   /** Last upgrade answered 403 (Cloudflare Access?), shown until connected. */
   @Volatile private var refused = false
   private val seen = HashMap<String, SeenIds>()
+  /** Title filter push mute: issue titles seen, compiled patterns. */
+  private val titles = IssueTitleCache()
+  private val titleMatcher = TitleMute.Matcher()
   private var networkCallback: ConnectivityManager.NetworkCallback? = null
 
   override fun onBind(intent: Intent?): IBinder? = null
@@ -247,6 +250,14 @@ class OperatorConnectionService : Service(), InboxSocket.Listener {
     if (stopRequested) return InboxDecider.Action.Ignore
     val ids = seen.getOrPut(workspace.slug) { loadSeen(workspace.slug) }
     val cal = Calendar.getInstance()
+    val cachedTitle = titles.get(entry.issueId)
+    titles.remember(entry.issueId, entry.title)
+    val titleMuted = entry.issueId != null && TitleMute.shouldMute(
+      config = prefs.titleMute[workspace.id],
+      entryTitle = entry.title,
+      cachedTitle = cachedTitle,
+      matcher = titleMatcher,
+    )
     val action = InboxDecider.decide(
       entry = entry,
       alreadySeen = ids.contains(entry.id),
@@ -255,6 +266,7 @@ class OperatorConnectionService : Service(), InboxSocket.Listener {
       nowMs = System.currentTimeMillis(),
       fromReconcile = fromReconcile,
       foregroundIssueId = prefs.foregroundIssueId,
+      titleMuted = titleMuted,
     )
     if (ids.add(entry.id)) saveSeen(workspace.slug, ids)
     if (action is InboxDecider.Action.Notify) {

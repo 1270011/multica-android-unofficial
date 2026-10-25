@@ -66,7 +66,9 @@ interface RbNotifyNative {
   getSettings(): NotifySettings;
   setStrings(map: Record<string, string>): void;
   setActors(map: Record<string, string>): void;
-  /** `dismiss`: also remove the issue's notification (in-app or own-notification open only). */
+  /** Title filter push mute of one workspace (W7); `pattern` null = off. */
+  setTitleMute(workspaceId: string, pattern: string | null, ignoreCase: boolean): void;
+  /** `dismiss`: also remove the issue's notification (in-app or own-notification open only, B5). */
   setForegroundIssue(issueId: string | null, dismiss: boolean): void;
   start(): boolean;
   stop(): void;
@@ -122,7 +124,11 @@ export const rbNotify = {
     safe(DEFAULT_SETTINGS, (m) => ({ ...DEFAULT_SETTINGS, ...m.getSettings() })),
   setStrings: (map: Record<string, string>) => safe(undefined, (m) => m.setStrings(map)),
   setActors: (map: Record<string, string>) => safe(undefined, (m) => m.setActors(map)),
-  /** Chat on screen; `dismiss` only for in-app / own-notification opens. */
+  setTitleMute: (workspaceId: string, config: { pattern: string; ignoreCase: boolean } | null) =>
+    safe(undefined, (m) =>
+      m.setTitleMute(workspaceId, config?.pattern ?? null, config?.ignoreCase ?? false),
+    ),
+  /** Chat on screen; `dismiss` only for in-app / own-notification opens (B5). */
   setForegroundIssue: (id: string, dismiss = false) => foreground.set(id, dismiss),
   /** Chat left: clears only if it is still the current one. */
   clearForegroundIssue: (id: string) => foreground.clear(id),

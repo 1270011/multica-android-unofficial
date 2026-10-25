@@ -55,12 +55,24 @@ vi.mock("./stores/my-issues-view-store", () => ({
 vi.mock("./stores/active-issue-view-store", () => ({
   useActiveIssueViewStore: { getState: () => ({ reset: vi.fn() }) },
 }));
+vi.mock("./stores/view-prefs-store", () => ({
+  useViewPrefsStore: { getState: () => ({ reset: vi.fn() }) },
+}));
 
 import { useAuthStore } from "./auth-store";
 import { useFailedCommentsStore } from "./stores/failed-comments-store";
 import { useLastViewedStore } from "./stores/last-viewed-store";
 import { useViewedIssuesStore } from "./viewed-issues-store";
 import { getMarkdownSegments, markdownSegmentCacheStats } from "@/lib/markdown/segment-cache";
+import {
+  noteSentMentions,
+  readMentionUsage,
+  registerMentionUsageStore,
+} from "@/lib/mention-usage";
+import { MemoryKv } from "./timeline-cache/memory-kv";
+
+const mentionKv = new MemoryKv();
+registerMentionUsageStore(mentionKv);
 
 /** What the old account leaves behind while signed in. */
 function seedOldAccount() {
@@ -76,6 +88,8 @@ function seedOldAccount() {
   useLastViewedStore.getState().markViewed("i-1");
   useViewedIssuesStore.getState().push("ws-old", "i-1");
   getMarkdownSegments("Kommentar des alten Kontos");
+  noteSentMentions("ws-old", "hi [@bob](mention://member/u-bob)");
+  noteSentMentions("ws-other", "[@bot](mention://agent/a-1)");
   route.forget.mockClear();
   timelineCache.clear.mockClear();
 }
@@ -91,6 +105,10 @@ function expectNothingLeft() {
   expect(markdownSegmentCacheStats().entries).toBe(0);
   // The encrypted on-device timeline cache and its key.
   expect(timelineCache.clear).toHaveBeenCalledTimes(1);
+  // W6-P9: the mention counts of every workspace, memory and disk.
+  expect(readMentionUsage("ws-old")).toEqual({});
+  expect(readMentionUsage("ws-other")).toEqual({});
+  expect(mentionKv.getAllKeys()).toEqual([]);
 }
 
 beforeEach(() => {
@@ -121,6 +139,7 @@ describe("session end clears the old account's data", () => {
     expect(route.forget).not.toHaveBeenCalled();
     expect(markdownSegmentCacheStats().entries).toBe(1);
     expect(timelineCache.clear).not.toHaveBeenCalled();
+    expect(readMentionUsage("ws-old")["member:u-bob"]?.n).toBe(1);
   });
 });
 

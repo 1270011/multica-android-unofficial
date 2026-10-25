@@ -117,13 +117,28 @@ class NotifyPrefs(context: Context) {
     prefs.edit().putString("actors", JSONObject(map as Map<*, *>).toString()).apply()
   }
 
+  /**
+   * Title-filter push mute per workspace id. Mirrored by JS
+   * only while filter, pattern and mute switch are all usable; a workspace
+   * missing here never mutes. Forgotten on logout like the workspace list.
+   */
+  var titleMute: Map<String, TitleMuteConfig>
+    get() = TitleMute.parseMap(prefs.getString("titleMute", null))
+    set(map) = prefs.edit().putString("titleMute", TitleMute.serializeMap(map)).apply()
+
+  fun setTitleMute(workspaceId: String, config: TitleMuteConfig?) {
+    val next = titleMute.toMutableMap()
+    if (config == null) next.remove(workspaceId) else next[workspaceId] = config
+    titleMute = next
+  }
+
   /** "Please sign in again" was shown for the current expiry already. */
   var reloginShown: Boolean
     get() = prefs.getBoolean("reloginShown", false)
     set(v) = prefs.edit().putBoolean("reloginShown", v).apply()
 
   fun clearSession() {
-    prefs.edit().remove("workspaces").remove("actors").apply()
+    prefs.edit().remove("workspaces").remove("actors").remove("titleMute").apply()
   }
 
   companion object {

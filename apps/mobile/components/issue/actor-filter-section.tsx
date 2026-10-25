@@ -9,6 +9,10 @@
  * The sheet shows ACTOR_LIST_PREVIEW people; "Show all (n)" opens
  * `ActorFilterPicker`, a sub-screen with search, so the sheet stays usable
  * at 200 % font size.
+ *
+ * People and agents hidden in Settings › View are left out of
+ * both lists unless picked; the sub-screen's search lists them dimmed under
+ * "Hidden".
  */
 import { useEffect, useState } from "react";
 import { BackHandler, FlatList, Pressable, View } from "react-native";
@@ -26,12 +30,17 @@ import {
   useIssueListFilterStore,
 } from "@/data/stores/issue-list-filter-store";
 import {
+  useHiddenActors,
+  useViewPrefsHydration,
+} from "@/data/stores/view-prefs-store";
+import {
   type ActorDirectory,
   type ActorOption,
   actorOptionA11yLabel,
+  actorOptionHint,
   actorOptions,
-  actorTypeLabel,
   type FilterSection,
+  hiddenActorOptions,
   lockedByNobody,
   previewOptions,
 } from "@/lib/actor-filter-options";
@@ -69,6 +78,12 @@ function useActorDirectory(wsId: string, withSquads: boolean) {
   return { dir, failed, retry };
 }
 
+/** The workspace's hidden people/agents, loaded from storage on first use. */
+function useHiddenForFilters(wsId: string) {
+  useViewPrefsHydration(wsId);
+  return useHiddenActors(wsId);
+}
+
 function sectionValues(section: FilterSection, filters: IssueListFilters) {
   return section === "assignee" ? filters.assignees : filters.creators;
 }
@@ -100,8 +115,14 @@ export function ActorFilterSection({
   const muted = THEME[colorScheme].mutedForeground;
   const isAssignee = section === "assignee";
   const { dir, failed, retry } = useActorDirectory(wsId, isAssignee && visible);
+  const hiddenActors = useHiddenForFilters(wsId);
   const selected = sectionValues(section, filters);
-  const options = actorOptions(dir, { userId, types: sectionTypes(section), selected });
+  const options = actorOptions(dir, {
+    userId,
+    types: sectionTypes(section),
+    selected,
+    hidden: hiddenActors,
+  });
 
   if (!visible) {
     return (
@@ -248,20 +269,24 @@ function ActorRow({
   checked,
   disabled,
   onPress,
+  hidden = false,
 }: {
   option: ActorOption;
   checked: boolean;
   disabled: boolean;
   onPress: () => void;
+  /** Row of the dimmed "Hidden" section (W4). */
+  hidden?: boolean;
 }) {
   const { t } = useT("issues");
   return (
     <FilterRow
       checked={checked}
       label={option.name}
-      hint={actorTypeLabel(option.type, t)}
-      a11yLabel={actorOptionA11yLabel(option.name, option.type, checked, t)}
+      hint={actorOptionHint(option.type, t, hidden)}
+      a11yLabel={actorOptionA11yLabel(option.name, option.type, checked, t, hidden)}
       disabled={disabled}
+      dimmed={hidden}
       onPress={onPress}
       icon={
         <ActorAvatar
@@ -301,13 +326,17 @@ export function ActorFilterPicker({
   const [query, setQuery] = useState("");
   const isAssignee = section === "assignee";
   const { dir } = useActorDirectory(wsId, isAssignee);
+  const hiddenActors = useHiddenForFilters(wsId);
   const selected = sectionValues(section, filters);
-  const options = actorOptions(dir, {
+  const optionQuery = {
     userId,
     types: sectionTypes(section),
     selected,
     query,
-  });
+    hidden: hiddenActors,
+  };
+  const options = actorOptions(dir, optionQuery);
+  const hiddenMatches = hiddenActorOptions(dir, optionQuery);
   const store = useIssueListFilterStore.getState();
   const nobody = lockedByNobody(section, filters);
   const toggle = (key: ActorKey) =>
@@ -376,9 +405,28 @@ export function ActorFilterPicker({
           />
         )}
         ListEmptyComponent={
-          <Text className="px-4 py-3 text-sm text-muted-foreground">
-            {t("filters.no_matches")}
-          </Text>
+          hiddenMatches.length === 0 ? (
+            <Text className="px-4 py-3 text-sm text-muted-foreground">
+              {t("filters.no_matches")}
+            </Text>
+          ) : null
+        }
+        ListFooterComponent={
+          hiddenMatches.length > 0 ? (
+            <View testID={`hidden-actors-${section}`}>
+              <SectionLabel>{t("filters.hidden_section")}</SectionLabel>
+              {hiddenMatches.map((o) => (
+                <ActorRow
+                  key={o.key}
+                  option={o}
+                  checked={false}
+                  disabled={nobody}
+                  hidden
+                  onPress={() => toggle(o.key)}
+                />
+              ))}
+            </View>
+          ) : null
         }
         contentContainerClassName="pb-6"
       />

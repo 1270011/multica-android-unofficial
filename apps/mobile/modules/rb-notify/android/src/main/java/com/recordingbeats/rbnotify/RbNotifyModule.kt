@@ -105,6 +105,14 @@ class RbNotifyModule : Module() {
 
     Function("setActors") { map: Map<String, String> -> NotifyPrefs(ctx).setActors(map) }
 
+    // Title filter push mute of one workspace; null pattern = off.
+    Function("setTitleMute") { workspaceId: String, pattern: String?, ignoreCase: Boolean ->
+      if (workspaceId.isEmpty()) return@Function
+      val config = pattern?.takeIf { it.isNotEmpty() && it.length <= TitleMute.MAX_PATTERN }
+        ?.let { TitleMuteConfig(it, ignoreCase) }
+      NotifyPrefs(ctx).setTitleMute(workspaceId, config)
+    }
+
     // `dismiss` only for an open from inside the app or the app's own
     // notification (nonce): a deep link from another app must not remove
     // the notification (same rule as T5).

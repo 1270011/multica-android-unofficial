@@ -21,7 +21,7 @@
  *   - Walk the top-level token list.
  *   - `code` token → emit a `code` segment.
  *   - `table` token → emit a `table` segment: rendered by
- *     `MarkdownTable` in an RN horizontal ScrollView, because enriched's
+ *     `MarkdownTable` as grid or cards, because enriched's
  *     native table scroller loses the swipe to the bubble's long-press
  *     and clips wide tables (see `table-model.ts`).
  *   - `paragraph` token containing image tokens → split the paragraph

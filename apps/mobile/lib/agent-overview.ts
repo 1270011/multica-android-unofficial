@@ -96,6 +96,22 @@ export function visibleAgents<T extends Pick<Agent, "name" | "archived_at">>(age
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
+/**
+ * More › Agents with W4 (Settings › View): agents the user hid are
+ * left out of `shown` and counted in `hidden`, so the list can end with
+ * "2 hidden · Show". Input order is kept (pass `visibleAgents` output).
+ */
+export function splitHiddenAgents<T extends Pick<Agent, "id">>(
+  agents: readonly T[],
+  hiddenIds: readonly string[],
+): { shown: T[]; hidden: T[] } {
+  const ids = new Set(hiddenIds);
+  const shown: T[] = [];
+  const hidden: T[] = [];
+  for (const a of agents) (ids.has(a.id) ? hidden : shown).push(a);
+  return { shown, hidden };
+}
+
 export interface SquadMemberRow {
   key: string;
   type: SquadMember["member_type"];

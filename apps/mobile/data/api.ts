@@ -104,9 +104,17 @@ import type {
   IssueViewPreference,
   RefreshSessionResponse,
 } from "@multica/core/api/schemas";
-// Issue subscription toggle in the issue chat menu.
-import { RuntimeHourlyActivityListSchema, SubscribersListSchema } from "@multica/core/api/schemas";
-import type { IssueSubscriber, RuntimeHourlyActivity } from "@multica/core/types";
+// Issue subscription toggle in the issue chat menu (P4a).
+import {
+  CommentTriggerPreviewSchema,
+  RuntimeHourlyActivityListSchema,
+  SubscribersListSchema,
+} from "@multica/core/api/schemas";
+import type {
+  CommentTriggerPreview,
+  IssueSubscriber,
+  RuntimeHourlyActivity,
+} from "@multica/core/types";
 import {
   ActiveTasksResponseSchema,
   AgentListSchema,
@@ -129,6 +137,7 @@ import {
   EMPTY_CHAT_PENDING_TASK,
   EMPTY_CHAT_SESSION_LIST,
   EMPTY_COMMENT,
+  EMPTY_COMMENT_TRIGGER_PREVIEW,
   EMPTY_INBOX_LIST,
   EMPTY_INBOX_UNREAD_SUMMARY,
   EMPTY_ISSUE_FALLBACK,
@@ -218,7 +227,7 @@ import type {
   MobileAutopilotRun,
   MobileAutopilotRunList,
 } from "./autopilot-schemas";
-import { buildCommentUpdateBody } from "./revision";
+import { buildCommentCreateBody, buildCommentUpdateBody } from "./revision";
 
 import { getCfAccessHeaders, getServerBaseUrl } from "./server-config-store";
 import { looksLikeAccessBlock } from "@/lib/server-config";
@@ -1126,26 +1135,49 @@ class ApiClient {
   async createComment(
     issueId: string,
     content: string,
-    opts?: { parentId?: string; type?: string; attachmentIds?: string[] },
+    opts?: {
+      parentId?: string;
+      type?: string;
+      attachmentIds?: string[];
+      suppressAgentIds?: string[];
+    },
   ): Promise<Comment> {
-    // Body shape mirrors backend `CreateCommentRequest`
-    // (server/internal/handler/comment.go:165). `parent_id` is sent only
-    // when present so top-level comments don't carry an explicit null.
-    // `type` defaults to "comment" matching web client.ts:686.
+    // Body shape mirrors backend `CreateCommentRequest`, see
+    // buildCommentCreateBody (data/revision.ts).
     return this.fetchValidatedWith(
       `/api/issues/${issueId}/comments`,
       CommentSchema,
       EMPTY_COMMENT,
       {
         method: "POST",
-        body: JSON.stringify({
-          content,
-          type: opts?.type ?? "comment",
-          ...(opts?.parentId ? { parent_id: opts.parentId } : {}),
-          ...(opts?.attachmentIds ? { attachment_ids: opts.attachmentIds } : {}),
-        }),
+        body: JSON.stringify(buildCommentCreateBody(content, opts)),
       },
       { endpoint: "createComment" },
+    );
+  }
+
+  // POST /api/issues/:id/comments/trigger-preview — read-only dry run of
+  // "which agents would this comment start". Body mirrors
+  // web packages/core/api/client.ts previewCommentTriggers; the server
+  // enqueues nothing. Callers treat any error as "no preview".
+  async previewCommentTriggers(
+    issueId: string,
+    content: string,
+    opts?: { parentId?: string; editingCommentId?: string; signal?: AbortSignal },
+  ): Promise<CommentTriggerPreview> {
+    return this.fetchValidatedWith(
+      `/api/issues/${issueId}/comments/trigger-preview`,
+      CommentTriggerPreviewSchema,
+      EMPTY_COMMENT_TRIGGER_PREVIEW,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          content,
+          ...(opts?.parentId ? { parent_id: opts.parentId } : {}),
+          ...(opts?.editingCommentId ? { editing_comment_id: opts.editingCommentId } : {}),
+        }),
+      },
+      { signal: opts?.signal, endpoint: "POST /api/issues/:id/comments/trigger-preview" },
     );
   }
 

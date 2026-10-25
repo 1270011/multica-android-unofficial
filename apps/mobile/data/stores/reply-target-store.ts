@@ -1,22 +1,15 @@
 /**
- * Screen-scoped state for "compose a reply to comment X" — read by the
- * inline comment composer, written by the comment long-press action sheet
- * ("Reply").
+ * "Compose a reply to comment X" — read by the inline comment composer,
+ * written by the "Reply" button under a thread, the comment long-press
+ * action sheet ("Reply") and the chat swipe.
  *
- * Why a global Zustand store and not props:
- *   - The trigger (long-press action sheet) and the consumer (composer at
- *     the bottom of the screen) live in different component trees. Threading
- *     a callback through TimelineList → CommentCard → useCommentLongPress
- *     would mean three layers of prop drilling for one boolean signal.
- *   - Only one reply can be in-flight at a time per issue detail screen,
- *     so a singleton store is the right shape.
- *
- * Lifecycle: the issue-detail screen clears the store on unmount (same
- * pattern as `comment-select-store.ts`). Each fresh navigation into an
- * issue starts with no reply target, so a stale target can't leak across
- * issues.
+ * The target lives in the issue's comment draft (`comment-drafts-store.ts`,
+ * W1-2): it stays until the reply
+ * is sent or the chip's ✕ is tapped, and survives scrolling, the keyboard
+ * closing, leaving the screen and switching tab or app as long as the draft
+ * does. Keyed per issue, so a target can't leak into another issue.
  */
-import { create } from "zustand";
+import { useCommentDraftsStore } from "@/data/stores/comment-drafts-store";
 
 export interface ReplyTarget {
   commentId: string;
@@ -31,14 +24,23 @@ export interface ReplyTarget {
   preview: string;
 }
 
-interface State {
-  target: ReplyTarget | null;
-  setTarget: (target: ReplyTarget) => void;
-  clear: () => void;
+export function useReplyTarget(issueId: string): ReplyTarget | null {
+  return useCommentDraftsStore((s) => s.drafts[issueId]?.replyTo ?? null);
 }
 
-export const useReplyTargetStore = create<State>((set) => ({
-  target: null,
-  setTarget: (target) => set({ target }),
-  clear: () => set({ target: null }),
-}));
+export function getReplyTarget(issueId: string): ReplyTarget | null {
+  return useCommentDraftsStore.getState().drafts[issueId]?.replyTo ?? null;
+}
+
+export function setReplyTarget(issueId: string, target: ReplyTarget): void {
+  useCommentDraftsStore.getState().setReplyTo(issueId, target);
+}
+
+export function clearReplyTarget(issueId: string): void {
+  useCommentDraftsStore.getState().setReplyTo(issueId, null);
+}
+
+/** Drops the target only if it still points at `commentId` (e.g. it was deleted). */
+export function clearReplyTargetIf(issueId: string, commentId: string): void {
+  if (getReplyTarget(issueId)?.commentId === commentId) clearReplyTarget(issueId);
+}
