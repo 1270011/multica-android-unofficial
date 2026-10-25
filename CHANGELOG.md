@@ -4,6 +4,42 @@ All notable changes of this unofficial Android app are listed here. The format f
 
 The baseline is the upstream Multica mobile client (`apps/mobile`) at tag `v0.6.1` of <https://github.com/multica-ai/multica>, which supports iOS only.
 
+## [2.1.0] – 2026-10-25
+
+Supported server: Multica v0.6.1 (self-hosted).
+
+Update from 2.0.0: install the APK over the existing app; it keeps your server, sign-in and settings (same signing key, versionCode 3).
+
+### Added – Tables in the chat
+- Markdown tables in the issue chat and in comments are no longer cut off: they are drawn as a wrapping grid while the columns stay readable, otherwise as stacked cards, without horizontal scrolling.
+- Full view for every table: opens from the bubble, follows rotation, scrolls in both directions where needed, and returns to the same place in the chat.
+- TalkBack reads a table row by row ("row n of m", header and value) and offers "Open table in full view" and the links of a row as actions.
+
+### Added – Replies and agent preview
+- A visible "Reply" button under every thread sets the reply target; the target stays while the keyboard closes and opens and can be cancelled from its chip.
+- Suggestion "Reply to <agent>" when the last message in the issue comes from an agent.
+- Preview chips "Starts: X" above the input show which agents the draft would start; deselecting an agent keeps it from starting for this comment.
+
+### Added – @-mentions
+- The @-sheet keeps several picks as chips with a "Done (n)" button, so earlier picks never need scrolling back to; the list holds its position while you pick.
+- "Frequent" section on top of the @-sheet and the suggestion bar, based on the mentions you sent in this workspace. Settings › View › Sort @ suggestions switches between frequency and name and clears the history.
+- The @-suggestion bar stays above the keyboard in new issue, issue edit and the comment composer.
+
+### Added – Hide people and agents
+- Settings › View › Hide people & agents: hidden people and agents leave lists, pickers, filters, the chat agent choice and the agent list. Search still finds them under "Hidden". A value that is already set stays visible. Stored on the device per workspace and cleared on sign-out.
+
+### Added – Title filter
+- Settings › View › Hide issues: a regular expression hides matching issue titles in My Issues, project issues and on the board, with a hint row ("n hidden by title filter · Show"). Search, sub-issues and opened issues are not filtered. An invalid pattern is reported and turns the filter off.
+- Optional: mute push notifications for issues the title filter hides. The inbox entry is still created.
+
+### Added – Agent view
+- "Chat" and "New issue" on the agent detail: the chat opens above the agent (back returns to it), and the new issue has the agent preset as assignee.
+
+### Fixed
+- The text cursor returns to the input after closing the @-sheet, so typed text is not lost; the list no longer jumps while picking.
+- The remove buttons on composer chips and attachments have a 48 dp touch target.
+- The issue chat lands on a far target comment without growing the list towards it first.
+
 ## [2.0.0] – 2026-10-23
 
 Supported server: Multica v0.6.1 (self-hosted). Features the server does not offer (for example Autopilots) stay hidden.
@@ -38,7 +74,7 @@ Update from 1.0.0: install the APK over the existing app; it keeps your server, 
 - Encrypted on-device timeline cache (AES-256, key in the Android Keystore): a reopened issue shows its last known timeline at once and syncs only when needed. It is cleared on logout and when access to an issue is lost.
 - Fewer re-renders and refetches: changed chat bubbles only, bundled presence refetches, no timeline reload on every agent-run event, a reconnect reloads only the focused screen.
 - Faster cold start through a baseline profile in the APK.
-- Markdown tables in the chat scroll horizontally.
+- Markdown tables in the chat scroll horizontally (replaced in 2.1.0 by grid, cards and full view).
 
 ### Fixed
 - Opening an issue from the inbox lands on the triggering comment instead of jumping.
@@ -53,7 +89,7 @@ Update from 1.0.0: install the APK over the existing app; it keeps your server, 
 
 ## [1.0.0] – 2026-10-18
 
-> ⚠️ **Early release.** v1.0.0 was built fast and may have rough edges. It is not extensively end-to-end tested. It is functional and usable, but not state of the art. Known issues are listed in [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
+> **Early release.** v1.0.0 was built fast and may have rough edges. It is not extensively end-to-end tested. It is functional and usable, but not state of the art. Known issues are listed in [KNOWN_ISSUES.md](KNOWN_ISSUES.md).
 
 First public release as a standalone repository. Earlier builds were private test builds; this release contains everything from them.
 

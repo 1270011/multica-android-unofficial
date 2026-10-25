@@ -30,7 +30,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
     // CHANGELOG.md). Release builds may override them with
     // ANDROID_VERSION_NAME and ANDROID_VERSION_CODE; Android refuses to
     // update an installed app to a lower or equal versionCode.
-    version: process.env.ANDROID_VERSION_NAME || "2.0.0",
+    version: process.env.ANDROID_VERSION_NAME || "2.1.0",
     // Portrait and landscape. MainActivity keeps
     // orientation|screenSize in configChanges, so turning the phone does not
     // recreate it; layouts react through lib/breakpoints.ts.
@@ -77,7 +77,7 @@ export default ({ config }: ConfigContext): ExpoConfig => {
       // single sideloaded APK, so there is no dev/staging/prod side-by-side
       // install to keep apart (that is what the iOS suffixes above do).
       package: "net.recordingbeats.multica.unofficial",
-      versionCode: Number.parseInt(process.env.ANDROID_VERSION_CODE ?? "2", 10),
+      versionCode: Number.parseInt(process.env.ANDROID_VERSION_CODE ?? "3", 10),
       adaptiveIcon: {
         foregroundImage: "./assets/icon.png",
         backgroundColor: "#ffffff",

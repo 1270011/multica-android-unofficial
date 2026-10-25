@@ -44,12 +44,20 @@ Modified by Multica Android (unofficial) contributors.
   `apps/mobile/plugins/with-baseline-profile.js` (app baseline profile).
   End-to-end test flows and CI scripts of the development setup are not
   part of this repository.
+- Version 2.1.0 (see `CHANGELOG.md`): tables in the chat as grid, cards
+  and full view (`apps/mobile/lib/markdown`, new route
+  `apps/mobile/app/(app)/[workspace]/table-view.tsx`), reply button and
+  agent preview in the composers, @-sheet with chips and a "Frequent"
+  section, hiding people and agents, a title filter with optional silent
+  push (also in `apps/mobile/modules/rb-notify`), chat and new issue from
+  the agent detail, and new settings screens under
+  `apps/mobile/app/(app)/[workspace]/more/settings/`. No new dependencies.
 - Comments only (no values or code changed): the `.env*` files,
   `app.config.ts`, `lib/debug-token-login.ts` and
   `scripts/check-release-bundle.sh` in `apps/mobile` no longer refer to
   iPhone-only scripts, the desktop/web apps or a missing `docs/ANDROID.md`.
 
-## Modified files (180)
+## Modified files (190)
 
 - `.gitattributes`
 - `.gitignore`
@@ -74,6 +82,7 @@ Modified by Multica Android (unofficial) contributors.
 - `apps/mobile/app/(app)/[workspace]/issue/[id]/picker/due-date.tsx`
 - `apps/mobile/app/(app)/[workspace]/issue/[id]/runs.tsx`
 - `apps/mobile/app/(app)/[workspace]/issues-filter.tsx`
+- `apps/mobile/app/(app)/[workspace]/mention-picker.tsx`
 - `apps/mobile/app/(app)/[workspace]/more/agents.tsx`
 - `apps/mobile/app/(app)/[workspace]/more/issues.tsx`
 - `apps/mobile/app/(app)/[workspace]/more/pins.tsx`
@@ -117,6 +126,7 @@ Modified by Multica Android (unofficial) contributors.
 - `apps/mobile/components/issue/inline-comment-composer.tsx`
 - `apps/mobile/components/issue/issue-header-card.tsx`
 - `apps/mobile/components/issue/issue-row.tsx`
+- `apps/mobile/components/issue/mention-suggestion-bar.tsx`
 - `apps/mobile/components/issue/pickers/assignee-picker-body.tsx`
 - `apps/mobile/components/issue/pickers/due-date-picker-body.tsx`
 - `apps/mobile/components/issue/pickers/label-picker-body.tsx`
@@ -177,11 +187,17 @@ Modified by Multica Android (unofficial) contributors.
 - `apps/mobile/data/realtime/use-project-realtime.ts`
 - `apps/mobile/data/realtime/ws-client.test.ts`
 - `apps/mobile/data/realtime/ws-client.ts`
+- `apps/mobile/data/revision.test.ts`
+- `apps/mobile/data/revision.ts`
 - `apps/mobile/data/schemas.ts`
 - `apps/mobile/data/secure-storage.ts`
 - `apps/mobile/data/session-renewal.ts`
+- `apps/mobile/data/stores/chat-session-picker-store.ts`
 - `apps/mobile/data/stores/failed-comments-store.ts`
+- `apps/mobile/data/stores/mention-draft-store.ts`
 - `apps/mobile/data/stores/my-issues-view-store.ts`
+- `apps/mobile/data/stores/new-issue-draft-store.ts`
+- `apps/mobile/data/stores/reply-target-store.ts`
 - `apps/mobile/data/workspace-store.ts`
 - `apps/mobile/docs/markdown-rendering-adr.md`
 - `apps/mobile/eslint.config.js`
@@ -199,6 +215,7 @@ Modified by Multica Android (unofficial) contributors.
 - `apps/mobile/lib/issue-status.test.ts`
 - `apps/mobile/lib/issue-status.ts`
 - `apps/mobile/lib/markdown/code-block.tsx`
+- `apps/mobile/lib/markdown/index.ts`
 - `apps/mobile/lib/markdown/lightbox-provider.tsx`
 - `apps/mobile/lib/markdown/markdown-image.tsx`
 - `apps/mobile/lib/markdown/markdown.tsx`
@@ -207,6 +224,7 @@ Modified by Multica Android (unofficial) contributors.
 - `apps/mobile/lib/parse-response.ts`
 - `apps/mobile/lib/time-ago.ts`
 - `apps/mobile/lib/timeline-thread.ts`
+- `apps/mobile/lib/use-native-search-bar.ts`
 - `apps/mobile/locales/en/auth.json`
 - `apps/mobile/locales/en/chat.json`
 - `apps/mobile/locales/en/common.json`
@@ -232,14 +250,16 @@ Modified by Multica Android (unofficial) contributors.
 - `pnpm-lock.yaml`
 - `pnpm-workspace.yaml`
 
-## Added files (463)
+## Added files (541)
 
 Files that do not exist in upstream `v0.6.1`.
 
+- `.github/release-notes/v2.1.0.md`
 - `.gitleaks.toml`
 - `CHANGELOG.md`
 - `KNOWN_ISSUES.md`
 - `apps/mobile/app/(app)/[workspace]/agent/[id].tsx`
+- `apps/mobile/app/(app)/[workspace]/agent/[id]/chat.tsx`
 - `apps/mobile/app/(app)/[workspace]/autopilots/[id].tsx`
 - `apps/mobile/app/(app)/[workspace]/autopilots/[id]/runs.tsx`
 - `apps/mobile/app/(app)/[workspace]/autopilots/[id]/runs/[runId].tsx`
@@ -265,12 +285,17 @@ Files that do not exist in upstream `v0.6.1`.
 - `apps/mobile/app/(app)/[workspace]/issue/[id]/wakeup-instruction.tsx`
 - `apps/mobile/app/(app)/[workspace]/issue/[id]/wakeup-reschedule.tsx`
 - `apps/mobile/app/(app)/[workspace]/issue/[id]/wakeups/[wakeupId].tsx`
+- `apps/mobile/app/(app)/[workspace]/more/settings/hidden-actors.tsx`
+- `apps/mobile/app/(app)/[workspace]/more/settings/mention-sort.tsx`
+- `apps/mobile/app/(app)/[workspace]/more/settings/title-filter.tsx`
 - `apps/mobile/app/(app)/[workspace]/runtimes/[id].tsx`
 - `apps/mobile/app/(app)/[workspace]/runtimes/index.tsx`
 - `apps/mobile/app/(app)/[workspace]/squad/[id].tsx`
+- `apps/mobile/app/(app)/[workspace]/table-view.tsx`
 - `apps/mobile/app/(auth)/server-setup.tsx`
 - `apps/mobile/app/(auth)/token-login.tsx`
 - `apps/mobile/app/+not-found.tsx`
+- `apps/mobile/components/agents/agent-action-row.tsx`
 - `apps/mobile/components/agents/agent-hang-notice.tsx`
 - `apps/mobile/components/agents/agent-texts.ts`
 - `apps/mobile/components/ai-team/placeholder.tsx`
@@ -282,7 +307,9 @@ Files that do not exist in upstream `v0.6.1`.
 - `apps/mobile/components/autopilots/autopilot-run-sheet.tsx`
 - `apps/mobile/components/autopilots/autopilot-runs.tsx`
 - `apps/mobile/components/autopilots/use-autopilot-menu.ts`
+- `apps/mobile/components/chat/agent-handover-bar.tsx`
 - `apps/mobile/components/chat/chat-queue.tsx`
+- `apps/mobile/components/chat/chat-screen.tsx`
 - `apps/mobile/components/chat/use-chat-session-menu.ts`
 - `apps/mobile/components/inbox/push-permission-card.tsx`
 - `apps/mobile/components/issue-chat/chat-bubble.tsx`
@@ -295,6 +322,7 @@ Files that do not exist in upstream `v0.6.1`.
 - `apps/mobile/components/issue/board/board-card.tsx`
 - `apps/mobile/components/issue/board/issue-board.tsx`
 - `apps/mobile/components/issue/board/use-board-drag.tsx`
+- `apps/mobile/components/issue/comment-trigger-chips.tsx`
 - `apps/mobile/components/issue/duplicate-of-chip.tsx`
 - `apps/mobile/components/issue/filter-rows.tsx`
 - `apps/mobile/components/issue/issue-identifier.tsx`
@@ -306,11 +334,16 @@ Files that do not exist in upstream `v0.6.1`.
 - `apps/mobile/components/issue/parent-issue-chip.tsx`
 - `apps/mobile/components/issue/pickers/issue-date-picker-route.tsx`
 - `apps/mobile/components/issue/pickers/issue-search-picker-body.tsx`
+- `apps/mobile/components/issue/pickers/mention-picker-selection.tsx`
+- `apps/mobile/components/issue/pickers/picker-hidden-section.tsx`
 - `apps/mobile/components/issue/pickers/use-batch-picker.ts`
+- `apps/mobile/components/issue/reply-suggestion-chip.tsx`
 - `apps/mobile/components/issue/run-transcript.tsx`
 - `apps/mobile/components/issue/sort-section.tsx`
 - `apps/mobile/components/issue/sub-issues-section.tsx`
 - `apps/mobile/components/issue/system-wakeup-row.tsx`
+- `apps/mobile/components/issue/thread-reply-button.tsx`
+- `apps/mobile/components/issue/title-filter-hint.tsx`
 - `apps/mobile/components/issue/use-wakeup-menu.ts`
 - `apps/mobile/components/issue/view-conflict-dialog.ts`
 - `apps/mobile/components/issue/view-mode-toggle.tsx`
@@ -360,6 +393,8 @@ Files that do not exist in upstream `v0.6.1`.
 - `apps/mobile/data/mutations/wakeups.test.ts`
 - `apps/mobile/data/mutations/wakeups.ts`
 - `apps/mobile/data/queries/autopilots.ts`
+- `apps/mobile/data/queries/comment-trigger-preview.test.ts`
+- `apps/mobile/data/queries/comment-trigger-preview.ts`
 - `apps/mobile/data/queries/features.ts`
 - `apps/mobile/data/queries/invitations.ts`
 - `apps/mobile/data/queries/issue-views.ts`
@@ -367,6 +402,8 @@ Files that do not exist in upstream `v0.6.1`.
 - `apps/mobile/data/queries/list-pages.ts`
 - `apps/mobile/data/queries/list-total.test.ts`
 - `apps/mobile/data/queries/list-total.ts`
+- `apps/mobile/data/queries/loaded-issue-titles.test.ts`
+- `apps/mobile/data/queries/loaded-issue-titles.ts`
 - `apps/mobile/data/queries/my-issues.test.ts`
 - `apps/mobile/data/queries/properties.ts`
 - `apps/mobile/data/queries/wakeup-keys.ts`
@@ -406,7 +443,11 @@ Files that do not exist in upstream `v0.6.1`.
 - `apps/mobile/data/stores/issue-selection-store.ts`
 - `apps/mobile/data/stores/issue-view-mode-store.test.ts`
 - `apps/mobile/data/stores/issue-view-mode-store.ts`
+- `apps/mobile/data/stores/mention-draft-store.test.ts`
 - `apps/mobile/data/stores/my-issues-view-store.test.ts`
+- `apps/mobile/data/stores/reply-target-store.test.ts`
+- `apps/mobile/data/stores/view-prefs-store.test.ts`
+- `apps/mobile/data/stores/view-prefs-store.ts`
 - `apps/mobile/data/timeline-cache/core.test.ts`
 - `apps/mobile/data/timeline-cache/core.ts`
 - `apps/mobile/data/timeline-cache/index.test.ts`
@@ -424,8 +465,11 @@ Files that do not exist in upstream `v0.6.1`.
 - `apps/mobile/lib/action-sheet.ts`
 - `apps/mobile/lib/actor-filter-options.test.ts`
 - `apps/mobile/lib/actor-filter-options.ts`
+- `apps/mobile/lib/agent-actions.test.ts`
+- `apps/mobile/lib/agent-actions.ts`
 - `apps/mobile/lib/agent-activity.test.ts`
 - `apps/mobile/lib/agent-activity.ts`
+- `apps/mobile/lib/agent-chat-route.test.ts`
 - `apps/mobile/lib/agent-hang-notice.test.ts`
 - `apps/mobile/lib/agent-hang-notice.ts`
 - `apps/mobile/lib/agent-hang-state.test.ts`
@@ -473,8 +517,18 @@ Files that do not exist in upstream `v0.6.1`.
 - `apps/mobile/lib/clipboard.ts`
 - `apps/mobile/lib/comment-resend.test.ts`
 - `apps/mobile/lib/comment-resend.ts`
+- `apps/mobile/lib/comment-trigger-chips.test.ts`
+- `apps/mobile/lib/comment-trigger-chips.ts`
+- `apps/mobile/lib/comment-trigger-preview.test.ts`
+- `apps/mobile/lib/comment-trigger-preview.ts`
+- `apps/mobile/lib/compose-message-content.test.ts`
+- `apps/mobile/lib/compose-message-content.ts`
 - `apps/mobile/lib/composer-actions.test.ts`
 - `apps/mobile/lib/composer-actions.ts`
+- `apps/mobile/lib/composer-chip-target.test.ts`
+- `apps/mobile/lib/composer-chip-target.ts`
+- `apps/mobile/lib/cpu-budget.test.ts`
+- `apps/mobile/lib/cpu-budget.ts`
 - `apps/mobile/lib/date-format.test.ts`
 - `apps/mobile/lib/date-format.ts`
 - `apps/mobile/lib/debug-token-login.test.ts`
@@ -485,6 +539,8 @@ Files that do not exist in upstream `v0.6.1`.
 - `apps/mobile/lib/focus-refresh-tracker.ts`
 - `apps/mobile/lib/haptics.ts`
 - `apps/mobile/lib/header-scale.ts`
+- `apps/mobile/lib/hidden-actors-screen.test.ts`
+- `apps/mobile/lib/hidden-actors-screen.ts`
 - `apps/mobile/lib/image-source.ts`
 - `apps/mobile/lib/inbox-details.test.ts`
 - `apps/mobile/lib/inbox-details.ts`
@@ -522,6 +578,8 @@ Files that do not exist in upstream `v0.6.1`.
 - `apps/mobile/lib/issue-row-selection.ts`
 - `apps/mobile/lib/issue-subscribers.test.ts`
 - `apps/mobile/lib/issue-subscribers.ts`
+- `apps/mobile/lib/issue-title-filter.test.ts`
+- `apps/mobile/lib/issue-title-filter.ts`
 - `apps/mobile/lib/issue-view-create.test.ts`
 - `apps/mobile/lib/issue-view-create.ts`
 - `apps/mobile/lib/issue-view-edit.test.ts`
@@ -540,11 +598,27 @@ Files that do not exist in upstream `v0.6.1`.
 - `apps/mobile/lib/logger.test.ts`
 - `apps/mobile/lib/logger.ts`
 - `apps/mobile/lib/manifest-hardening-plugin.test.ts`
+- `apps/mobile/lib/markdown/content-width-context.tsx`
+- `apps/mobile/lib/markdown/content-width.ts`
+- `apps/mobile/lib/markdown/link-press.ts`
 - `apps/mobile/lib/markdown/markdown-table.tsx`
 - `apps/mobile/lib/markdown/segment-cache.test.ts`
 - `apps/mobile/lib/markdown/segment-cache.ts`
+- `apps/mobile/lib/markdown/speech.ts`
+- `apps/mobile/lib/markdown/table-actions.ts`
+- `apps/mobile/lib/markdown/table-full-view.test.ts`
+- `apps/mobile/lib/markdown/table-full-view.tsx`
+- `apps/mobile/lib/markdown/table-layout.test.ts`
 - `apps/mobile/lib/markdown/table-model.test.ts`
 - `apps/mobile/lib/markdown/table-model.ts`
+- `apps/mobile/lib/markdown/table-view-store.ts`
+- `apps/mobile/lib/mention-frequent.test.ts`
+- `apps/mobile/lib/mention-frequent.ts`
+- `apps/mobile/lib/mention-picker-selection.test.ts`
+- `apps/mobile/lib/mention-picker-selection.ts`
+- `apps/mobile/lib/mention-usage-native.ts`
+- `apps/mobile/lib/mention-usage.test.ts`
+- `apps/mobile/lib/mention-usage.ts`
 - `apps/mobile/lib/modal-presentation.test.ts`
 - `apps/mobile/lib/modal-presentation.ts`
 - `apps/mobile/lib/nav-layout.test.ts`
@@ -562,6 +636,8 @@ Files that do not exist in upstream `v0.6.1`.
 - `apps/mobile/lib/notify/push-logic.ts`
 - `apps/mobile/lib/notify/session.test.ts`
 - `apps/mobile/lib/notify/session.ts`
+- `apps/mobile/lib/notify/title-mute.test.ts`
+- `apps/mobile/lib/notify/title-mute.ts`
 - `apps/mobile/lib/notify/use-notify-bridge.ts`
 - `apps/mobile/lib/otp-paste.test.ts`
 - `apps/mobile/lib/otp-paste.ts`
@@ -576,6 +652,8 @@ Files that do not exist in upstream `v0.6.1`.
 - `apps/mobile/lib/redact-secrets.test.ts`
 - `apps/mobile/lib/redact-secrets.ts`
 - `apps/mobile/lib/refresh-guard.ts`
+- `apps/mobile/lib/reply-suggestion.test.ts`
+- `apps/mobile/lib/reply-suggestion.ts`
 - `apps/mobile/lib/route-restore.test.ts`
 - `apps/mobile/lib/route-restore.ts`
 - `apps/mobile/lib/run-transcript-i18n.test.ts`
@@ -594,18 +672,34 @@ Files that do not exist in upstream `v0.6.1`.
 - `apps/mobile/lib/sub-issues.ts`
 - `apps/mobile/lib/system-wakeup.test.ts`
 - `apps/mobile/lib/system-wakeup.ts`
+- `apps/mobile/lib/thread-reply.test.ts`
+- `apps/mobile/lib/thread-reply.ts`
 - `apps/mobile/lib/timeline-thread.test.ts`
+- `apps/mobile/lib/title-filter-screen.test.ts`
+- `apps/mobile/lib/title-filter-screen.ts`
+- `apps/mobile/lib/title-filter.test.ts`
+- `apps/mobile/lib/title-filter.ts`
 - `apps/mobile/lib/toast-a11y.test.ts`
 - `apps/mobile/lib/toast-a11y.ts`
 - `apps/mobile/lib/toast.test.ts`
 - `apps/mobile/lib/toast.ts`
 - `apps/mobile/lib/token-login-error.test.ts`
+- `apps/mobile/lib/touch-target.test.ts`
+- `apps/mobile/lib/touch-target.ts`
 - `apps/mobile/lib/unmatched-link.test.ts`
 - `apps/mobile/lib/unmatched-link.ts`
+- `apps/mobile/lib/use-comment-trigger-preview.ts`
+- `apps/mobile/lib/use-mention-usage.ts`
 - `apps/mobile/lib/use-refresh-on-focus.ts`
+- `apps/mobile/lib/use-title-filter.ts`
+- `apps/mobile/lib/use-visible-actors.ts`
 - `apps/mobile/lib/use-visible-tick.ts`
 - `apps/mobile/lib/view-pins.test.ts`
 - `apps/mobile/lib/view-pins.ts`
+- `apps/mobile/lib/view-prefs.test.ts`
+- `apps/mobile/lib/view-prefs.ts`
+- `apps/mobile/lib/visible-actors.test.ts`
+- `apps/mobile/lib/visible-actors.ts`
 - `apps/mobile/lib/visible-ticker.test.ts`
 - `apps/mobile/lib/visible-ticker.ts`
 - `apps/mobile/lib/wakeup-actions.test.ts`
@@ -656,6 +750,7 @@ Files that do not exist in upstream `v0.6.1`.
 - `apps/mobile/modules/rb-notify/android/src/main/java/com/recordingbeats/rbnotify/RbNotifyPackage.kt`
 - `apps/mobile/modules/rb-notify/android/src/main/java/com/recordingbeats/rbnotify/SeenIds.kt`
 - `apps/mobile/modules/rb-notify/android/src/main/java/com/recordingbeats/rbnotify/StateFile.kt`
+- `apps/mobile/modules/rb-notify/android/src/main/java/com/recordingbeats/rbnotify/TitleMute.kt`
 - `apps/mobile/modules/rb-notify/android/src/main/java/com/recordingbeats/rbnotify/Workspaces.kt`
 - `apps/mobile/modules/rb-notify/android/src/main/res/xml/rb_notify_backup_rules.xml`
 - `apps/mobile/modules/rb-notify/android/src/main/res/xml/rb_notify_data_extraction_rules.xml`
@@ -666,6 +761,7 @@ Files that do not exist in upstream `v0.6.1`.
 - `apps/mobile/modules/rb-notify/android/src/test/java/com/recordingbeats/rbnotify/NotifyStateTest.kt`
 - `apps/mobile/modules/rb-notify/android/src/test/java/com/recordingbeats/rbnotify/PingRuleVectorsTest.kt`
 - `apps/mobile/modules/rb-notify/android/src/test/java/com/recordingbeats/rbnotify/StateFileTest.kt`
+- `apps/mobile/modules/rb-notify/android/src/test/java/com/recordingbeats/rbnotify/TitleMuteTest.kt`
 - `apps/mobile/modules/rb-notify/expo-module.config.json`
 - `apps/mobile/modules/rb-notify/index.ts`
 - `apps/mobile/modules/rb-notify/package.json`

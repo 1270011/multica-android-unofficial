@@ -1,6 +1,6 @@
-# Known issues – v2.0.0
+# Known issues – v2.1.0
 
-The points below are known in v2.0.0. Most testing ran on emulators against one server version, so rough edges are still possible. If you hit something that is not listed, please [open an issue](../../issues).
+The points below are known in v2.1.0. Most testing ran on emulators against one server version, so rough edges are still possible. If you hit something that is not listed, please [open an issue](../../issues).
 
 ## Open issues
 
@@ -9,7 +9,8 @@ The points below are known in v2.0.0. Most testing ran on emulators against one 
 - **Offline indicator is unreliable.** The offline bar and the connection state are not always accurate and can lag behind or differ from the real network state. Pull to refresh if the content looks stale. Comments written offline are still kept and sent later. (Improved in v2.0.0: lists show an offline state instead of an empty list.)
 - **"Paste" button can be hidden by the keyboard.** On some screens and screen sizes the paste button next to an input field ends up under the on-screen keyboard. Close the keyboard to reach it, or paste with a long press into the field.
 - **"Unknown Agent" in the issue chat.** In the issue chat view, the author of some messages is shown as "Unknown Agent" instead of the agent's name. The classic activity view shows the correct author.
-- **Tables in the issue chat are cut off.** Wide Markdown tables in the issue chat are clipped at the screen edge. They can be scrolled sideways, but this is hard to discover, and a long press opens the message menu instead. Workaround: swipe horizontally directly on the table, or open the comment in the web app. A fix is planned.
+- **@-sheet in the chat tab is empty without a search text.** In the composer of an agent chat, the @-sheet shows no entries until you type part of a name. Type a few letters to see the matching people, agents and issues. The @-sheet in the issue composer is not affected.
+- **Markdown characters in some TalkBack announcements.** A few TalkBack announcements, for example of single chat messages or previews, still contain Markdown markup such as asterisks or brackets. The text on screen is not affected.
 - **Placeholder in "Local / VPN" mode.** The server URL field in "Local / VPN" mode shows the placeholder `https://multica.example.lan`. It is only an example; enter your real server URL (any `https://` address works).
 
 ### Platform and distribution
@@ -19,7 +20,13 @@ The points below are known in v2.0.0. Most testing ran on emulators against one 
 - **Sign-in by e-mail code only.** Release builds sign in with the e-mail code, as in the web app. There is no sign-in with a personal access token in release builds (that screen exists only in debug builds for automated tests).
 - **Tested against one server version.** Development and testing used a self-hosted Multica server v0.6.1. Newer server versions and Multica Cloud have not been tested.
 - **Tablet layout mostly tested on emulators.** The navigation rail and the two-column issue view were tested mainly on emulators; behaviour on specific real tablets may differ.
+- **Table full view at 200 % font size.** Returning from the table full view after rotating the device was tested less at 200 % font size than at 100 %. If the chat does not land on the table again, scroll to it.
 - **Limited real-device testing.** Most testing ran on Android emulators; behaviour on specific vendor ROMs (battery optimisation, notification handling) may differ. If notifications stop in the background, exclude the app from battery optimisation.
+
+## Fixed in v2.1.0
+
+- **Tables in the issue chat are cut off.** Tables are now drawn as a wrapping grid or as cards and have a full view; nothing is clipped at the screen edge.
+- **Typed text lost after the @-sheet.** After "Done" in the @-sheet the cursor returns to the input.
 
 ## Fixed in v2.0.0
 
@@ -29,14 +36,8 @@ The points below are known in v2.0.0. Most testing ran on emulators against one 
 
 No dates yet. Planned:
 
-- **Fewer @-mentions needed.** Replies reach the right agent the same way as in the web app, so you do not have to mention it every time.
-- **Chat and new issue from the agent view.** Start a chat with an agent or create an issue for it directly from its detail screen.
-- **Hide members and agents.** Choose in the settings which members and agents are shown in lists and pickers.
-- **Tables in the issue chat.** Wide tables become fully readable in the chat.
-- **@-mention list without scrolling back.** The mention list stays reachable while you type.
-- **Filter issues by title.**
 - **Settings and management closer to the web app.**
-- **Fixes for the other issues above.**
+- **Fixes for the issues above.**
 - **More end-to-end tests** on emulators and real devices, so that regressions are caught before a release.
 
 Changes per release are listed in [CHANGELOG.md](CHANGELOG.md).

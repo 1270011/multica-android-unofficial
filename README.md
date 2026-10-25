@@ -2,14 +2,14 @@
 
 <p align="center"><img src="docs/social-preview.png" alt="Multica for Android (unofficial) – inbox, issues, Kanban board and agent chat on your phone" width="100%"></p>
 
-> **v2.0.0:** tablet layout (navigation rail from 600 dp, two-pane issue view, limited reading width), saved views, multi-select and batch actions, wakeups, autopilots and runtimes, and a faster issue chat → [Changelog](CHANGELOG.md) · [Known issues](KNOWN_ISSUES.md)
+> **v2.1.0:** tables in the chat without clipping, a Reply button with a preview of which agents a comment starts, @-mentions with chips and a "Frequent" section, hiding people and agents, a title filter with optional silent push, and chat and new issues from the agent view → [Changelog](CHANGELOG.md) · [Known issues](KNOWN_ISSUES.md)
 
 [![Release](https://img.shields.io/github/v/release/1270011/multica-android-unofficial?include_prereleases&sort=semver)](https://github.com/1270011/multica-android-unofficial/releases)
 [![License](https://img.shields.io/badge/license-Multica%20License%20(Apache--2.0%20based)-blue)](LICENSE)
 [![Downloads](https://img.shields.io/github/downloads/1270011/multica-android-unofficial/total)](https://github.com/1270011/multica-android-unofficial/releases)
 [![Website](https://img.shields.io/badge/website-1270011.github.io-blue)](https://1270011.github.io/multica-android-unofficial/)
 
-**🌐 Website: [https://1270011.github.io/multica-android-unofficial/](https://1270011.github.io/multica-android-unofficial/)**
+**Website: [https://1270011.github.io/multica-android-unofficial/](https://1270011.github.io/multica-android-unofficial/)**
 
 **Multica for Android (unofficial)** is a source-available (Multica License, Apache-2.0-based) Android app for [Multica](https://github.com/multica-ai/multica), the platform where people and AI coding agents work on the same issues. Use it to follow your AI agents on the go: inbox and on-device notifications, issues and a Kanban board, comments, agent runs and agent chat, connected to your own Multica server – self-hosted or cloud.
 
@@ -35,11 +35,14 @@ The app is a fork of the official Expo / React Native mobile client (`apps/mobil
 **Issues and Kanban board**
 - **My Issues** with the tabs Assigned, Created and All, list grouped by status, and a **Kanban board** (status columns, status change with undo, drag and drop between columns in landscape and on tablets).
 - Filters for status, priority, project, label, due date, assignee and creator, remembered per list and workspace; server-side sorting, including manual board order.
+- **Title filter**: a regular expression hides matching issues in the lists and on the board; push notifications for them can be muted.
 - **Saved views**: apply, save, rename, share, delete and pin.
 - **Multi-select** by long press in the list and on the board, with batch status, priority, assignee and delete.
 - Issue detail: title and description editing with conflict protection, status, priority, assignee, labels, project, start and due date, stage, parent, sub-issues grouped by stage with progress, mark as duplicate, custom properties.
 - Comments with threads, reactions, resolve, edit and delete, mentions and attachments. Comments written offline are sent when the connection returns.
 - **Issue chat**: a mobile-only, chat-style view of an issue's timeline next to the classic activity view. It opens at once, also for long issues, and shows the last known timeline from an encrypted on-device cache while it syncs.
+- **Replies and @-mentions**: a Reply button under every thread, a preview of which agents a comment starts (deselect to skip), @-mentions picked as chips with a "Frequent" section, and a suggestion bar above the keyboard.
+- **Tables** in the chat and in comments are never clipped: a wrapping grid or cards, a full view that follows rotation, and row-wise TalkBack reading.
 - Subscribe/unsubscribe, subscriber list, agent runs with read-only transcripts (secrets redacted), cancel and re-run.
 - Create issues, search issues and projects, pin issues and projects, copy link, open in web.
 
@@ -52,6 +55,8 @@ The app is a fork of the official Expo / React Native mobile client (`apps/mobil
 - Runtimes grouped by machine, with a banner for problems; runtime detail with queue and activity.
 - "Why is my agent stuck?" notice on the agent and the issue detail.
 - Agents and squads: status, runtime, recent runs, squad members and active issues.
+- **Chat** and **New issue** directly from an agent's detail screen.
+- Hide people and agents locally, so they leave lists, pickers and filters.
 
 **Projects and workspaces**
 - Projects: list, detail, properties, resources, create, edit, delete, board and list of project issues.
@@ -258,9 +263,6 @@ The offline indicator is not always accurate (see [Known issues](KNOWN_ISSUES.md
 **The paste button is hidden by the keyboard**
 Close the keyboard to reach it, or long-press the input field and paste.
 
-**Tables in the issue chat are cut off**
-Swipe horizontally directly on the table, or open the comment in the web app (see [Known issues](KNOWN_ISSUES.md)). A fix is planned.
-
 **Signed out after changing the server**
 This is intended: changing or forgetting the server under **Settings → Server connection** signs you out. Sign in again with the e-mail code.
 
@@ -299,7 +301,7 @@ It is source-available. The complete source is in this repository under the Mult
 Yes. There is no paid version, no account with this project and no in-app purchase. You need your own Multica instance or a Multica Cloud account.
 
 **What is planned next?**
-Fewer @-mentions needed (replies as in the web app), chat and new issues directly from the agent view, hiding members and agents in the settings, a fix for tables in the issue chat, the remaining [known issues](KNOWN_ISSUES.md), and more end-to-end tests.
+Settings and management closer to the web app, the remaining [known issues](KNOWN_ISSUES.md), and more end-to-end tests.
 
 <sub>Multica for Android (unofficial) is not affiliated with or endorsed by Multica / Index Labs (Hong Kong) Limited.</sub>
 
@@ -307,7 +309,7 @@ Fewer @-mentions needed (replies as in the web app), chat and new issues directl
 
 ## Roadmap
 
-**v2.0.0** brought the tablet layout, saved views, batch actions, wakeups, autopilots and runtimes (see [CHANGELOG.md](CHANGELOG.md)). Next: fewer @-mentions needed (replies as in the web app), chat and new issues directly from the agent view, hiding members and agents in the settings, a fix for tables in the issue chat, the remaining [known issues](KNOWN_ISSUES.md), and more end-to-end tests. There are no dates yet.
+**v2.1.0** brought readable tables in the chat, replies and @-mentions closer to the web app, hiding people and agents, a title filter and chat and new issues from the agent view; **v2.0.0** the tablet layout, saved views, batch actions, wakeups, autopilots and runtimes (see [CHANGELOG.md](CHANGELOG.md)). Next: settings and management closer to the web app, the remaining [known issues](KNOWN_ISSUES.md), and more end-to-end tests. There are no dates yet.
 
 ## Build from source
 
