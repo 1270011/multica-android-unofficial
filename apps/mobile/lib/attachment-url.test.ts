@@ -13,6 +13,7 @@
  */
 import { describe, expect, it, vi } from "vitest";
 import {
+  attachmentIdFromDownloadUrlWithBase,
   resolveAttachmentUrl,
   resolveAttachmentUrlWithBase,
 } from "./attachment-url";
@@ -127,5 +128,46 @@ describe("resolveAttachmentUrl (env-bound)", () => {
     expect(resolveAttachmentUrl(undefined)).toBeNull();
     expect(resolveAttachmentUrl(null)).toBeNull();
     expect(resolveAttachmentUrl("")).toBeNull();
+  });
+});
+
+describe("attachmentIdFromDownloadUrlWithBase", () => {
+  const BASE = "https://api.example.test/";
+  const ID = "01a1d0d1-1385-7858-9413-f0745d11314e";
+
+  it("extracts the id from a server-relative download path", () => {
+    expect(
+      attachmentIdFromDownloadUrlWithBase(`/api/attachments/${ID}/download`, BASE),
+    ).toBe(ID);
+  });
+
+  it("extracts the id from an absolute download URL on the configured server", () => {
+    expect(
+      attachmentIdFromDownloadUrlWithBase(
+        `https://api.example.test/api/attachments/${ID}/download`,
+        BASE,
+      ),
+    ).toBe(ID);
+  });
+
+  it.each([
+    ["another host", `https://other.example/api/attachments/${ID}/download`],
+    ["a host sharing the prefix", `https://api.example.test.evil/api/attachments/${ID}/download`],
+    ["a pre-signed URL", "https://cdn.example/obj?sig=abc"],
+    ["a query string", `/api/attachments/${ID}/download?x=1`],
+    ["a non-uuid id", "/api/attachments/not-a-uuid/download"],
+    ["the signed-download path", `/api/attachments/${ID}/signed-download?sig=x`],
+    ["an empty url", ""],
+  ])("returns null for %s", (_label, url) => {
+    expect(attachmentIdFromDownloadUrlWithBase(url, BASE)).toBeNull();
+  });
+
+  it("does not match absolute URLs when no server is configured", () => {
+    expect(
+      attachmentIdFromDownloadUrlWithBase(
+        `https://api.example.test/api/attachments/${ID}/download`,
+        "",
+      ),
+    ).toBeNull();
   });
 });

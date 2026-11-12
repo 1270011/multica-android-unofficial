@@ -77,6 +77,22 @@ export const AttachmentSchema: z.ZodType<Attachment> = z.object({
 export const AttachmentListSchema = z.array(AttachmentSchema).default([]);
 export const EMPTY_ATTACHMENT_LIST: Attachment[] = [];
 
+/** GET /api/attachments/:id — only the two freshly signed,
+ *  credential-free URLs are consumed. Empty strings make the caller fall
+ *  back to the URL it already has. */
+export const AttachmentDownloadUrlsSchema = z.object({
+  download_url: z.string().default(""),
+  attachment_download_url: z.string().default(""),
+}).loose();
+export type AttachmentDownloadUrls = {
+  download_url: string;
+  attachment_download_url: string;
+};
+export const EMPTY_ATTACHMENT_DOWNLOAD_URLS: AttachmentDownloadUrls = {
+  download_url: "",
+  attachment_download_url: "",
+};
+
 /** Comment write endpoints all return a full Comment. Used by createComment /
  *  updateComment / resolveComment / unresolveComment via fetchValidatedWith.
  *  Empty fallback yields `id: ""` so downstream code (the mutations'

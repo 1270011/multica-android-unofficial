@@ -93,3 +93,48 @@ describe("api.listIssues", () => {
     expect(url.searchParams.has("sort_direction")).toBe(false);
   });
 });
+
+describe("api.getAttachmentDownloadUrls", () => {
+  const fetchMock = vi.fn(
+    async () =>
+      new Response(
+        JSON.stringify({
+          id: "att-1",
+          download_url: "/api/attachments/att-1/signed-download?sig=a",
+          attachment_download_url: "/api/attachments/att-1/signed-download?sig=b&dl=1",
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+  );
+
+  beforeEach(() => {
+    fetchMock.mockClear();
+    vi.stubGlobal("fetch", fetchMock);
+    vi.spyOn(console, "log").mockImplementation(() => {});
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("requests the authenticated metadata route and returns the signed URLs", async () => {
+    api.setToken("tok");
+    try {
+      const meta = await api.getAttachmentDownloadUrls("att-1");
+
+      expect(fetchMock).toHaveBeenCalledWith(
+        "https://api.example.test/api/attachments/att-1",
+        expect.objectContaining({
+          headers: expect.objectContaining({ Authorization: "Bearer tok" }),
+        }),
+      );
+      expect(meta).toMatchObject({
+        download_url: "/api/attachments/att-1/signed-download?sig=a",
+        attachment_download_url: "/api/attachments/att-1/signed-download?sig=b&dl=1",
+      });
+    } finally {
+      api.setToken(null);
+    }
+  });
+});

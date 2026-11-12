@@ -124,6 +124,9 @@ import {
   AgentTaskListSchema,
   AttachmentListSchema,
   AttachmentSchema,
+  AttachmentDownloadUrlsSchema,
+  EMPTY_ATTACHMENT_DOWNLOAD_URLS,
+  type AttachmentDownloadUrls,
   ChatMessageListSchema,
   CommentSchema,
   ChatPendingTaskSchema,
@@ -1097,6 +1100,24 @@ class ApiClient {
       AttachmentListSchema,
       EMPTY_ATTACHMENT_LIST,
       { ...opts, endpoint: "GET /api/issues/:id/attachments" },
+    );
+  }
+
+  // GET /api/attachments/:id — authenticated, workspace-scoped (current
+  // slug header). Besides the metadata it mints fresh, credential-free URLs
+  // (capability link or presigned URL) the system browser can open; the
+  // stable `/api/attachments/:id/download` path needs a bearer token it
+  // lacks. Available since server v0.6.1; the user-scoped
+  // `/download-metadata` sibling is newer, so it is not used here.
+  async getAttachmentDownloadUrls(
+    attachmentId: string,
+    opts?: { signal?: AbortSignal },
+  ): Promise<AttachmentDownloadUrls> {
+    return this.fetchValidated(
+      `/api/attachments/${encodeURIComponent(attachmentId)}`,
+      AttachmentDownloadUrlsSchema,
+      EMPTY_ATTACHMENT_DOWNLOAD_URLS,
+      { ...opts, endpoint: "GET /api/attachments/:id" },
     );
   }
 
