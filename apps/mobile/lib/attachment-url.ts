@@ -41,3 +41,32 @@ export function resolveAttachmentUrl(
 ): string | null {
   return resolveAttachmentUrlWithBase(rawUrl, getServerBaseUrl() ?? "");
 }
+
+const ATTACHMENT_DOWNLOAD_PATH_RE =
+  /^\/api\/attachments\/([0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12})\/download$/;
+
+/**
+ * Extract the attachment id from the auth-gated download URL
+ * `/api/attachments/{id}/download`, either server-relative or absolute on
+ * the configured server. Returns null for any other URL (other hosts,
+ * pre-signed storage URLs, query strings), which callers open unchanged.
+ */
+export function attachmentIdFromDownloadUrlWithBase(
+  rawUrl: string | null | undefined,
+  baseUrl: string,
+): string | null {
+  if (!rawUrl) return null;
+  const trimmedBaseUrl = baseUrl.replace(/\/+$/, "");
+  let path = rawUrl;
+  if (!rawUrl.startsWith("/")) {
+    if (!trimmedBaseUrl || !rawUrl.startsWith(`${trimmedBaseUrl}/`)) return null;
+    path = rawUrl.slice(trimmedBaseUrl.length);
+  }
+  return ATTACHMENT_DOWNLOAD_PATH_RE.exec(path)?.[1] ?? null;
+}
+
+export function attachmentIdFromDownloadUrl(
+  rawUrl: string | null | undefined,
+): string | null {
+  return attachmentIdFromDownloadUrlWithBase(rawUrl, getServerBaseUrl() ?? "");
+}
