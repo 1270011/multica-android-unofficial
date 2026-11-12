@@ -1001,7 +1001,7 @@
     "bar": "Ansicht: {{name}}",
     "bar_a11y": "Ansicht {{name}}. Ansichten öffnen",
     "default": "Standard",
-    "sheet_title": "Ansichten · Meine Issues – {{tab}}",
+    "sheet_title": "Ansichten · Issues – {{tab}}",
     "shared": "Geteilt",
     "empty": "Noch keine gespeicherten Ansichten. Stelle Filter ein und speichere sie hier.",
     "loading": "Ansichten werden geladen",

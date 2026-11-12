@@ -977,7 +977,7 @@
     "bar": "视图：{{name}}",
     "bar_a11y": "视图 {{name}}。打开视图列表",
     "default": "默认",
-    "sheet_title": "视图 · 我的事项 – {{tab}}",
+    "sheet_title": "视图 · 任务 – {{tab}}",
     "shared": "已共享",
     "empty": "还没有保存的视图。设置筛选条件后可在此保存。",
     "loading": "正在加载视图",
