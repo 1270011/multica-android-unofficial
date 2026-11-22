@@ -2,7 +2,7 @@
 
 <p align="center"><img src="docs/social-preview.png" alt="Multica for Android (unofficial) – inbox, issues, Kanban board and agent chat on your phone" width="100%"></p>
 
-> **v2.1.0:** tables in the chat without clipping, a Reply button with a preview of which agents a comment starts, @-mentions with chips and a "Frequent" section, hiding people and agents, a title filter with optional silent push, and chat and new issues from the agent view → [Changelog](CHANGELOG.md) · [Known issues](KNOWN_ISSUES.md)
+> **v2.1.1:** attachments open on self-hosted servers and the "Issues" tab is fixed. **v2.1.0:** tables in the chat without clipping, a Reply button with a preview of which agents a comment starts, @-mentions with chips and a "Frequent" section, hiding people and agents, a title filter with optional silent push, and chat and new issues from the agent view → [Changelog](CHANGELOG.md) · [Known issues](KNOWN_ISSUES.md)
 
 [![Release](https://img.shields.io/github/v/release/1270011/multica-android-unofficial?include_prereleases&sort=semver)](https://github.com/1270011/multica-android-unofficial/releases)
 [![License](https://img.shields.io/badge/license-Multica%20License%20(Apache--2.0%20based)-blue)](LICENSE)
@@ -309,7 +309,7 @@ Settings and management closer to the web app, the remaining [known issues](KNOW
 
 ## Roadmap
 
-**v2.1.0** brought readable tables in the chat, replies and @-mentions closer to the web app, hiding people and agents, a title filter and chat and new issues from the agent view; **v2.0.0** the tablet layout, saved views, batch actions, wakeups, autopilots and runtimes (see [CHANGELOG.md](CHANGELOG.md)). Next: settings and management closer to the web app, the remaining [known issues](KNOWN_ISSUES.md), and more end-to-end tests. There are no dates yet.
+**v2.1.1** fixed opening attachments on self-hosted servers and the "Issues" tab; **v2.1.0** brought readable tables in the chat, replies and @-mentions closer to the web app, hiding people and agents, a title filter and chat and new issues from the agent view; **v2.0.0** the tablet layout, saved views, batch actions, wakeups, autopilots and runtimes (see [CHANGELOG.md](CHANGELOG.md)). Next: settings and management closer to the web app, the remaining [known issues](KNOWN_ISSUES.md), and more end-to-end tests. There are no dates yet.
 
 ## Build from source
 
