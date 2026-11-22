@@ -347,6 +347,12 @@ Notes:
 
 Maintained by [Recordingbeats](https://recordingbeats.com).
 
+## Contributors
+
+Thank you to everyone who contributed to this project:
+
+- [Víctor Andrade (@choutos)](https://github.com/choutos) – fix for opening file attachments on self-hosted servers ([#3](https://github.com/1270011/multica-android-unofficial/pull/3)) and the clearer "Issues" tab label ([#4](https://github.com/1270011/multica-android-unofficial/pull/4)).
+
 ## License
 
 This project is distributed under the **Multica License**, the same license as the upstream code: the Apache License 2.0 together with additional conditions (Part I). The full text is in [LICENSE](LICENSE).
