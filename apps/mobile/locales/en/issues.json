@@ -1000,7 +1000,7 @@
     "bar": "View: {{name}}",
     "bar_a11y": "View {{name}}. Open views",
     "default": "Default",
-    "sheet_title": "Views · My Issues – {{tab}}",
+    "sheet_title": "Views · Issues – {{tab}}",
     "shared": "Shared",
     "empty": "No saved views yet. Set filters and save them here.",
     "loading": "Loading views",

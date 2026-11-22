@@ -206,6 +206,6 @@
     "mute_push": "Also mute push notifications",
     "mute_push_help": "No push for issues whose title matches. They still appear in the Inbox. Hidden people and agents keep notifying.",
     "mute_push_unavailable": "Available when the title filter is on and the pattern is valid.",
-    "scope": "Applies to My Issues (list and board), projects and chat suggestions. Search, Inbox, sub-issues and opened issues still show everything."
+    "scope": "Applies to Issues (list and board), projects and chat suggestions. Search, Inbox, sub-issues and opened issues still show everything."
   }
 }

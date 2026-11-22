@@ -206,6 +206,6 @@
     "mute_push": "Auch keine Push-Benachrichtigung",
     "mute_push_help": "Kein Push für Issues, deren Titel passt. Sie erscheinen weiter in der Inbox. Ausgeblendete Personen und Agenten melden sich weiter.",
     "mute_push_unavailable": "Verfügbar, wenn der Titel-Filter an und das Muster gültig ist.",
-    "scope": "Gilt für Meine Issues (Liste und Board), Projekte und Chat-Vorschläge. Suche, Inbox, Unter-Issues und geöffnete Issues zeigen weiter alles."
+    "scope": "Gilt für Issues (Liste und Board), Projekte und Chat-Vorschläge. Suche, Inbox, Unter-Issues und geöffnete Issues zeigen weiter alles."
   }
 }
