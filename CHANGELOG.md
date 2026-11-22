@@ -4,6 +4,21 @@ All notable changes of this unofficial Android app are listed here. The format f
 
 The baseline is the upstream Multica mobile client (`apps/mobile`) at tag `v0.6.1` of <https://github.com/multica-ai/multica>, which supports iOS only.
 
+## [2.1.1] – 2026-11-22
+
+Supported server: Multica v0.6.1 (self-hosted).
+
+Update from 2.1.0: install the APK over the existing app; it keeps your server, sign-in and settings (same signing key, versionCode 4).
+
+### Fixed
+- File attachments (for example PDFs) now open on self-hosted servers: the app opens them through a signed URL instead of the plain storage address (GitHub issue #2, PR #3 by @choutos).
+
+### Changed
+- The "My Issues" tab is now called "Issues" (PR #4 by @choutos).
+
+### Documentation
+- Contributors section in the README and on the project page.
+
 ## [2.1.0] – 2026-10-25
 
 Supported server: Multica v0.6.1 (self-hosted).
