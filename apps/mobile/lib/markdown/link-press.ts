@@ -6,6 +6,8 @@ import { useCallback } from "react";
 import { Linking } from "react-native";
 import { router } from "expo-router";
 import { useWorkspaceStore } from "@/data/workspace-store";
+import { attachmentIdFromDownloadUrl } from "@/lib/attachment-url";
+import { openAttachment } from "@/lib/open-attachment";
 
 export function useMarkdownLinkPress(): (e: { url: string }) => void {
   const wsSlug = useWorkspaceStore((s) => s.currentWorkspaceSlug);
@@ -42,6 +44,13 @@ export function useMarkdownLinkPress(): (e: { url: string }) => void {
       // Everything else — http(s), mailto, tel, app-scheme deep links —
       // hand off to the system. Linking.openURL throws if no app handles
       // the URL; the catch keeps a stray tap from crashing the screen.
+      // File cards link to the auth-gated attachment download path, which
+      // the system browser cannot open without the bearer token.
+      const attachmentId = attachmentIdFromDownloadUrl(url);
+      if (attachmentId) {
+        void openAttachment(attachmentId, url);
+        return;
+      }
       Linking.openURL(url).catch(() => {
         // Silent: failing loudly is worse than a no-op tap.
       });
