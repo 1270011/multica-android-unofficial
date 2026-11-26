@@ -394,6 +394,7 @@
   "new_badge": "Neu",
   "jump_a11y_one": "Zu {{count}} neuer Nachricht springen",
   "jump_a11y_other": "Zu {{count}} neuen Nachrichten springen",
+  "jump_to_latest": "Zum Neuesten springen",
   "a11y": {
     "agent_working": "Agent arbeitet – Läufe öffnen",
     "remove_mention": "Erwähnung von {{name}} entfernen",

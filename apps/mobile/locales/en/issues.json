@@ -393,6 +393,7 @@
   "new_badge": "New",
   "jump_a11y_one": "Jump to {{count}} new message",
   "jump_a11y_other": "Jump to {{count}} new messages",
+  "jump_to_latest": "Jump to latest",
   "a11y": {
     "agent_working": "Agent working — open runs",
     "remove_mention": "Remove mention {{name}}",

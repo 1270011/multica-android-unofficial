@@ -388,6 +388,7 @@
   "header_filter": "筛选",
   "new_badge": "新",
   "jump_a11y_other": "跳到 {{count}} 条新消息",
+  "jump_to_latest": "跳到最新",
   "a11y": {
     "agent_working": "智能体处理中 — 打开运行",
     "remove_mention": "移除提及 {{name}}",
