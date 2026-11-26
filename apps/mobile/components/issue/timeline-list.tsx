@@ -81,6 +81,7 @@ import {
   Pressable,
   RefreshControl,
   View,
+  type LayoutChangeEvent,
   type NativeScrollEvent,
   type NativeSyntheticEvent,
   type ViewToken,
@@ -148,6 +149,27 @@ const HIGHLIGHT_HOLD_MS = 5000;
  *  "already at bottom" so the new-comment chip doesn't fire for entries
  *  the user is already about to see. */
 const AT_BOTTOM_SLACK_PX = 80;
+
+/** "Jump to latest" thresholds — upstream web parity
+ *  (packages/views/issues/hooks/use-jump-to-latest.ts, MUL-8324/MUL-8951).
+ *  Away once more than a viewport is left below; once away, the reader has
+ *  to come back within RETURN_WITHIN_SCREENS of the bottom, so the button
+ *  does not flicker at the threshold. */
+const RETURN_WITHIN_SCREENS = 0.5;
+/** On a phone the button only shows while the reader is near the top of
+ *  the page: once they have scrolled further on their own they are
+ *  reading, not hunting for the latest entry, and the button would cover
+ *  the text column above the composer. */
+const NEAR_TOP_RATIO = 0.2;
+/** A jump keeps re-pinning the bottom while the follow window is open —
+ *  async markdown (Shiki highlight, image natural-size) and WS appends can
+ *  resolve after the jump and leave the reader short of the newest entry
+ *  (the web jump does the same with a rAF loop). */
+const JUMP_FOLLOW_MS = 2000;
+/** Cadence of the follow-window re-pin check. */
+const JUMP_FOLLOW_TICK_MS = 120;
+/** Distance from the bottom (px) that still counts as landed after a jump. */
+const AT_END_EPSILON_PX = 4;
 
 /** Sentinel id for the "New since last view" divider row injected into the
  *  FlatList data. Picked because it can never collide with a real comment
@@ -277,6 +299,98 @@ export function TimelineList({
     setNewCount((prev) => prev + diff);
   }, [data.length]);
 
+  // ── "Jump to latest" button ───────────────────────────────────────────
+  // Upstream web parity (MUL-8324/MUL-8951): visible while the newest
+  // entry is more than a screen away (hysteresis: RETURN_WITHIN_SCREENS on
+  // the way back) AND — phone layouts — the reader is still near the top
+  // of the page, where the button covers the text column the least. A
+  // jump also re-pins the end while the follow window is open
+  // (JUMP_FOLLOW_MS): async markdown and WS appends can resolve after the
+  // jump and land the reader short of the bottom.
+  const [jumpVisible, setJumpVisible] = useState(false);
+  const jumpAwayRef = useRef(false);
+  const jumpTailPendingRef = useRef(true);
+  const jumpTailIdxRef = useRef(-1);
+  const jumpLastIndexRef = useRef(-1);
+  const jumpMetricsRef = useRef({
+    offset: 0,
+    contentH: 0,
+    viewportH: 0,
+    lastOffsetChangeAt: 0,
+  });
+  const jumpFollowRef = useRef<{
+    until: number;
+    timer: ReturnType<typeof setInterval>;
+  } | null>(null);
+
+  const stopJumpFollow = useCallback(() => {
+    const follow = jumpFollowRef.current;
+    if (follow) {
+      clearInterval(follow.timer);
+      jumpFollowRef.current = null;
+    }
+  }, []);
+
+  const recomputeJumpVisibility = useCallback(() => {
+    const { offset, contentH, viewportH } = jumpMetricsRef.current;
+    if (viewportH <= 0) return;
+    const dist = contentH - (offset + viewportH);
+    const threshold = jumpAwayRef.current
+      ? viewportH * RETURN_WITHIN_SCREENS
+      : viewportH;
+    const away = jumpTailPendingRef.current || dist > threshold;
+    jumpAwayRef.current = away;
+    const nearTop = contentH > 0 && offset <= contentH * NEAR_TOP_RATIO;
+    const visible = away && nearTop;
+    setJumpVisible((prev) => (prev === visible ? prev : visible));
+  }, []);
+
+  const jumpToLatest = useCallback(() => {
+    stopJumpFollow();
+    listRef.current?.scrollToEnd({ animated: true });
+    const until = Date.now() + JUMP_FOLLOW_MS;
+    const timer = setInterval(() => {
+      const follow = jumpFollowRef.current;
+      if (!follow || Date.now() >= until) {
+        stopJumpFollow();
+        return;
+      }
+      const { offset, contentH, viewportH, lastOffsetChangeAt } =
+        jumpMetricsRef.current;
+      if (viewportH <= 0) return;
+      // Re-pin only once the travel has settled — pinning mid-flight would
+      // fight the animated jump. Late content growth (which moves the
+      // bottom without moving the offset) is caught here as well.
+      if (Date.now() - lastOffsetChangeAt > JUMP_FOLLOW_TICK_MS) {
+        if (contentH - (offset + viewportH) > AT_END_EPSILON_PX) {
+          listRef.current?.scrollToEnd({ animated: false });
+        }
+      }
+    }, JUMP_FOLLOW_TICK_MS);
+    jumpFollowRef.current = { until, timer };
+  }, [stopJumpFollow]);
+
+  const onJumpToLatest = useCallback(() => {
+    jumpToLatest();
+    setNewCount(0);
+  }, [jumpToLatest]);
+
+  const handleContentSizeChange = useCallback(
+    (_width: number, height: number) => {
+      jumpMetricsRef.current.contentH = height;
+      recomputeJumpVisibility();
+    },
+    [recomputeJumpVisibility],
+  );
+
+  const handleListLayout = useCallback(
+    (e: LayoutChangeEvent) => {
+      jumpMetricsRef.current.viewportH = e.nativeEvent.layout.height;
+      recomputeJumpVisibility();
+    },
+    [recomputeJumpVisibility],
+  );
+
   const handleScroll = useCallback(
     (e: NativeSyntheticEvent<NativeScrollEvent>) => {
       const { contentOffset, contentSize, layoutMeasurement } = e.nativeEvent;
@@ -289,14 +403,17 @@ export function TimelineList({
       if (!wasAtBottom && isAtBottomRef.current && newCount > 0) {
         setNewCount(0);
       }
+      const metrics = jumpMetricsRef.current;
+      if (metrics.offset !== contentOffset.y) {
+        metrics.lastOffsetChangeAt = Date.now();
+      }
+      metrics.offset = contentOffset.y;
+      metrics.contentH = contentSize.height;
+      metrics.viewportH = layoutMeasurement.height;
+      recomputeJumpVisibility();
     },
-    [newCount],
+    [newCount, recomputeJumpVisibility],
   );
-
-  const onJumpToNew = useCallback(() => {
-    listRef.current?.scrollToEnd({ animated: true });
-    setNewCount(0);
-  }, []);
 
   // ── Inject divider as a sentinel row before its anchor entry ──────────
   // FlatList wants a flat data[] and a stable key per row. Rather than
@@ -329,6 +446,23 @@ export function TimelineList({
   );
   const handleViewableItemsChanged = useCallback(
     ({ viewableItems }: { viewableItems: ViewToken[] }) => {
+      // Tail tracking for "Jump to latest": a virtualized content height
+      // can claim the bottom is close while the rows below are still
+      // estimated (the web jump calls this `tailPending`). Once the last
+      // row has been laid out, the distance to the bottom is exact again.
+      if (viewableItems.length > 0) {
+        const maxIdx = viewableItems.reduce(
+          (acc, v) => (v.index != null && v.index > acc ? v.index : acc),
+          jumpTailIdxRef.current,
+        );
+        if (maxIdx > jumpTailIdxRef.current) {
+          jumpTailIdxRef.current = maxIdx;
+          if (maxIdx >= jumpLastIndexRef.current) {
+            jumpTailPendingRef.current = false;
+            recomputeJumpVisibility();
+          }
+        }
+      }
       if (!dividerAnchorId) return;
       if (dividerScrolledPastRef.current) return;
       const dividerIdx = dataWithDivider.findIndex(
@@ -343,13 +477,14 @@ export function TimelineList({
         dividerScrolledPastRef.current = true;
       }
     },
-    [dividerAnchorId, dataWithDivider],
+    [dividerAnchorId, dataWithDivider, recomputeJumpVisibility],
   );
   // FlashList v2 captures `viewabilityConfigCallbackPairs` at mount —
   // "Changing viewabilityConfig on the fly is not supported." So we wrap
   // the handler in a stable ref-backed forwarder and pass a frozen pairs
   // array. The inner closure still updates with deps (dividerAnchorId,
-  // dataWithDivider), but the prop identity FlashList sees is stable.
+  // dataWithDivider, recomputeJumpVisibility), but the prop identity
+  // FlashList sees is stable.
   const handlerRef = useRef(handleViewableItemsChanged);
   useEffect(() => {
     handlerRef.current = handleViewableItemsChanged;
@@ -383,6 +518,38 @@ export function TimelineList({
     // anchor's "scrolled past" state if WS extended the timeline mid-read.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [issue.id]);
+
+  // Reset the jump state per issue (screens are reused across issues).
+  // The tail index and metrics resync from data/layout once the new issue
+  // loads, so only the derived bits are cleared here.
+  useEffect(() => {
+    jumpAwayRef.current = false;
+    jumpTailPendingRef.current = true;
+    jumpTailIdxRef.current = -1;
+    jumpMetricsRef.current = {
+      offset: 0,
+      contentH: 0,
+      viewportH: 0,
+      lastOffsetChangeAt: 0,
+    };
+    setJumpVisible(false);
+    return stopJumpFollow;
+  }, [issue.id, stopJumpFollow]);
+
+  // Tail-tracking sync for "Jump to latest": the pending flag stays on
+  // until the last row has been laid out, then flips off so the scroll
+  // position becomes authoritative again.
+  useEffect(() => {
+    const last = dataWithDivider.length - 1;
+    if (last === jumpLastIndexRef.current) return;
+    jumpLastIndexRef.current = last;
+    if (jumpTailIdxRef.current >= last) {
+      jumpTailPendingRef.current = false;
+    } else {
+      jumpTailPendingRef.current = true;
+    }
+    recomputeJumpVisibility();
+  }, [dataWithDivider, recomputeJumpVisibility]);
 
   const ListHeader = (
     <View>
@@ -527,12 +694,15 @@ export function TimelineList({
           );
         }}
         onScroll={handleScroll}
+        onContentSizeChange={handleContentSizeChange}
+        onLayout={handleListLayout}
         // Any user-initiated scroll exits comment text-selection mode —
         // matches iMessage's behavior where scrolling implicitly commits /
         // dismisses the selection caret. Hooks both drag-start and the
         // momentum kick after a flick so a fast scroll can't escape.
         onScrollBeginDrag={() => {
           wakeupsLandingDone.current = true;
+          stopJumpFollow();
           useCommentSelectStore.getState().clear();
         }}
         onMomentumScrollBegin={() =>
@@ -546,7 +716,10 @@ export function TimelineList({
       />
       </Pressable>
       {newCount > 0 ? (
-        <NewCommentChip count={newCount} onPress={onJumpToNew} />
+        <NewCommentChip count={newCount} onPress={onJumpToLatest} />
+      ) : null}
+      {jumpVisible ? (
+        <JumpToLatestButton count={newCount} onPress={onJumpToLatest} />
       ) : null}
     </View>
     </ImageSequenceProvider>
@@ -626,6 +799,62 @@ function NewCommentChip({
       <Text className="text-xs font-semibold text-primary-foreground">
         {count} new
       </Text>
+    </Pressable>
+  );
+}
+
+/**
+ * Floating round "Jump to latest" button at the right edge above the
+ * composer — the mobile adaptation of the desktop client's down arrow
+ * (upstream web parity, MUL-8324/MUL-8951: a round outline button with an
+ * ArrowDown icon in the composer dock). Shows while the reader is near the
+ * top of a timeline whose newest entry is more than a screen away; the
+ * badge counts the comments that arrived while the reader was away,
+ * capped at 9+ like web's JUMP_COUNT_CAP.
+ */
+function JumpToLatestButton({
+  count,
+  onPress,
+}: {
+  count: number;
+  onPress: () => void;
+}) {
+  const { colorScheme } = useColorScheme();
+  const { t } = useT("issues");
+  const fg = THEME[colorScheme].foreground;
+  return (
+    <Pressable
+      onPress={onPress}
+      testID="timeline-jump-to-latest"
+      accessibilityRole="button"
+      accessibilityLabel={
+        count > 0
+          ? t(count === 1 ? "jump_a11y_one" : "jump_a11y_other", { count })
+          : t("jump_to_latest")
+      }
+      hitSlop={6}
+      className="absolute bottom-3 right-4 h-10 w-10 items-center justify-center rounded-full border border-border bg-background active:opacity-80"
+      style={{
+        // shadow comes from system, not Tailwind — keeps the button
+        // readable against either light or dark timeline content beneath.
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.18,
+        shadowRadius: 6,
+        elevation: 4,
+      }}
+    >
+      <Ionicons name="arrow-down" size={20} color={fg} />
+      {count > 0 ? (
+        <View
+          pointerEvents="none"
+          className="absolute -right-1 -top-1 h-[18px] min-w-[18px] items-center justify-center rounded-full bg-primary px-1"
+        >
+          <Text className="text-[11px] font-semibold text-primary-foreground">
+            {count > 9 ? "9+" : count}
+          </Text>
+        </View>
+      ) : null}
     </Pressable>
   );
 }
