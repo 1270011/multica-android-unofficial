@@ -11,7 +11,7 @@
  *      (`adb shell run-as <applicationId> …`).
  */
 import { useState } from "react";
-import { KeyboardAvoidingView, Platform, Pressable, View } from "react-native";
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router } from "expo-router";
 import * as Haptics from "@/lib/haptics";
@@ -119,7 +119,15 @@ export function TokenLoginScreen() {
         className="flex-1"
         behavior={Platform.OS === "ios" ? "padding" : undefined}
       >
-        <View className="flex-1 justify-center px-6 gap-6">
+        <ScrollView
+          className="flex-1"
+      // Content must scroll above the keyboard on small screens and in
+      // landscape, so the paste button stays reachable (KNOWN_ISSUES:
+      // "Paste" button under the keyboard). stays centered while there is
+      // room and scrolls when the keyboard squeezes the space.
+          contentContainerClassName="flex-grow justify-center px-6 gap-6"
+          keyboardShouldPersistTaps="handled"
+        >
           <View className="items-center gap-3">
             <MulticaLogo size={32} />
             <View className="gap-1 items-center">
@@ -218,7 +226,7 @@ export function TokenLoginScreen() {
               <Text className="text-sm text-primary">{t("token_login.back")}</Text>
             </Pressable>
           </View>
-        </View>
+        </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
   );
