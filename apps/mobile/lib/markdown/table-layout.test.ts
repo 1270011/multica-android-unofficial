@@ -181,6 +181,22 @@ describe("proseToSpeech", () => {
   it("leaves snake_case, lone stars and arithmetic alone", () => {
     expect(proseToSpeech("file_name_x, 5 * 3 * 2, a*b")).toBe("file_name_x, 5 * 3 * 2, a*b");
   });
+
+  it("unwraps links, images and autolinks", () => {
+    expect(proseToSpeech("siehe [Doku](https://example.com/a) und **fett**")).toBe(
+      "siehe Doku und fett",
+    );
+    expect(proseToSpeech("![Bild](https://example.com/b.png) Ende")).toBe("Bild Ende");
+    expect(proseToSpeech("<https://example.com/a_b>")).toBe("https://example.com/a_b");
+    expect(proseToSpeech("<mailto:hallo@example.com>")).toBe("mailto:hallo@example.com");
+  });
+
+  it("keeps brackets and URLs that are no markdown link", () => {
+    expect(proseToSpeech("siehe [1] und [2], https://example.com/a_b")).toBe(
+      "siehe [1] und [2], https://example.com/a_b",
+    );
+    expect(proseToSpeech("[Text] ohne Klammer auf")).toBe("[Text] ohne Klammer auf");
+  });
 });
 
 describe("content widths", () => {

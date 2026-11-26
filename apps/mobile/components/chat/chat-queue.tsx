@@ -16,6 +16,7 @@ import type { ChatQueuedTask } from "@multica/core/types";
 import { Text } from "@/components/ui/text";
 import { Ionicons } from "@/components/ui/ionicons";
 import { queuePreview, type SendNowState } from "@/lib/chat-queue";
+import { proseToSpeech } from "@/lib/markdown/speech";
 import { useColorScheme } from "@/lib/use-color-scheme";
 import { THEME } from "@/lib/theme";
 import { useT } from "@/lib/i18n";
@@ -117,7 +118,9 @@ export function ChatQueue({
                 disabled={!canSendNow}
                 hitSlop={6}
                 accessibilityRole="button"
-                accessibilityLabel={`${sendNowLabel}: ${preview}`}
+                // proseToSpeech keeps the announcement free of markdown; the
+                // on-screen preview stays raw, matching the queued message.
+                accessibilityLabel={`${sendNowLabel}: ${proseToSpeech(preview)}`}
                 accessibilityState={{ disabled: !canSendNow, busy: busyAction === "send" }}
                 className={cn(
                   "min-h-9 flex-row items-center gap-1 rounded-md border border-border px-2 active:bg-secondary",

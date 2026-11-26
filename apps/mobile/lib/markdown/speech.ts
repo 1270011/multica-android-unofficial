@@ -13,11 +13,20 @@ const HEADING = /^ {0,3}#{1,6}[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$/gm;
 const BOLD = /\*\*(?=\S)(.+?)(?<=\S)\*\*|(?<![\w_])__(?=\S)(.+?)(?<=\S)__(?![\w_])/g;
 /** `*x*`, `_x_` → `x`; a lone `*` (5 * 3) or `file_name` stays. */
 const ITALIC = /(?<![*\w])\*(?=[^\s*])([^*\n]+?)(?<=[^\s*])\*(?![*\w])|(?<![\w_])_(?=[^\s_])([^_\n]+?)(?<=[^\s_])_(?![\w_])/g;
+/** `![alt](url)` → `alt` (before LINK, else the `!` would survive). */
+const IMAGE = /!\[([^\]]*)\]\([^)]*\)/g;
+/** `[text](url)` → `text`. */
+const LINK = /\[([^\]]*)\]\([^)]*\)/g;
+/** `<https://x>` / `<mailto:…>` autolinks → the bare target. */
+const AUTOLINK = /<((?:https?|mailto):[^>\s]+)>/g;
 
-/** Heading, bold and italic markup removed from a prose segment. */
+/** Heading, markup and link syntax removed from a prose segment. */
 export function proseToSpeech(text: string): string {
   return text
     .replace(HEADING, "$1")
+    .replace(IMAGE, "$1")
+    .replace(AUTOLINK, "$1")
+    .replace(LINK, "$1")
     .replace(BOLD, (_m, a?: string, b?: string) => a ?? b ?? "")
     .replace(ITALIC, (_m, a?: string, b?: string) => a ?? b ?? "");
 }
