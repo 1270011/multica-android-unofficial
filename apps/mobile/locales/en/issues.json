@@ -246,6 +246,7 @@
     "leader_needs_runtime": "Leader needs runtime",
     "squad": "Squad",
     "no_matches": "No matches.",
+    "search_issues_hint": "Type to search issues.",
     "no_project": "No project",
     "no_projects": "No projects in this workspace yet.\nCreate them on web.",
     "no_labels": "No labels in this workspace yet.",

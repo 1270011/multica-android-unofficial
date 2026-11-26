@@ -244,6 +244,7 @@
     "leader_needs_runtime": "负责人需要运行时",
     "squad": "小队",
     "no_matches": "没有匹配结果。",
+    "search_issues_hint": "输入以搜索任务。",
     "no_project": "无项目",
     "no_projects": "该工作区还没有项目。\n请在网页端创建。",
     "no_labels": "该工作区还没有标签。",
