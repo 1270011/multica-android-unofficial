@@ -488,6 +488,11 @@ export default function ServerSetup() {
               invalid={!!error && !validated.ok && validated.error.startsWith("url")}
               returnKeyType="next"
             />
+            {draft.mode === "direct" ? (
+              <Text className="text-xs text-muted-foreground">
+                {t("server.url_hint_direct")}
+              </Text>
+            ) : null}
           </View>
 
           {draft.mode === "cloudflare" ? (
