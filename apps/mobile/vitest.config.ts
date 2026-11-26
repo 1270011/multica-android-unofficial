@@ -23,6 +23,8 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // Mocks native modules the node env cannot parse (see vitest.setup.ts).
+    setupFiles: ["./vitest.setup.ts"],
     globals: true,
     include: ["lib/**/*.test.ts", "data/**/*.test.ts"],
     passWithNoTests: true,

@@ -236,6 +236,11 @@ import { getCfAccessHeaders, getServerBaseUrl } from "./server-config-store";
 import { looksLikeAccessBlock } from "@/lib/server-config";
 import { CLIENT_OS } from "@/lib/client-os";
 import { logger } from "@/lib/logger";
+import {
+  markNetworkOffline,
+  markNetworkOnline,
+  setNetworkProbeUrl,
+} from "@/lib/network-status";
 
 /**
  * Base URL comes from the user's server setup (data/server-config-store.ts),
@@ -387,6 +392,10 @@ class ApiClient {
     const method = init.method ?? "GET";
 
     const baseUrl = requireBaseUrl();
+    // Probe target for the offline indicator: while the app thinks it is
+    // offline, it re-checks this URL directly, so a reachable server wins
+    // over NetInfo's internet-reachability guess (Local / VPN setups).
+    setNetworkProbeUrl(baseUrl);
     const requestUrl = `${baseUrl}${path}`;
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
@@ -459,10 +468,17 @@ class ApiClient {
           undefined,
         );
       }
+      // Connection-level failures (DNS, refused, airplane mode) surface as
+      // TypeError: Network request failed. Everything else — our timeout
+      // ApiError above, caller aborts — says nothing about the link.
+      if (err instanceof TypeError) markNetworkOffline();
       throw err;
     }
     clearTimeout(timeoutId);
     callerSignal?.removeEventListener("abort", onCallerAbort);
+    // Any response — even 4xx/5xx — proves the link to the server is up,
+    // possibly long before NetInfo's own reachability check catches up.
+    markNetworkOnline();
     const duration = Date.now() - start;
 
     // Checked before `res.ok`: a followed Access redirect is a 200.
