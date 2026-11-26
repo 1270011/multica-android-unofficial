@@ -93,7 +93,14 @@ export function ProjectLeadPickerBody({ value, query, onChange }: Props) {
     );
     const bots = visibleActors.split(
       [...agents]
-        .filter((a) => matchName(a.name))
+        // Archived agents are in the directory (it also names chat/timeline
+        // authors); a lead picker must not offer them — except the current
+        // lead, so an archived lead still renders as the selected row.
+        .filter(
+          (a) =>
+            matchName(a.name) &&
+            (!a.archived_at || (value?.type === "agent" && value.id === a.id)),
+        )
         .sort((a, b) => a.name.localeCompare(b.name))
         .map((a): Row => ({ kind: "agent", agent: a })),
       actorRef,
