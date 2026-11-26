@@ -106,6 +106,12 @@ import {
   timelineListTestID,
   type TimelineRow,
 } from "@/lib/timeline-thread";
+import {
+  computeJumpVisibility,
+  jumpFollowShouldPin,
+  JUMP_FOLLOW_MS,
+  JUMP_FOLLOW_TICK_MS,
+} from "@/lib/timeline-jump";
 import { ImageSequenceProvider } from "@/lib/markdown/image-sequence";
 import { issueAttachmentsOptions } from "@/data/queries/issues";
 import { useWorkspaceStore } from "@/data/workspace-store";
@@ -150,26 +156,8 @@ const HIGHLIGHT_HOLD_MS = 5000;
  *  the user is already about to see. */
 const AT_BOTTOM_SLACK_PX = 80;
 
-/** "Jump to latest" thresholds — upstream web parity
- *  (packages/views/issues/hooks/use-jump-to-latest.ts, MUL-8324/MUL-8951).
- *  Away once more than a viewport is left below; once away, the reader has
- *  to come back within RETURN_WITHIN_SCREENS of the bottom, so the button
- *  does not flicker at the threshold. */
-const RETURN_WITHIN_SCREENS = 0.5;
-/** On a phone the button only shows while the reader is near the top of
- *  the page: once they have scrolled further on their own they are
- *  reading, not hunting for the latest entry, and the button would cover
- *  the text column above the composer. */
-const NEAR_TOP_RATIO = 0.2;
-/** A jump keeps re-pinning the bottom while the follow window is open —
- *  async markdown (Shiki highlight, image natural-size) and WS appends can
- *  resolve after the jump and leave the reader short of the newest entry
- *  (the web jump does the same with a rAF loop). */
-const JUMP_FOLLOW_MS = 2000;
-/** Cadence of the follow-window re-pin check. */
-const JUMP_FOLLOW_TICK_MS = 120;
-/** Distance from the bottom (px) that still counts as landed after a jump. */
-const AT_END_EPSILON_PX = 4;
+/** The jump-to-latest thresholds and follow-window rules live in
+ *  lib/timeline-jump.ts (pure logic, unit-tested). */
 
 /** Sentinel id for the "New since last view" divider row injected into the
  *  FlatList data. Picked because it can never collide with a real comment
@@ -332,16 +320,12 @@ export function TimelineList({
   }, []);
 
   const recomputeJumpVisibility = useCallback(() => {
-    const { offset, contentH, viewportH } = jumpMetricsRef.current;
-    if (viewportH <= 0) return;
-    const dist = contentH - (offset + viewportH);
-    const threshold = jumpAwayRef.current
-      ? viewportH * RETURN_WITHIN_SCREENS
-      : viewportH;
-    const away = jumpTailPendingRef.current || dist > threshold;
+    const { away, visible } = computeJumpVisibility(
+      jumpAwayRef.current,
+      jumpMetricsRef.current,
+      jumpTailPendingRef.current,
+    );
     jumpAwayRef.current = away;
-    const nearTop = contentH > 0 && offset <= contentH * NEAR_TOP_RATIO;
-    const visible = away && nearTop;
     setJumpVisible((prev) => (prev === visible ? prev : visible));
   }, []);
 
@@ -357,14 +341,15 @@ export function TimelineList({
       }
       const { offset, contentH, viewportH, lastOffsetChangeAt } =
         jumpMetricsRef.current;
-      if (viewportH <= 0) return;
       // Re-pin only once the travel has settled — pinning mid-flight would
       // fight the animated jump. Late content growth (which moves the
       // bottom without moving the offset) is caught here as well.
-      if (Date.now() - lastOffsetChangeAt > JUMP_FOLLOW_TICK_MS) {
-        if (contentH - (offset + viewportH) > AT_END_EPSILON_PX) {
-          listRef.current?.scrollToEnd({ animated: false });
-        }
+      if (jumpFollowShouldPin(
+        { offset, contentH, viewportH },
+        lastOffsetChangeAt,
+        Date.now(),
+      )) {
+        listRef.current?.scrollToEnd({ animated: false });
       }
     }, JUMP_FOLLOW_TICK_MS);
     jumpFollowRef.current = { until, timer };
