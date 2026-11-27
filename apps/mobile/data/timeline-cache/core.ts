@@ -23,6 +23,7 @@
 import type { Attachment, TimelineEntry } from "@multica/core/types";
 import { attachmentDownloadPath } from "@multica/core/types";
 import { TimelineEntriesSchema } from "@multica/core/api/schemas";
+import { replaceEqualDeep } from "@tanstack/react-query";
 import { isOptimisticCommentId } from "@/lib/pending-comments";
 
 /** The subset of MMKV the cache uses. */
@@ -198,6 +199,56 @@ function withStableUrls(entry: TimelineEntry): TimelineEntry {
 /** C3 + no unconfirmed local comments (their text lives in the mutation cache, C1). */
 export function sanitizeTimeline(entries: readonly TimelineEntry[]): TimelineEntry[] {
   return entries.filter((e) => !isOptimisticCommentId(e.id)).map(sanitizeEntry);
+}
+
+/**
+ * Equality of two entries as `sanitizeTimeline` would store them,
+ * computed without building the sanitized copies: every stored field
+ * compares the same way the stored copies would (Object.is-style deep
+ * equality), fields only the server sends are ignored, attachment URLs
+ * are always empty once stored, and the avatar URL is equal after its
+ * query is stripped. So `sameSanitizedTimelineEntry(a, b)` equals
+ * `deepEqual(sanitizeTimeline([a])[0], sanitizeTimeline([b])[0])` —
+ * for non-optimistic ids — without the two arrays, the two entry
+ * objects, and the extra deep walk of the sanitize-and-compare path.
+ */
+export function sameSanitizedTimelineEntry(a: TimelineEntry, b: TimelineEntry): boolean {
+  if (a === b) return true;
+  for (const field of ENTRY_FIELDS) {
+    const va = a[field];
+    if (va === undefined) {
+      if (b[field] !== undefined) return false;
+      continue;
+    }
+    const vb = b[field];
+    if (vb === undefined || replaceEqualDeep(va, vb) !== va) return false;
+  }
+  const av = a.actor_avatar_url;
+  const bv = b.actor_avatar_url;
+  if (av && bv) {
+    if (stripUrlQuery(av) !== stripUrlQuery(bv)) return false;
+  } else if (av || bv) {
+    return false;
+  }
+  const aa = a.attachments;
+  const ba = b.attachments;
+  if (aa && ba) {
+    if (aa.length !== ba.length) return false;
+    for (let i = 0; i < aa.length; i++) {
+      const x = aa[i]!;
+      const y = ba[i]!;
+      if (
+        replaceEqualDeep(x.id, y.id) !== x.id ||
+        replaceEqualDeep(x.filename, y.filename) !== x.filename ||
+        replaceEqualDeep(x.content_type, y.content_type) !== x.content_type ||
+        replaceEqualDeep(x.size_bytes, y.size_bytes) !== x.size_bytes
+      )
+        return false;
+    }
+  } else if (aa || ba) {
+    return false;
+  }
+  return true;
 }
 
 // ── Store ──────────────────────────────────────────────────────────────
