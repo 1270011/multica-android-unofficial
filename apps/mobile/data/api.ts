@@ -833,7 +833,13 @@ class ApiClient {
    *  notification service needs the agent names of every
    *  workspace); default is the current workspace. */
   async listAgents(opts?: { signal?: AbortSignal; workspaceSlug?: string }): Promise<Agent[]> {
-    const raw = await this.fetch<unknown>("/api/agents", {
+    // include_archived: the directory doubles as the actor-name resolver for
+    // chat/timeline authors. WS comment events carry no actor_name, so an
+    // archived agent's past comments can only be named from this list; web
+    // fetches its directory with include_archived for the same reason
+    // (packages/core/workspace/queries.ts). Consumers that must not offer
+    // archived agents (pickers, agent screens) filter `archived_at` locally.
+    const raw = await this.fetch<unknown>("/api/agents?include_archived=true", {
       signal: opts?.signal,
       headers: opts?.workspaceSlug ? { "X-Workspace-Slug": opts.workspaceSlug } : undefined,
     });
