@@ -11,7 +11,7 @@ The points below are known in v2.1.0. Most testing ran on emulators against one 
 - **"Unknown Agent" in the issue chat.** In the issue chat view, the author of some messages is shown as "Unknown Agent" instead of the agent's name. The classic activity view shows the correct author.
 - **@-sheet in the chat tab is empty without a search text.** In the composer of an agent chat, the @-sheet shows no entries until you type part of a name. Type a few letters to see the matching people, agents and issues. The @-sheet in the issue composer is not affected.
 - **Markdown characters in some TalkBack announcements.** A few TalkBack announcements, for example of single chat messages or previews, still contain Markdown markup such as asterisks or brackets. The text on screen is not affected.
-- **Placeholder in "Local / VPN" mode.** The server URL field in "Local / VPN" mode shows the placeholder `https://multica.example.lan`. It is only an example; enter your real server URL (any `https://` address works).
+- **Placeholder in "Local / VPN" mode.** The server URL field in "Local / VPN" mode shows the placeholder `https://multica.example.lan`. It is only an example; enter your real server URL (any `https://` address works). (Improved on `main`: the Local / VPN field now shows a hint that the placeholder is only an example and any `https://` address works.)
 
 ### Platform and distribution
 
