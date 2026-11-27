@@ -191,7 +191,10 @@ export const ChatBubble = memo(function ChatBubble({
     time,
     mentionsMe ? t("chat.mention_you") : null,
     replyTo ? t("chat.a11y_reply_to", { name: quoteName }) : null,
-    hasTable ? markdownToSpeech(entry.content ?? "", tableWords) : (entry.content ?? ""),
+    // markdownToSpeech also converts prose (strips heading/bold/italic), so
+    // TalkBack reads the message, not its markup. The old `hasTable` ternary
+    // passed raw markdown for every non-table message.
+    markdownToSpeech(entry.content ?? "", tableWords),
     attachmentCount > 0 ? t("chat.a11y_attachments", { count: attachmentCount }) : null,
     reactions.length > 0 ? t("chat.a11y_reactions", { count: reactions.length }) : null,
     resolved ? t("chat.resolved") : null,
