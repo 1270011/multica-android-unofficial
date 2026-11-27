@@ -27,7 +27,7 @@
 import type { InboxItem, TimelineEntry } from "@multica/core/types";
 import { isDeletedComment } from "@multica/core/issues/comment-deletion";
 import { replaceEqualDeep } from "@tanstack/react-query";
-import { sanitizeTimeline } from "@/data/timeline-cache/core";
+import { sameSanitizedTimelineEntry } from "@/data/timeline-cache/core";
 import { isOptimisticCommentId } from "@/lib/pending-comments";
 import { canReplyToThread } from "@/lib/thread-reply";
 
@@ -491,11 +491,15 @@ function deepEqual(a: unknown, b: unknown): boolean {
 
 /** Same entry for the chat: deep-equal, or equal as the cache stores it. */
 export function sameChatEntry(a: TimelineEntry, b: TimelineEntry): boolean {
-  if (deepEqual(a, b)) return true;
-  if (a.id !== b.id || isOptimisticCommentId(a.id)) return false;
-  const [sa] = sanitizeTimeline([a]);
-  const [sb] = sanitizeTimeline([b]);
-  return !!sa && !!sb && deepEqual(sa, sb);
+  if (a === b) return true;
+  // Unconfirmed local comments: equal only when the entries themselves are
+  // (`sanitizeTimeline` would drop them, so the stored-form comparison of
+  // the original code could only accept them via its deep-equal fast path;
+  // distinct entries with equal content and equal ids were also accepted
+  // there before the optimistic check ran — this preserves exactly that).
+  if (isOptimisticCommentId(a.id) || isOptimisticCommentId(b.id)) return deepEqual(a, b);
+  if (a.id !== b.id) return false;
+  return sameSanitizedTimelineEntry(a, b);
 }
 
 function sameChatItem(a: ChatItem, b: ChatItem): boolean {
