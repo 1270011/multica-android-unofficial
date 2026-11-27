@@ -6,7 +6,7 @@ The points below are known in v2.1.0. Most testing ran on emulators against one 
 
 ### App behaviour
 
-- **Offline indicator is unreliable.** The offline bar and the connection state are not always accurate and can lag behind or differ from the real network state. Pull to refresh if the content looks stale. Comments written offline are still kept and sent later. (Improved in v2.0.0: lists show an offline state instead of an empty list.)
+- **Offline indicator is unreliable.** The offline bar and the connection state are not always accurate and can lag behind or differ from the real network state. Pull to refresh if the content looks stale. Comments written offline are still kept and sent later. (Improved in v2.0.0: lists show an offline state instead of an empty list.) (Improved on `main`: the status now also follows actual request outcomes and probes the configured server while offline, so it clears as soon as the server answers — including on Local / VPN setups without internet reachability.)
 - **"Paste" button can be hidden by the keyboard.** On some screens and screen sizes the paste button next to an input field ends up under the on-screen keyboard. Close the keyboard to reach it, or paste with a long press into the field.
 - **"Unknown Agent" in the issue chat.** In the issue chat view, the author of some messages is shown as "Unknown Agent" instead of the agent's name. The classic activity view shows the correct author.
 - **@-sheet in the chat tab is empty without a search text.** In the composer of an agent chat, the @-sheet shows no entries until you type part of a name. Type a few letters to see the matching people, agents and issues. The @-sheet in the issue composer is not affected.

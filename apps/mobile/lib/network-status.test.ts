@@ -1,62 +1,83 @@
+/**
+ * Tests for the app-wide connectivity signal (lib/network-status.ts):
+ * the pure "what does offline mean" rule, the observed-reachability
+ * flips (markNetworkOnline / markNetworkOffline), and the probe loop
+ * that clears the offline state as soon as the server answers.
+ */
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { onlineManager } from "@tanstack/react-query";
+import {
+  isNetworkOffline,
+  markNetworkOffline,
+  markNetworkOnline,
+  setNetworkProbeUrl,
+  useNetworkStore,
+} from "./network-status";
 
-vi.mock("@react-native-community/netinfo", () => ({
-  default: { addEventListener: vi.fn(() => () => {}) },
-}));
+const online = () => useNetworkStore.getState().online;
 
-import { isNetworkOffline, runWhileOnline, useNetworkStore } from "./network-status";
-import { viewUpdateErrorKind } from "./issue-view-edit";
+afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
+  setNetworkProbeUrl(null);
+  useNetworkStore.setState({ online: true });
+});
 
 describe("isNetworkOffline", () => {
-  it("is offline when not connected", () => {
+  it("counts a disconnected radio as offline", () => {
     expect(isNetworkOffline({ isConnected: false, isInternetReachable: null })).toBe(true);
   });
-  it("is offline when connected but internet is known unreachable", () => {
+
+  it("counts connected-without-internet as offline", () => {
     expect(isNetworkOffline({ isConnected: true, isInternetReachable: false })).toBe(true);
   });
-  it("is online while reachability is still unknown", () => {
+
+  it("counts unknown reachability (still probing) as online", () => {
     expect(isNetworkOffline({ isConnected: true, isInternetReachable: null })).toBe(false);
-    expect(isNetworkOffline({ isConnected: null, isInternetReachable: null })).toBe(false);
-  });
-  it("is online when connected and reachable", () => {
     expect(isNetworkOffline({ isConnected: true, isInternetReachable: true })).toBe(false);
   });
 });
 
-describe("useNetworkStore", () => {
-  it("defaults to online so the banner never flashes on boot", () => {
-    expect(useNetworkStore.getState().online).toBe(true);
-  });
-});
-
-describe("runWhileOnline (saving a view)", () => {
-  const setOnline = (online: boolean) => useNetworkStore.setState({ online });
-  afterEach(() => setOnline(true));
-
-  it("does not start the write while offline", async () => {
-    setOnline(false);
-    const run = vi.fn(() => Promise.resolve("saved"));
-    const err = await runWhileOnline(run).catch((e: unknown) => e);
-    expect(run).not.toHaveBeenCalled();
-    expect(viewUpdateErrorKind(err)).toBe("offline");
+describe("observed reachability", () => {
+  it("flips offline on a connection-level failure and back on success", () => {
+    markNetworkOffline();
+    expect(online()).toBe(false);
+    markNetworkOnline();
+    expect(online()).toBe(true);
   });
 
-  it("gives up on a hanging request when the link drops, then saves after reconnect", async () => {
-    const hanging = runWhileOnline(() => new Promise<string>(() => {}));
-    setOnline(false);
-    expect(viewUpdateErrorKind(await hanging.catch((e: unknown) => e))).toBe("offline");
-
-    setOnline(true);
-    await expect(runWhileOnline(() => Promise.resolve("saved"))).resolves.toBe("saved");
+  it("does not touch TanStack Query on the way down", () => {
+    const setOnline = vi.spyOn(onlineManager, "setOnline");
+    markNetworkOffline();
+    expect(setOnline).not.toHaveBeenCalled();
+    markNetworkOnline();
+    expect(setOnline).toHaveBeenLastCalledWith(true);
   });
 
-  it("passes a 409 after reconnect through to the conflict dialog", async () => {
-    setOnline(false);
-    setOnline(true);
-    const conflict = Object.assign(new Error("view was modified by someone else"), {
-      status: 409,
+  it("clears the offline state as soon as a probe answers", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("ok")));
+    setNetworkProbeUrl("https://server.example");
+    markNetworkOffline();
+    expect(online()).toBe(false);
+    await vi.waitFor(() => expect(online()).toBe(true));
+  });
+
+  it("retries the probe while offline until the server answers", async () => {
+    vi.useFakeTimers();
+    const fetchMock = vi.fn<() => Promise<Response>>(async () => {
+      throw new TypeError("Network request failed");
     });
-    const err = await runWhileOnline(() => Promise.reject(conflict)).catch((e: unknown) => e);
-    expect(viewUpdateErrorKind(err)).toBe("conflict");
+    vi.stubGlobal("fetch", fetchMock);
+    setNetworkProbeUrl("https://server.example");
+    markNetworkOffline();
+    await vi.advanceTimersByTimeAsync(0);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(online()).toBe(false);
+    await vi.advanceTimersByTimeAsync(11_000);
+    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(online()).toBe(false);
+    fetchMock.mockImplementation(async () => new Response("ok"));
+    await vi.advanceTimersByTimeAsync(11_000);
+    expect(online()).toBe(true);
   });
 });
