@@ -57,7 +57,7 @@ import {
 import { router } from "expo-router";
 import { useKeyboardState } from "react-native-keyboard-controller";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueries } from "@tanstack/react-query";
 import { Ionicons } from "@/components/ui/ionicons";
 import { useColorScheme } from "nativewind";
 import type {
@@ -69,11 +69,22 @@ import type {
 import { Text } from "@/components/ui/text";
 import { ActorAvatar } from "@/components/ui/actor-avatar";
 import { StatusIcon } from "@/components/ui/status-icon";
-import { issueColumnCategory } from "@/lib/issue-status";
+import {
+  CLOSED_CATEGORIES,
+  issueBehavesAsAny,
+  issueColumnCategory,
+} from "@/lib/issue-status";
 import { useIssueStatuses } from "@/lib/use-issue-statuses";
 import { memberListOptions } from "@/data/queries/members";
 import { agentListOptions } from "@/data/queries/agents";
 import { squadListOptions } from "@/data/queries/squads";
+import { issueDetailOptions } from "@/data/queries/issues";
+import { myIssueListOptions } from "@/data/queries/my-issues";
+import { useAuthStore } from "@/data/auth-store";
+import {
+  selectViewedIssueIds,
+  useViewedIssuesStore,
+} from "@/data/viewed-issues-store";
 import { api } from "@/data/api";
 import { useWorkspaceStore } from "@/data/workspace-store";
 import {
@@ -95,6 +106,7 @@ import { useScrollToTopOnChange } from "@/lib/use-scroll-to-top-on-change";
 import { THEME } from "@/lib/theme";
 import { isAgentRuntimeBound } from "@/lib/is-agent-runtime-bound";
 import { cn } from "@/lib/utils";
+import { useTitleFilterMatcher } from "@/lib/use-title-filter";
 import { useT } from "@/lib/i18n";
 import { useVisibleActors } from "@/lib/use-visible-actors";
 import { type PickerActorRef, withHiddenNote } from "@/lib/visible-actors";
@@ -104,6 +116,11 @@ import { type MentionUsage, mentionUsageKey, readMentionUsage } from "@/lib/ment
 import { useMentionSortMode } from "@/data/stores/view-prefs-store";
 
 const AVATAR_SIZE = 36;
+
+/** Chat fallback limits, mirroring MentionSuggestionBar's chat mode
+ * (components/issue/mention-suggestion-bar.tsx). */
+const RECENT_LIMIT = 5;
+const MY_ISSUES_LIMIT = 10;
 
 function actorRef(row: Row): PickerActorRef | null {
   if (row.kind === "member") return { type: "member", id: row.member.user_id };
@@ -276,6 +293,40 @@ export function MentionPickerBody({
     };
   }, [query]);
 
+  // Chat fallback data (see the rows memo): without a query the server
+  // search returns nothing, so the sheet mirrors the composer's suggestion
+  // bar — Recent (viewed issues) + My issues. Disabled in comment mode,
+  // where people-style sections fill the sheet instead.
+  const isChat = mode === "chat";
+  const userId = useAuthStore((s) => s.user?.id ?? null);
+  const viewedIds = useViewedIssuesStore(selectViewedIssueIds(wsId));
+  const recentIds = useMemo(
+    () => viewedIds.slice(0, RECENT_LIMIT),
+    [viewedIds],
+  );
+  const recentQueries = useQueries({
+    queries: recentIds.map((id) => ({
+      ...issueDetailOptions(wsId, id),
+      enabled: isChat && !!wsId,
+    })),
+  });
+  const recentIssues = useMemo<Issue[]>(
+    () =>
+      recentQueries
+        .map((q) => q.data)
+        .filter((i): i is Issue => !!i),
+    [recentQueries],
+  );
+  const myFilter = useMemo(
+    () => (userId ? { assignee_id: userId } : { assignee_id: "" }),
+    [userId],
+  );
+  const { data: myIssuesAll = [] } = useQuery({
+    ...myIssueListOptions(wsId, "assigned", myFilter),
+    enabled: isChat && !!wsId && !!userId,
+  });
+  const titleFilter = useTitleFilterMatcher(wsId);
+
   const isSelectedKey = (type: MentionTargetType, id: string) =>
     selected.some((m) => m.type === type && m.id === id);
 
@@ -359,7 +410,30 @@ export function MentionPickerBody({
       }
     }
 
-    if (issueResults.length > 0) {
+    if (isChat && !query.trim()) {
+      // Chat with an empty query: the server search is a no-op, so mirror
+      // the composer's suggestion bar — Recent + My issues, deduped,
+      // title filter applied. This is what the sheet used to lack
+      // (KNOWN_ISSUES: "@-sheet in the chat tab is empty without a search
+      // text").
+      const matchedRecent = recentIssues.filter(
+        (i) => !titleFilter.matchesTitleFilter(i),
+      );
+      const recentIdSet = new Set(matchedRecent.map((i) => i.id));
+      const matchedMine = myIssuesAll
+        .filter(
+          (i) => !recentIdSet.has(i.id) && !titleFilter.matchesTitleFilter(i),
+        )
+        .slice(0, MY_ISSUES_LIMIT);
+      if (matchedRecent.length > 0) {
+        out.push({ kind: "section", label: t("suggestions.recent") });
+        for (const i of matchedRecent) out.push({ kind: "issue", issue: i });
+      }
+      if (matchedMine.length > 0) {
+        out.push({ kind: "section", label: t("suggestions.my_issues") });
+        for (const i of matchedMine) out.push({ kind: "issue", issue: i });
+      }
+    } else if (issueResults.length > 0) {
       out.push({ kind: "section", label: t("picker.issues") });
       for (const i of issueResults) {
         out.push({ kind: "issue", issue: i });
@@ -367,6 +441,7 @@ export function MentionPickerBody({
     }
     return out;
   }, [
+    isChat,
     mode,
     members,
     agents,
@@ -379,6 +454,9 @@ export function MentionPickerBody({
     sortMode,
     visibleActors,
     runnableAgentIds,
+    recentIssues,
+    myIssuesAll,
+    titleFilter,
   ]);
 
   const pick = (row: Row) => {
@@ -455,6 +533,12 @@ export function MentionPickerBody({
             (item.kind === "agent" && !isAgentRuntimeBound(item.agent)) ||
             (item.kind === "squad" &&
               !runnableAgentIds.has(item.squad.leader_id));
+          // By CATEGORY, not by key — mirror MentionSuggestionBar (MUL-6243):
+          // a custom status in the completed category is done, and a plain
+          // status check would render it at full opacity.
+          const closed =
+            item.kind === "issue" &&
+            issueBehavesAsAny(item.issue, CLOSED_CATEGORIES);
           return (
             <Pressable
               testID={dimmed ? `mention-row-${item.kind}-hidden` : `mention-row-${item.kind}`}
@@ -468,7 +552,7 @@ export function MentionPickerBody({
               accessibilityHint={dimmed ? t("picker.hidden_note") : undefined}
               className={cn(
                 "flex-row items-center gap-3 px-4 py-3 active:bg-secondary",
-                (needsRuntime || dimmed) && "opacity-50",
+                closed ? "opacity-60" : (needsRuntime || dimmed) && "opacity-50",
               )}
             >
               {item.kind === "all" ? (
@@ -561,7 +645,9 @@ export function MentionPickerBody({
         ListEmptyComponent={
           <View className="px-3 py-8 items-center">
             <Text className="text-sm text-muted-foreground">
-              {t("picker.no_matches")}
+              {isChat && !query.trim()
+                ? t("picker.search_issues_hint")
+                : t("picker.no_matches")}
             </Text>
           </View>
         }
